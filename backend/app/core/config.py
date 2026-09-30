@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     DATABASE_URL: str
+    # Tokens are ES256-signed. Public keys come from the JWKS endpoint under this URL
+    # (/auth/v1/.well-known/jwks.json), so no JWT secret is needed.
     SUPABASE_URL: str
-    SUPABASE_JWT_SECRET: SecretStr
     FRONTEND_ORIGIN: str
     REDIS_URL: str
     ENV: Literal["local", "test", "staging", "production"] = "local"

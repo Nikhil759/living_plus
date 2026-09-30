@@ -25,7 +25,6 @@ os.environ.update(
     ENV="test",
     DATABASE_URL=TEST_DATABASE_URL,
     SUPABASE_URL="https://test.supabase.co",
-    SUPABASE_JWT_SECRET="test-jwt-secret",
     FRONTEND_ORIGIN="http://localhost:3000",
     REDIS_URL="redis://localhost:6379/0",
 )
