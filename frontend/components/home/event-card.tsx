@@ -102,7 +102,9 @@ export function EventCard({
 
       <div className="flex flex-1 flex-col justify-between gap-3 p-3.5">
         <div className="space-y-1">
-          <h3 className="line-clamp-1 text-label-lg text-on-surface">{title}</h3>
+          <Link href={href} className="line-clamp-1 text-label-lg text-on-surface hover:text-primary">
+            {title}
+          </Link>
           <p className="flex items-center gap-1 text-body-sm text-on-surface-variant">
             <HostIcon className="h-[15px] w-[15px] shrink-0 text-tertiary" aria-hidden="true" />
             <span className="truncate">{host}</span>

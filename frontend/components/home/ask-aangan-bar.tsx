@@ -7,12 +7,14 @@ export interface AskAanganBarProps {
 }
 
 /** Sticky "Ask Aangan" pill that floats above the bottom nav. */
-export function AskAanganBar({ suggestion, href = "/ask-aangan" }: AskAanganBarProps) {
+export function AskAanganBar({ suggestion, href }: AskAanganBarProps) {
+  const destination =
+    href ?? `/ask-aangan?q=${encodeURIComponent(suggestion)}`;
   return (
     // Mobile: floats above the bottom nav. Desktop (no bottom nav): sits in the flow / side rail.
     <aside className="sticky bottom-20 z-40 px-1 lg:static lg:px-0">
       <Link
-        href={href}
+        href={destination}
         className="flex items-center justify-between gap-3 rounded-full bg-surface-container-lowest/95 p-2 pr-3 shadow-card ring-1 ring-outline-variant/30 backdrop-blur-xl transition-transform active:scale-[0.99]"
       >
         <span className="flex min-w-0 items-center gap-2.5">

@@ -25,6 +25,7 @@ export function AmenitiesSection({ amenities }: AmenitiesSectionProps) {
         <SectionHeader
           title="Amenities right now"
           adornment={hasAmenities ? <LiveDot /> : undefined}
+          action={hasAmenities ? { label: "Book", href: "/amenities" } : undefined}
         />
         {hasAmenities ? (
           <span className="shrink-0 text-label-sm text-on-surface-variant">
