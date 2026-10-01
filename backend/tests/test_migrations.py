@@ -11,6 +11,19 @@ from app.core.db import build_engine
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 IDENTITY_TABLES = frozenset({"users", "societies", "towers", "flats", "memberships", "profiles"})
+DOMAIN_TABLES = frozenset(
+    {
+        "amenities",
+        "amenity_status",
+        "amenity_bookings",
+        "groups",
+        "group_members",
+        "whatsapp_groups",
+        "posts",
+        "events",
+        "event_tickets",
+    }
+)
 
 
 def _alembic_config() -> Config:
@@ -60,6 +73,7 @@ def test_identity_migration_applies_on_empty_database() -> None:
     tables = _list_public_tables(database_url)
 
     assert IDENTITY_TABLES.issubset(tables)
+    assert DOMAIN_TABLES.issubset(tables)
     assert "alembic_version" in tables
 
     command.upgrade(_alembic_config(), "head")

@@ -48,3 +48,17 @@ uv run alembic upgrade head
 ```
 
 Never edit a migration that has been applied; add a new one instead.
+
+### Demo seed data
+
+After migrations, load the Sector 50 demo society (identity, amenities, groups, posts,
+events, tickets, stalls). Idempotent — safe to re-run:
+
+```bash
+cd backend
+PYTHONPATH=. uv run python scripts/seed.py
+```
+
+Invite code: `AANGAN50`. Demo users use synthetic `supabase_uid` values (`seed:…@…`); they
+won’t sign in until matching Supabase Auth accounts exist. Optional: set `SEED_DEMO_PASSWORD`
+and extend the script with the Supabase Admin API (Prompt 4).
