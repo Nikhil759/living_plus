@@ -24,18 +24,21 @@ export function EventCard({
   goingCount,
   going,
   href,
+  layout = "rail",
   className,
-}: Omit<HomeEvent, "id"> & { className?: string }) {
+}: Omit<HomeEvent, "id"> & { className?: string; layout?: "rail" | "fill" }) {
   const Glyph = GLYPHS[glyph];
 
   return (
     <Link
       href={href}
       className={cn(
-        "group w-[280px] shrink-0 snap-start overflow-hidden rounded-card bg-card shadow-card",
+        "group overflow-hidden rounded-card bg-card shadow-card",
         "transition-[transform,box-shadow] duration-premium ease-premium",
         "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
-        "lg:w-[320px]",
+        layout === "rail" &&
+          "w-[280px] shrink-0 snap-start lg:w-[320px]",
+        layout === "fill" && "min-w-0 w-full",
         className,
       )}
     >
@@ -45,7 +48,7 @@ export function EventCard({
             src={imageUrl}
             alt={imageAlt ?? title}
             fill
-            sizes="320px"
+            sizes={layout === "fill" ? "(max-width: 640px) 100vw, (max-width: 1280px) 33vw, 25vw" : "320px"}
             placeholder="blur"
             blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY3Ii8+PC9zdmc+"
             className="object-cover"

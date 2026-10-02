@@ -6,5 +6,9 @@
   "tower": "Tower C",
   "flat": "702",
   "roles": ["Tower C Rep"],
-  "hasUnreadNotifications": true
+  "hasUnreadNotifications": true,
+  "bio": "Weekend FIFA in the club lounge.",
+  "interests": ["FIFA", "Running"],
+  "isVisible": true,
+  "showFlat": false
 }

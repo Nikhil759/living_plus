@@ -20,6 +20,10 @@ class ResidentOut(CamelModel):
     flat: str
     roles: list[str]
     has_unread_notifications: bool = False
+    bio: str | None = None
+    interests: list[str] = Field(default_factory=list)
+    is_visible: bool = False
+    show_flat: bool = False
 
 
 class HomeEventOut(CamelModel):

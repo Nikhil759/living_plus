@@ -124,6 +124,8 @@ async def test_home_returns_seeded_shape(
     body = response.json()
     assert body["resident"]["name"] == "Nikhil"
     assert body["resident"]["society"] == "Test Society"
+    assert body["resident"]["interests"] == ["FIFA"]
+    assert body["resident"]["isVisible"] is True
     assert len(body["events"]) == 1
     assert body["events"][0]["id"] == "evt-test"
     assert len(body["amenities"]) == 1

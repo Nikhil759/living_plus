@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, field_validator, model_validator
 
 from app.models.enums import MembershipRole, MembershipStatus, SocietyPlan
 from app.schemas.base import CamelModel
@@ -115,3 +115,27 @@ class ProfileUpdate(CamelModel):
     interests: list[str] | None = None
     is_visible: bool | None = None
     show_flat: bool | None = None
+
+    @field_validator("interests")
+    @classmethod
+    def normalize_interests(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [part.strip() for part in value if part.strip()]
+        if len(cleaned) > 30:
+            raise ValueError("At most 30 interests.")
+        for item in cleaned:
+            if len(item) > 100:
+                raise ValueError("Each interest must be at most 100 characters.")
+        return cleaned
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "ProfileUpdate":
+        if (
+            self.bio is None
+            and self.interests is None
+            and self.is_visible is None
+            and self.show_flat is None
+        ):
+            raise ValueError("At least one field is required.")
+        return self

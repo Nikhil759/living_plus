@@ -266,6 +266,7 @@ def map_resident(
     *,
     tower_name: str,
     flat_no: str,
+    profile: Profile | None = None,
 ) -> ResidentOut:
     role_label = membership.role.value.replace("_", " ").title()
     if membership.role.value == "committee":
@@ -281,6 +282,10 @@ def map_resident(
         flat=flat_no,
         roles=roles,
         has_unread_notifications=False,
+        bio=profile.bio if profile else None,
+        interests=list(profile.interests) if profile else [],
+        is_visible=profile.is_visible if profile else False,
+        show_flat=profile.show_flat if profile else False,
     )
 
 

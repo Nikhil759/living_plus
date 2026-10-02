@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.auth.deps import CurrentMember
-from app.models import Flat, Membership, Profile, Society
+from app.models import Flat, Membership, Society
 from app.schemas.home import AanganPromptOut, HomeDataOut
 from app.services import mappers
+from app.services import profile as profile_service
 
 
 async def load_tower_flat(db: AsyncSession, membership_id: uuid.UUID) -> tuple[str, str]:
@@ -31,16 +32,20 @@ async def get_home_data(db: AsyncSession, member: CurrentMember) -> HomeDataOut:
         raise ValueError("Membership missing")
 
     tower_name, flat_no = await load_tower_flat(db, member.membership_id)
+    profile, created = await profile_service.ensure_profile(db, member)
+    if created:
+        await db.commit()
+
     resident = mappers.map_resident(
         member.user,
         society,
         membership,
         tower_name=tower_name,
         flat_no=flat_no,
+        profile=profile,
     )
 
-    profile = await db.get(Profile, member.user.id)
-    interests = profile.interests if profile else []
+    interests = profile.interests
 
     return HomeDataOut(
         resident=resident,

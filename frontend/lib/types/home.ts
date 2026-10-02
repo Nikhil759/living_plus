@@ -12,6 +12,17 @@ export interface Resident extends Person {
   flat: string;
   roles: string[];
   hasUnreadNotifications: boolean;
+  bio?: string | null;
+  interests?: string[];
+  isVisible?: boolean;
+  showFlat?: boolean;
+}
+
+export interface ProfilePatch {
+  bio?: string | null;
+  interests?: string[];
+  isVisible?: boolean;
+  showFlat?: boolean;
 }
 
 /** Glyph shown in the image area when an event has no photo. */

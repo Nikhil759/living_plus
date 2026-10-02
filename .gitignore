@@ -7,3 +7,4 @@ next-env.d.ts
 !**/.env.example
 mcp.json
 .DS_Store
+frontend/.demo/

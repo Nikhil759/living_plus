@@ -41,6 +41,29 @@ def _name_from_claims(claims: dict[str, object]) -> str | None:
     return name if isinstance(name, str) else None
 
 
+def _avatar_from_claims(claims: dict[str, object]) -> str | None:
+    meta = claims.get("user_metadata")
+    if isinstance(meta, dict):
+        avatar = meta.get("avatar_url") or meta.get("picture")
+        if isinstance(avatar, str) and avatar:
+            return avatar
+    picture = claims.get("picture")
+    return picture if isinstance(picture, str) and picture else None
+
+
+def _apply_claims_to_user(user: User, claims: dict[str, object]) -> bool:
+    changed = False
+    name = _name_from_claims(claims)
+    if name and user.name != name:
+        user.name = name
+        changed = True
+    avatar = _avatar_from_claims(claims)
+    if avatar and user.avatar_url != avatar:
+        user.avatar_url = avatar
+        changed = True
+    return changed
+
+
 async def get_current_user(
     db: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
@@ -81,8 +104,11 @@ async def get_current_user(
             supabase_uid=sub,
             email=email,
             name=_name_from_claims(claims),
+            avatar_url=_avatar_from_claims(claims),
         )
         db.add(user)
+        await db.flush()
+    elif _apply_claims_to_user(user, claims):
         await db.flush()
     return user
 

@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { apiGet, apiPost, ApiError } from "@/lib/api/client";
+import { apiGet, apiPatch, apiPost, ApiError } from "@/lib/api/client";
 
 export async function getServerAccessToken(): Promise<string | null> {
   const supabase = await createServerSupabaseClient();
@@ -28,4 +28,12 @@ export async function apiPostAsUser<T>(path: string, body: unknown): Promise<T> 
     throw new ApiError("Missing access token.", 401, "unauthorised");
   }
   return apiPost<T>(path, body, { headers: authHeaders(token) });
+}
+
+export async function apiPatchAsUser<T>(path: string, body: unknown): Promise<T> {
+  const token = await getServerAccessToken();
+  if (!token) {
+    throw new ApiError("Missing access token.", 401, "unauthorised");
+  }
+  return apiPatch<T>(path, body, { headers: authHeaders(token) });
 }

@@ -2,25 +2,22 @@ from fastapi import APIRouter
 
 from app.auth import CurrentMemberDep
 from app.core.db import DbSession
-from app.models import Membership, Society
 from app.schemas.home import ResidentOut
-from app.services import home as home_service
-from app.services import mappers
+from app.schemas.identity import ProfileUpdate
+from app.services import profile as profile_service
 
 router = APIRouter(tags=["me"])
 
 
 @router.get("/me", response_model=ResidentOut)
 async def get_me(db: DbSession, member: CurrentMemberDep) -> ResidentOut:
-    society = await db.get(Society, member.society_id)
-    membership = await db.get(Membership, member.membership_id)
-    if society is None or membership is None:
-        raise ValueError("Missing membership context")
-    tower_name, flat_no = await home_service.load_tower_flat(db, member.membership_id)
-    return mappers.map_resident(
-        member.user,
-        society,
-        membership,
-        tower_name=tower_name,
-        flat_no=flat_no,
-    )
+    return await profile_service.build_resident_out(db, member)
+
+
+@router.patch("/me", response_model=ResidentOut)
+async def patch_me(
+    body: ProfileUpdate,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> ResidentOut:
+    return await profile_service.update_profile(db, member, body)

@@ -67,3 +67,28 @@ export async function apiPost<T>(
 
   return (await response.json()) as T;
 }
+
+export async function apiPatch<T>(
+  path: string,
+  body: unknown,
+  init?: RequestInit,
+): Promise<T> {
+  const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const response = await fetch(url, {
+    ...init,
+    method: "PATCH",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+
+  return (await response.json()) as T;
+}

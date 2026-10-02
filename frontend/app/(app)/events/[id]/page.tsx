@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { Clock, MapPin } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
 import { AvatarStack } from "@/components/home/avatar-stack";
-import { buttonVariants } from "@/components/ui/button";
+import { EventRsvpButton } from "@/components/events/event-rsvp-button";
 import { Card } from "@/components/ui/card";
 import { formatEventWhen, formatPriceInr } from "@/lib/format";
-import { loadEventById } from "@/lib/data";
+import { demoUserHasRsvp } from "@/lib/demo-store/events-write";
+import { getDemoSessionUser } from "@/lib/demo-store/session-user";
+import { eventsWriteBackend, loadEventById, loadResident } from "@/lib/data";
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const { id } = await params;
   const event = await loadEventById(id);
   if (!event) notFound();
+
+  const backend = eventsWriteBackend();
+  let alreadyGoing = false;
+  if (backend === "demo") {
+    const session = await getDemoSessionUser();
+    if (session) {
+      alreadyGoing = demoUserHasRsvp(session.id, id);
+    }
+  } else {
+    const resident = await loadResident();
+    alreadyGoing =
+      event.going?.some((person) => person.id === resident.id) ?? false;
+  }
 
   return (
     <AppPage title="Event">
@@ -58,9 +73,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             ) : null}
             <p className="text-caption text-ink-secondary">{event.goingCount} neighbours going</p>
           </div>
-          <button type="button" className={buttonVariants({ variant: "primary" })} disabled>
-            {event.actionLabel}
-          </button>
+          <EventRsvpButton event={event} backend={backend} alreadyGoing={alreadyGoing} />
         </div>
       </Card>
     </AppPage>

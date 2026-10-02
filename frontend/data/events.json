@@ -120,5 +120,239 @@
     "actionLabel": "RSVP",
     "actionTone": "soft",
     "href": "/events/evt-terrace-yoga"
+  },
+  {
+    "id": "evt-ipl-screening",
+    "title": "IPL Finals Watch Party",
+    "host": "Tower B RWA · Screen on the lawn",
+    "hostIcon": "club",
+    "schedule": { "weekday": 6, "hour": 19, "minute": 30 },
+    "location": "Central Lawn",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d305f220ce5c?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Cricket fans watching a match outdoors",
+    "glyph": "game",
+    "goingCount": 42,
+    "going": [
+      {
+        "id": "ipl1",
+        "name": "Vikram",
+        "avatarUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "ipl2",
+        "name": "Arjun",
+        "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "ipl3",
+        "name": "Neha",
+        "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-ipl-screening"
+  },
+  {
+    "id": "evt-kids-chess",
+    "title": "Kids Chess & Strategy Hour",
+    "host": "Priya (A-502) · Parent volunteers",
+    "hostIcon": "person",
+    "schedule": { "weekday": 3, "hour": 17, "minute": 0 },
+    "location": "Kids Activity Room",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Children playing chess",
+    "glyph": "game",
+    "goingCount": 12,
+    "going": [
+      {
+        "id": "ch1",
+        "name": "Priya",
+        "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "ch2",
+        "name": "Rahul",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "soft",
+    "href": "/events/evt-kids-chess"
+  },
+  {
+    "id": "evt-book-club",
+    "title": "Tower C Book Club — April Pick",
+    "host": "Nikhil (C-702) hosting",
+    "hostIcon": "person",
+    "schedule": { "weekday": 2, "hour": 20, "minute": 0 },
+    "location": "Club Lounge",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1512820790807-4d33440f4b2d?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Open book with tea on a table",
+    "glyph": "general",
+    "goingCount": 7,
+    "going": [
+      {
+        "id": "bk1",
+        "name": "Nikhil",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "bk2",
+        "name": "Divya",
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-book-club"
+  },
+  {
+    "id": "evt-tennis-mixer",
+    "title": "Doubles Tennis Mixer",
+    "host": "Sports Committee",
+    "hostIcon": "club",
+    "schedule": { "weekday": 5, "hour": 7, "minute": 0 },
+    "location": "Tennis Courts",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Tennis players on a court",
+    "glyph": "general",
+    "goingCount": 16,
+    "going": [
+      {
+        "id": "tn1",
+        "name": "Kabir",
+        "avatarUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "tn2",
+        "name": "Simran",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "soft",
+    "href": "/events/evt-tennis-mixer"
+  },
+  {
+    "id": "evt-food-stalls",
+    "title": "Weekend Food Stall Mela",
+    "host": "RWA · Committee approved",
+    "hostIcon": "celebration",
+    "schedule": { "weekday": 0, "hour": 11, "minute": 0 },
+    "location": "Podium Level",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Street food stalls at a community fair",
+    "glyph": "general",
+    "goingCount": 28,
+    "going": [
+      {
+        "id": "fd1",
+        "name": "Chef Ravi",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "fd2",
+        "name": "Lakshmi",
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "fd3",
+        "name": "Mohit",
+        "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-food-stalls"
+  },
+  {
+    "id": "evt-senior-walk",
+    "title": "Senior Citizens Morning Walk",
+    "host": "Wellness Group · Tower reps",
+    "hostIcon": "club",
+    "schedule": { "weekday": 1, "hour": 6, "minute": 45 },
+    "location": "Jogging Track",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "People walking in a park at sunrise",
+    "glyph": "wellness",
+    "goingCount": 18,
+    "going": [
+      {
+        "id": "sw1",
+        "name": "Mr. Sharma",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "sw2",
+        "name": "Mrs. Iyer",
+        "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "Join Walk",
+    "actionTone": "solid",
+    "href": "/events/evt-senior-walk"
+  },
+  {
+    "id": "evt-pottery-workshop",
+    "title": "Weekend Pottery Workshop",
+    "host": "Studio Clay · Resident discount",
+    "hostIcon": "celebration",
+    "schedule": { "weekday": 6, "hour": 10, "minute": 0 },
+    "location": "Community Hall",
+    "priceInr": 799,
+    "imageUrl": "https://images.unsplash.com/photo-1565193566175-7a0ee3dbe261?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Hands shaping clay on a pottery wheel",
+    "glyph": "general",
+    "goingCount": 6,
+    "going": [
+      {
+        "id": "pt1",
+        "name": "Ananya",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "pt2",
+        "name": "Rhea",
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "Book Spot",
+    "actionTone": "soft",
+    "href": "/events/evt-pottery-workshop"
+  },
+  {
+    "id": "evt-open-mic",
+    "title": "Open Mic & Acoustic Night",
+    "host": "Rohan (B-404) & friends",
+    "hostIcon": "person",
+    "schedule": { "weekday": 4, "hour": 20, "minute": 0 },
+    "location": "Club Lounge",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Musician performing with a guitar",
+    "glyph": "music",
+    "goingCount": 15,
+    "going": [
+      {
+        "id": "om1",
+        "name": "Rohan",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "om2",
+        "name": "Isha",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-open-mic"
   }
 ]
