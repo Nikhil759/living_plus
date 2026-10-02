@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import LoginScene, { type SocietyMatch } from "@/components/login/LoginScene";
 import { PENDING_INVITE_KEY, writePendingInviteCode } from "@/lib/auth/pending-invite";
-import { getApiBaseUrl } from "@/lib/api/config";
+import { lookupInviteCode } from "@/lib/api/lookup-invite";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export function LoginPageClient({ supabaseConfigured = true }: { supabaseConfigured?: boolean }) {
@@ -59,14 +59,7 @@ export function LoginPageClient({ supabaseConfigured = true }: { supabaseConfigu
         });
         if (error) throw new Error("We couldn't send the reset email. Try again in a minute.");
       }}
-      onLookupInvite={async (code): Promise<SocietyMatch | null> => {
-        const res = await fetch(
-          `${getApiBaseUrl()}/v1/societies/lookup?code=${encodeURIComponent(code)}`,
-        );
-        if (res.status === 404) return null;
-        if (!res.ok) throw new Error("We couldn't check that code. Try again.");
-        return (await res.json()) as SocietyMatch;
-      }}
+      onLookupInvite={lookupInviteCode}
       onInviteConfirmed={(code) => {
         writePendingInviteCode(code);
       }}

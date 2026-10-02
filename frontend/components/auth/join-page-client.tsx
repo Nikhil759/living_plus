@@ -2,21 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import LoginScene, { type SocietyMatch } from "@/components/login/LoginScene";
-import { ApiError } from "@/lib/api/client";
-import { getApiBaseUrl } from "@/lib/api/config";
+import LoginScene from "@/components/login/LoginScene";
+import { inviteRedeemError } from "@/lib/api/invite-errors";
+import { lookupInviteCode } from "@/lib/api/lookup-invite";
 import { redeemInvite } from "@/lib/api/invites";
 import {
   clearPendingInviteCode,
   readPendingInviteCode,
 } from "@/lib/auth/pending-invite";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-
-function redeemErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof Error) return error.message;
-  return "Something went wrong. Try again.";
-}
 
 export function JoinPageClient({ email }: { email: string }) {
   const router = useRouter();
@@ -27,14 +21,10 @@ export function JoinPageClient({ email }: { email: string }) {
     setInitialCode(readPendingInviteCode() ?? undefined);
   }, []);
 
-  const lookupInvite = useCallback(async (code: string): Promise<SocietyMatch | null> => {
-    const res = await fetch(
-      `${getApiBaseUrl()}/v1/societies/lookup?code=${encodeURIComponent(code)}`,
-    );
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error("We couldn't check that code. Try again.");
-    return (await res.json()) as SocietyMatch;
-  }, []);
+  const lookupInvite = useCallback(
+    (code: string) => lookupInviteCode(code),
+    [],
+  );
 
   return (
     <LoginScene
@@ -62,7 +52,8 @@ export function JoinPageClient({ email }: { email: string }) {
           try {
             await redeemInvite(code, session.access_token);
           } catch (err) {
-            throw new Error(redeemErrorMessage(err));
+            const mapped = inviteRedeemError(err);
+            throw mapped;
           }
           clearPendingInviteCode();
           router.replace("/home");

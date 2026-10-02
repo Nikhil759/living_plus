@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Instrument_Serif } from "next/font/google";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { InviteFlowError, inviteLookupError, inviteRedeemError } from "@/lib/api/invite-errors";
 import styles from "./login-scene.module.css";
 
 const display = Instrument_Serif({
@@ -74,6 +75,7 @@ export default function LoginScene({
 
   const [code, setCode] = useState("");
   const [codeErr, setCodeErr] = useState("");
+  const [inviteError, setInviteError] = useState<{ title: string; message: string } | null>(null);
   const [society, setSociety] = useState<SocietyMatch | null>(null);
   const [joining, setJoining] = useState<SocietyMatch | null>(null);
 
@@ -200,7 +202,9 @@ export default function LoginScene({
       try {
         await joinFlow.onRedeem(normalized);
       } catch (err) {
-        setFormError(errorMessage(err, "We couldn't join with that code. Try again."));
+        const flow = err instanceof InviteFlowError ? err : inviteRedeemError(err);
+        setInviteError({ title: flow.title, message: flow.message });
+        setFormError("");
       } finally {
         setBusy(false);
       }
@@ -218,12 +222,18 @@ export default function LoginScene({
     }
     setBusy(true);
     setFormError("");
+    setInviteError(null);
     try {
       const match = await onLookupInvite(normalized);
-      if (match) setSociety(match);
-      else setCodeErr("We couldn't find that code. Check it with your committee.");
+      if (match) {
+        setSociety(match);
+        setInviteError(null);
+      }
     } catch (err) {
-      setFormError(errorMessage(err, "We couldn't check that code. Try again."));
+      const flow = err instanceof InviteFlowError ? err : inviteLookupError(err);
+      setInviteError({ title: flow.title, message: flow.message });
+      setSociety(null);
+      setCodeErr("");
     } finally {
       setBusy(false);
     }
@@ -389,26 +399,36 @@ export default function LoginScene({
                     with any account; personal codes must match your email.
                   </p>
                 )}
-                {formError && <p className={styles.formError} role="alert">{formError}</p>}
+                {inviteError ? (
+                  <div className={styles.codeAlert} role="alert">
+                    <strong>{inviteError.title}</strong>
+                    <span>{inviteError.message}</span>
+                  </div>
+                ) : null}
                 <div className={styles.field}>
                   <label htmlFor="login-invite">Invite code</label>
                   <input
                     id="login-invite"
                     className={styles.upper}
                     autoComplete="off"
-                    placeholder="e.g. SECTOR50"
+                    placeholder="e.g. PMG-9R2N"
                     value={code}
                     autoFocus
                     disabled={busy}
-                    aria-invalid={codeErr ? true : undefined}
+                    aria-invalid={codeErr || inviteError ? true : undefined}
                     aria-describedby="login-invite-err"
                     onChange={(e) => {
                       setCode(e.target.value.toUpperCase().replace(/\s/g, ""));
                       setCodeErr("");
+                      setInviteError(null);
                       setSociety(null);
                     }}
                   />
-                  <span id="login-invite-err" className={styles.err}>{codeErr}</span>
+                  {codeErr ? (
+                    <span id="login-invite-err" className={styles.err}>
+                      {codeErr}
+                    </span>
+                  ) : null}
                 </div>
                 {society && (
                   <div className={styles.result}>

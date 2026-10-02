@@ -278,7 +278,6 @@
   box-shadow: inset 0 0 0 1px var(--hair);
 }
 .field input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--sky); }
-.field input[aria-invalid="true"] { box-shadow: inset 0 0 0 2px var(--danger); }
 .upper { text-transform: uppercase; }
 .err { font-size: 13px; color: var(--danger); }
 .formError {
@@ -288,6 +287,27 @@
   background: rgba(196, 53, 43, 0.08);
   color: var(--danger);
   font-size: 14px;
+}
+.codeAlert {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(196, 53, 43, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(196, 53, 43, 0.18);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.codeAlert strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.field input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--danger);
+  background: rgba(255, 255, 255, 0.95);
 }
 .rowEnd { display: flex; justify-content: flex-end; }
 .result {
