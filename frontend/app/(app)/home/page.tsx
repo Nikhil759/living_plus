@@ -4,11 +4,23 @@ import { AmenitiesSection } from "@/components/home/amenities-section";
 import { DigestCard } from "@/components/home/digest-card";
 import { EventsSection } from "@/components/home/events-section";
 import { FeedPostItem } from "@/components/home/feed-post-item";
+import { FlatOpeningsSection } from "@/components/home/flat-openings-section";
+import { HelpDeskSection } from "@/components/home/help-desk-section";
 import { HomeGreeting } from "@/components/home/home-greeting";
+import { LocalBusinessesSection } from "@/components/home/local-businesses-section";
+import { MarketplaceSection } from "@/components/home/marketplace-section";
 import { NeighbourMatchCard } from "@/components/home/neighbour-match-card";
 import { SectionHeader } from "@/components/home/section-header";
 import { ErrorState } from "@/components/ui/error-state";
-import { getDataSource, loadHomeData } from "@/lib/data";
+import {
+  getDataSource,
+  loadFlatOpenings,
+  loadHelpDeskTickets,
+  loadHelpDeskVendors,
+  loadHomeData,
+  loadLocalBusinesses,
+  loadMarketplaceListings,
+} from "@/lib/data";
 import { getStaticHomeData } from "@/lib/data/static";
 
 interface HomePageProps {
@@ -30,6 +42,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         : "Could not load home data.";
     data = getStaticHomeData({ empty: true });
   }
+
+  const [listings, businesses, openings, tickets, vendors] = await Promise.all([
+    loadMarketplaceListings(),
+    loadLocalBusinesses(),
+    loadFlatOpenings(),
+    loadHelpDeskTickets(),
+    loadHelpDeskVendors(),
+  ]);
 
   const { resident, digest, events, amenities, match } = data;
   const posts = digest?.posts ?? [];
@@ -58,6 +78,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </div>
               </section>
             ) : null}
+            <MarketplaceSection listings={listings} />
+            <LocalBusinessesSection businesses={businesses} />
+            <FlatOpeningsSection openings={openings} />
+            <HelpDeskSection vendors={vendors} tickets={tickets} />
           </div>
 
           <div className="xl:sticky xl:top-16">
