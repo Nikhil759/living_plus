@@ -6,7 +6,7 @@ export interface AskAanganBarProps {
   href?: string;
 }
 
-/** Sticky "Ask Aangan" pill that floats above the bottom nav. */
+/** Sticky "Ask Living+" pill that floats above the bottom nav. */
 export function AskAanganBar({ suggestion, href }: AskAanganBarProps) {
   const destination =
     href ?? `/ask-aangan?q=${encodeURIComponent(suggestion)}`;
@@ -23,8 +23,7 @@ export function AskAanganBar({ suggestion, href }: AskAanganBarProps) {
           </span>
           <span className="flex min-w-0 flex-col">
             <span className="flex items-center gap-1 text-label-md text-on-surface">
-              Ask Aangan
-              <span className="text-label-sm text-primary">✨ AI</span>
+              Ask Living+
             </span>
             <span className="truncate text-body-sm text-on-surface-variant">
               “{suggestion}”

@@ -1,0 +1,42 @@
+{
+  "current": {
+    "periodLabel": "October 2026",
+    "monthlyRentInr": 42000,
+    "maintenanceInr": 3500,
+    "totalDueInr": 45500,
+    "dueDate": "2026-10-05",
+    "status": "due",
+    "landlordName": "Mr. Rajesh Sharma",
+    "tower": "Tower C",
+    "flat": "702"
+  },
+  "recurring": {
+    "status": "not_set"
+  },
+  "history": [
+    {
+      "id": "rent-sep-2026",
+      "periodLabel": "September 2026",
+      "amountInr": 45500,
+      "paidAt": "2026-09-04T10:22:00.000Z",
+      "method": "UPI manual",
+      "receiptId": "RCPT-2026-09-702"
+    },
+    {
+      "id": "rent-aug-2026",
+      "periodLabel": "August 2026",
+      "amountInr": 45500,
+      "paidAt": "2026-08-05T09:15:00.000Z",
+      "method": "Bank transfer",
+      "receiptId": "RCPT-2026-08-702"
+    },
+    {
+      "id": "rent-jul-2026",
+      "periodLabel": "July 2026",
+      "amountInr": 45500,
+      "paidAt": "2026-07-03T18:40:00.000Z",
+      "method": "UPI manual",
+      "receiptId": "RCPT-2026-07-702"
+    }
+  ]
+}

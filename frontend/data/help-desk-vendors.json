@@ -1,0 +1,77 @@
+[
+  {
+    "id": "v-hk-1",
+    "name": "Society housekeeping desk",
+    "category": "housekeeping",
+    "emoji": "🧹",
+    "phone": "+911244000101",
+    "whatsapp": "911244000101",
+    "note": "Daily maid roster, deep clean, move-in/out",
+    "societyApproved": true
+  },
+  {
+    "id": "v-hk-2",
+    "name": "Priya Home Help Agency",
+    "category": "housekeeping",
+    "emoji": "👩‍🍳",
+    "whatsapp": "919876500100",
+    "note": "Verified cooks and part-time help for towers A–D",
+    "societyApproved": true
+  },
+  {
+    "id": "v-elec-1",
+    "name": "QuickFix Electricians",
+    "category": "electrical",
+    "emoji": "⚡",
+    "phone": "+919811220033",
+    "whatsapp": "919811220033",
+    "note": "MCB, wiring, geyser — society empanelled",
+    "societyApproved": true
+  },
+  {
+    "id": "v-plumb-1",
+    "name": "AquaCare Plumbing",
+    "category": "plumbing",
+    "emoji": "🔧",
+    "phone": "+919955667788",
+    "whatsapp": "919955667788",
+    "note": "Leaks, taps, RO service",
+    "societyApproved": true
+  },
+  {
+    "id": "v-lift-1",
+    "name": "Otis lift AMC desk",
+    "category": "lift",
+    "emoji": "🛗",
+    "phone": "+911800102030",
+    "note": "Stuck lift emergencies — call security first",
+    "societyApproved": true
+  },
+  {
+    "id": "v-sec-1",
+    "name": "Gate 1 security supervisor",
+    "category": "security",
+    "emoji": "🛡️",
+    "phone": "+911244000201",
+    "note": "Visitor issues, parking disputes",
+    "societyApproved": true
+  },
+  {
+    "id": "v-carp-1",
+    "name": "WoodCraft Interiors",
+    "category": "carpentry",
+    "emoji": "🪚",
+    "whatsapp": "919888776655",
+    "note": "Modular repairs, door alignment",
+    "societyApproved": true
+  },
+  {
+    "id": "v-pest-1",
+    "name": "SafeHome Pest Control",
+    "category": "pest_control",
+    "emoji": "🐜",
+    "whatsapp": "919900887700",
+    "note": "Quarterly society spray + flat visits",
+    "societyApproved": true
+  }
+]

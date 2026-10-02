@@ -1,0 +1,100 @@
+[
+  {
+    "id": "mp-study-desk",
+    "title": "IKEA Micke study desk (white)",
+    "category": "furniture",
+    "priceInr": 4500,
+    "condition": "good",
+    "description": "Used for 2 years, minor scratches on one leg. Includes drawer. Pick up from Tower C basement parking.",
+    "sellerLabel": "Priya · Tower C",
+    "postedAt": "2026-09-28T10:00:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919876543210" },
+    "status": "active"
+  },
+  {
+    "id": "mp-stroller",
+    "title": "Chicco LiteWay stroller",
+    "category": "kids",
+    "priceInr": 3200,
+    "condition": "like_new",
+    "description": "Barely used after we moved abroad. Rain cover and cup holder included.",
+    "sellerLabel": "Ankit · Tower A",
+    "postedAt": "2026-09-30T14:30:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919812345678" },
+    "status": "active"
+  },
+  {
+    "id": "mp-ps5-games",
+    "title": "PS5 games bundle (FIFA 24 + GT7)",
+    "category": "electronics",
+    "priceInr": 2800,
+    "condition": "like_new",
+    "description": "Both discs with cases. No scratches. Can meet at club lounge.",
+    "imageUrl": "/mock/event-fifa.jpg",
+    "imageAlt": "Video game cases on a table",
+    "sellerLabel": "Rohan · Tower B",
+    "postedAt": "2026-10-01T08:00:00.000Z",
+    "contact": { "type": "phone", "value": "+919988776655" },
+    "status": "active"
+  },
+  {
+    "id": "mp-cycle",
+    "title": "Hero Sprint 26T hybrid cycle",
+    "category": "sports",
+    "priceInr": 5500,
+    "condition": "good",
+    "description": "Serviced last month. New tyres. Helmet free if picked up this week.",
+    "sellerLabel": "Meera · Tower D",
+    "postedAt": "2026-09-25T06:00:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919900112233" },
+    "status": "active"
+  },
+  {
+    "id": "mp-microwave",
+    "title": "Samsung 28L convection microwave",
+    "category": "appliances",
+    "priceInr": 6000,
+    "condition": "good",
+    "description": "Works perfectly. Relocating — must go by Sunday.",
+    "sellerLabel": "Vikram · Tower C",
+    "postedAt": "2026-09-29T11:00:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919811223344" },
+    "status": "reserved"
+  },
+  {
+    "id": "mp-bookshelf",
+    "title": "5-tier wooden bookshelf",
+    "category": "furniture",
+    "priceInr": 1800,
+    "condition": "fair",
+    "description": "Solid wood, needs a wipe. Buyer to arrange pickup from 4th floor (no lift stop).",
+    "sellerLabel": "Sana · Tower B",
+    "postedAt": "2026-09-27T16:00:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919877665544" },
+    "status": "active"
+  },
+  {
+    "id": "mp-crib",
+    "title": "Baby cot with mattress",
+    "category": "kids",
+    "priceInr": 4000,
+    "condition": "good",
+    "description": "Convertible side rail. Mattress cleaned and covered.",
+    "sellerLabel": "Neighbour · Tower A",
+    "postedAt": "2026-09-20T09:00:00.000Z",
+    "contact": { "type": "phone", "value": "+919955443322" },
+    "status": "sold"
+  },
+  {
+    "id": "mp-monitor",
+    "title": "Dell 24\" IPS monitor",
+    "category": "electronics",
+    "priceInr": 6500,
+    "condition": "like_new",
+    "description": "1080p, HDMI + DP cables included. WFH upgrade sale.",
+    "sellerLabel": "Kunal · Tower C",
+    "postedAt": "2026-10-01T12:00:00.000Z",
+    "contact": { "type": "whatsapp", "value": "919966778899" },
+    "status": "active"
+  }
+]

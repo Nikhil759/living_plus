@@ -1,0 +1,32 @@
+[
+  {
+    "id": "dg-water",
+    "emoji": "water",
+    "lead": "Water maintenance",
+    "body": "Tower B supply paused 2:00–4:00 PM today for motor replacement."
+  },
+  {
+    "id": "dg-mela",
+    "emoji": "sparkle",
+    "lead": "Diwali Mela",
+    "body": "Food and handcraft stall slots close this Friday at 6:00 PM."
+  },
+  {
+    "id": "dg-mail",
+    "emoji": "package",
+    "lead": "Central Mailroom",
+    "body": "2 packages arrived for C-702 at Security Gate 1 desk."
+  },
+  {
+    "id": "dg-parking",
+    "emoji": "parking",
+    "lead": "Visitor parking",
+    "body": "Basement B2 slots 12–18 reserved for Diwali Mela setup this weekend."
+  },
+  {
+    "id": "dg-agm",
+    "emoji": "file",
+    "lead": "AGM reminder",
+    "body": "Annual general meeting on Sunday, 10:00 AM in the amphitheatre."
+  }
+]

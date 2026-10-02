@@ -1,0 +1,10 @@
+{
+  "id": "res-nikhil",
+  "name": "Nikhil",
+  "avatarUrl": "/mock/avatar-nikhil.jpg",
+  "society": "Sector 50 Residency",
+  "tower": "Tower C",
+  "flat": "702",
+  "roles": ["Tower C Rep"],
+  "hasUnreadNotifications": true
+}

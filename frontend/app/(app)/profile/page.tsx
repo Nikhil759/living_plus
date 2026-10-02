@@ -1,29 +1,23 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { AppPage } from "@/components/layout/app-page";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { mockResident } from "@/lib/mock/home";
+import { AppPage } from "@/components/layout/app-page";
+import { loadResident } from "@/lib/data";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const resident = await loadResident();
+
   return (
     <AppPage title="Profile">
-      <Link
-        href="/home"
-        className="inline-flex items-center gap-1 text-label-md text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to Home
-      </Link>
-      <Card className="mt-4 flex items-start gap-4 p-5">
-        <Avatar name={mockResident.name} src={mockResident.avatarUrl} size="md" />
-        <div className="min-w-0 space-y-1">
-          <h2 className="text-headline-sm text-on-surface">{mockResident.name}</h2>
-          <p className="text-body-md text-on-surface-variant">{mockResident.society}</p>
-          <p className="text-body-md text-on-surface">
-            {mockResident.tower}, Flat {mockResident.flat}
+      <Card className="flex items-center gap-4">
+        <Avatar name={resident.name} src={resident.avatarUrl} size="md" />
+        <div className="min-w-0">
+          <h1 className="text-title text-ink">{resident.name}</h1>
+          <p className="text-body text-ink-secondary">
+            {resident.tower} · {resident.flat}
           </p>
-          <p className="text-label-md text-primary">{mockResident.roles.join(" · ")}</p>
+          <p className="text-caption text-ink-tertiary">{resident.society}</p>
+          {resident.roles[0] ? <Badge className="mt-2">{resident.roles[0]}</Badge> : null}
         </div>
       </Card>
     </AppPage>

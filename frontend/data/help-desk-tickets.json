@@ -1,0 +1,26 @@
+[
+  {
+    "id": "tkt-lift-b",
+    "title": "Tower B lift 2 intermittent stop at 5th floor",
+    "category": "lift",
+    "status": "in_progress",
+    "createdAt": "2026-10-01T09:00:00.000Z",
+    "lastUpdate": "Vendor visit scheduled today 4 PM"
+  },
+  {
+    "id": "tkt-water-c",
+    "title": "Low pressure in Tower C morning supply",
+    "category": "water",
+    "status": "open",
+    "createdAt": "2026-10-02T06:30:00.000Z",
+    "lastUpdate": "Submitted to help desk"
+  },
+  {
+    "id": "tkt-gym",
+    "title": "Treadmill #2 belt slipping",
+    "category": "amenity",
+    "status": "resolved",
+    "createdAt": "2026-09-25T14:00:00.000Z",
+    "lastUpdate": "Fixed on 26 Sep"
+  }
+]

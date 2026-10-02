@@ -18,12 +18,22 @@ function statusLabel(status: AmenityStatus): string {
   return status;
 }
 
-export function AmenitiesSection({ amenities }: { amenities: Amenity[] }) {
+export function AmenitiesSection({
+  amenities,
+  showSeeAll = true,
+}: {
+  amenities: Amenity[];
+  showSeeAll?: boolean;
+}) {
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Amenities right now"
-        action={amenities.length > 0 ? { label: "See all", href: "/amenities" } : undefined}
+        action={
+          showSeeAll && amenities.length > 0
+            ? { label: "See all", href: "/amenities" }
+            : undefined
+        }
       />
       {amenities.length === 0 ? (
         <EmptyState icon={<Waves />} title="No live amenity data" />

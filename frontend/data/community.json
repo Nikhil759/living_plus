@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "id": "g-cyclists",
+      "name": "Resident Cyclists Club",
+      "emoji": "🚴",
+      "memberCount": 24,
+      "description": "Weekend rides and expressway training loops."
+    },
+    {
+      "id": "g-fifa",
+      "name": "FIFA & Game Night",
+      "emoji": "🎮",
+      "memberCount": 18,
+      "description": "Club lounge tournaments and casual sessions."
+    },
+    {
+      "id": "g-yoga",
+      "name": "Yoga Circle",
+      "emoji": "🧘",
+      "memberCount": 12,
+      "description": "Sunrise terrace sessions and weekend workshops."
+    }
+  ],
+  "whatsappGroups": [
+    {
+      "id": "wa-tower-c",
+      "name": "Tower C residents",
+      "memberCount": 86
+    },
+    {
+      "id": "wa-parents",
+      "name": "Parents & kids activities",
+      "memberCount": 142
+    }
+  ]
+}
