@@ -1,34 +1,40 @@
 import * as React from "react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Variant = "solid" | "soft" | "ghost";
+type Variant = "primary" | "secondary" | "tertiary" | "solid" | "soft" | "ghost";
 type Size = "sm" | "md";
 
 const base =
-  "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full transition-transform active:scale-95 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface " +
-  "disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex shrink-0 items-center justify-center gap-1.5 font-semibold " +
+  "transition-transform duration-premium ease-premium " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+  "disabled:pointer-events-none disabled:opacity-40 " +
+  "motion-safe:active:scale-[0.98]";
 
 const variants: Record<Variant, string> = {
-  solid: "bg-primary text-on-primary hover:bg-primary-container",
-  soft: "bg-primary-fixed text-on-primary-fixed-variant hover:bg-primary-fixed-dim",
-  ghost: "text-primary hover:bg-surface-container",
+  primary: "rounded-full bg-primary text-white hover:bg-primary-pressed",
+  secondary: "rounded-full bg-primary-tint text-primary hover:bg-primary-tint",
+  tertiary: "rounded-none bg-transparent text-primary hover:opacity-80",
+  solid: "rounded-full bg-primary text-white hover:bg-primary-pressed",
+  soft: "rounded-full bg-primary-tint text-primary hover:bg-primary-tint",
+  ghost: "rounded-none bg-transparent text-primary hover:opacity-80",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-label-sm",
-  md: "px-4 py-2 text-label-md",
+  sm: "h-9 px-4 text-callout",
+  md: "h-11 px-5 text-headline",
 };
 
 export interface ButtonStyleProps {
   variant?: Variant;
   size?: Size;
   className?: string;
+  chevron?: boolean;
 }
 
-/** Use on `<Link>` / `<a>` when you need button styling without a `<button>`. */
 export function buttonVariants({
-  variant = "solid",
+  variant = "primary",
   size = "md",
   className,
 }: ButtonStyleProps = {}) {
@@ -44,13 +50,21 @@ export function Button({
   size,
   className,
   type = "button",
+  chevron,
+  children,
   ...props
 }: ButtonProps) {
+  const resolved = variant ?? "primary";
+  const showChevron = chevron ?? (resolved === "tertiary" || resolved === "ghost");
+
   return (
     <button
       type={type}
-      className={buttonVariants({ variant, size, className })}
+      className={buttonVariants({ variant: resolved, size, className })}
       {...props}
-    />
+    >
+      {children}
+      {showChevron ? <ChevronRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" /> : null}
+    </button>
   );
 }

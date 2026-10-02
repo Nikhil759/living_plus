@@ -1,30 +1,29 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { StatusDot, type StatusTone } from "@/components/ui/status-dot";
 
 type Tone = "neutral" | "primary" | "secondary" | "overlay" | "overlay-primary";
 
-const tones: Record<Tone, string> = {
-  neutral: "bg-surface-container-high text-on-surface-variant",
-  primary: "bg-primary-fixed text-on-primary-fixed-variant",
-  secondary: "bg-secondary-container text-on-secondary-fixed-variant",
-  // Sits on top of photos: translucent white + blur.
-  overlay: "bg-surface-container-lowest/90 text-secondary font-semibold backdrop-blur-md",
-  "overlay-primary": "bg-surface-container-lowest/90 text-primary font-semibold backdrop-blur-md",
-};
-
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
+  /** Optional 8px status marker — the only place colour fills are allowed. */
+  dot?: StatusTone;
 }
 
-export function Badge({ tone = "neutral", className, ...props }: BadgeProps) {
+export function Badge({ tone = "neutral", dot, className, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-label-sm",
-        tones[tone],
+        "inline-flex items-center gap-1.5 rounded-full bg-quiet px-2.5 py-0.5 text-caption text-ink-secondary",
+        tone === "overlay" || tone === "overlay-primary"
+          ? "glass text-ink"
+          : null,
         className,
       )}
       {...props}
-    />
+    >
+      {dot ? <StatusDot tone={dot} /> : null}
+      {children}
+    </span>
   );
 }

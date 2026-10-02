@@ -3,18 +3,13 @@ import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/format";
 
 export type AvatarTone = "primary" | "secondary" | "tertiary" | "neutral";
-export type AvatarSize = "sm" | "md";
-
-const tones: Record<AvatarTone, string> = {
-  primary: "bg-primary-fixed text-primary",
-  secondary: "bg-secondary-fixed text-on-secondary-fixed",
-  tertiary: "bg-tertiary-fixed text-on-tertiary-fixed",
-  neutral: "bg-surface-container-highest text-on-surface-variant",
-};
+export type AvatarSize = "xs" | "sm" | "md" | "lg";
 
 const sizes: Record<AvatarSize, { box: string; px: number; text: string }> = {
-  sm: { box: "h-8 w-8", px: 32, text: "text-label-md" },
-  md: { box: "h-10 w-10", px: 40, text: "text-label-lg" },
+  xs: { box: "h-8 w-8", px: 32, text: "text-caption" },
+  sm: { box: "h-9 w-9", px: 36, text: "text-caption" },
+  md: { box: "h-10 w-10", px: 40, text: "text-callout" },
+  lg: { box: "h-10 w-10", px: 40, text: "text-callout" },
 };
 
 export interface AvatarProps {
@@ -22,7 +17,6 @@ export interface AvatarProps {
   src?: string;
   size?: AvatarSize;
   tone?: AvatarTone;
-  /** Override the initials (used for "+4" overflow chips). */
   label?: string;
   className?: string;
 }
@@ -31,7 +25,6 @@ export function Avatar({
   name,
   src,
   size = "sm",
-  tone = "primary",
   label,
   className,
 }: AvatarProps) {
@@ -39,10 +32,9 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-quiet text-ink-secondary",
         s.box,
         s.text,
-        tones[tone],
         className,
       )}
       title={name}

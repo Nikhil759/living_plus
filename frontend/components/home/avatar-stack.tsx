@@ -1,14 +1,10 @@
-import { Avatar, type AvatarSize, type AvatarTone } from "@/components/ui/avatar";
+import { Avatar, type AvatarSize } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { Person } from "@/lib/types/home";
 
-const TONE_CYCLE: AvatarTone[] = ["primary", "secondary", "tertiary"];
-
 export interface AvatarStackProps {
   people: Person[];
-  /** Max avatars rendered before collapsing into a "+N" chip. Default 3. */
   max?: number;
-  /** Real total when `people` is only a preview (e.g. 7 matches, 3 loaded). */
   total?: number;
   size?: AvatarSize;
   className?: string;
@@ -26,7 +22,7 @@ export function AvatarStack({
 
   if (visible.length === 0) return null;
 
-  const ring = "ring-2 ring-surface-container-lowest shadow-card";
+  const ring = "ring-2 ring-card";
 
   return (
     <div
@@ -34,13 +30,12 @@ export function AvatarStack({
       role="group"
       aria-label={`${total ?? people.length} people`}
     >
-      {visible.map((person, i) => (
+      {visible.map((person) => (
         <Avatar
           key={person.id}
           name={person.name}
           src={person.avatarUrl}
           size={size}
-          tone={TONE_CYCLE[i % TONE_CYCLE.length]}
           className={ring}
         />
       ))}
@@ -49,7 +44,6 @@ export function AvatarStack({
           name={`${overflow} more`}
           label={`+${overflow}`}
           size={size}
-          tone="neutral"
           className={ring}
         />
       ) : null}
