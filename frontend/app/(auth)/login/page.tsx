@@ -3,6 +3,8 @@ import { LoginPageClient } from "@/components/auth/login-page-client";
 import { isApprovedMember } from "@/lib/auth/landing";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 function safeNextPath(next: string | undefined): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
   if (next === "/login" || next === "/join" || next.startsWith("/auth/")) return null;
@@ -16,6 +18,9 @@ export default async function LoginPage({
 }) {
   const { next } = await searchParams;
   const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    return <LoginPageClient supabaseConfigured={false} />;
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -32,5 +37,5 @@ export default async function LoginPage({
     redirect("/join");
   }
 
-  return <LoginPageClient />;
+  return <LoginPageClient supabaseConfigured />;
 }

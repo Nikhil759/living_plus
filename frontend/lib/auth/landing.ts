@@ -5,6 +5,7 @@ export type LandingRoute = "/login" | "/join" | "/home";
 
 export async function resolveLandingRoute(): Promise<LandingRoute> {
   const supabase = await createServerSupabaseClient();
+  if (!supabase) return "/login";
   const {
     data: { user },
   } = await supabase.auth.getUser();

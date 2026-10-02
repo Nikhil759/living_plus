@@ -8,8 +8,13 @@ export const metadata: Metadata = {
   title: "Join your society · Living+",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function JoinPage() {
   const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    redirect("/login");
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();

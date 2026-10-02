@@ -3,5 +3,7 @@ node_modules
 next-env.d.ts
 *.tsbuildinfo
 .env*
+!.env.example
+!**/.env.example
 mcp.json
 .DS_Store
