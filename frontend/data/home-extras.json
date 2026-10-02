@@ -1,0 +1,56 @@
+{
+  "digest": {
+    "title": "Today",
+    "subtitle": "Summarised by Living+",
+    "summary": "Tower B water is paused this afternoon, two packages are waiting at Gate 1, and Diwali Mela stall slots close Friday. FIFA night and the morning ride are filling up.",
+    "totalCount": 5,
+    "items": [
+      {
+        "id": "dg-water",
+        "emoji": "water",
+        "lead": "Water maintenance",
+        "body": "Tower B supply paused 2:00–4:00 PM for motor replacement."
+      },
+      {
+        "id": "dg-mela",
+        "emoji": "sparkle",
+        "lead": "Diwali Mela",
+        "body": "Food and handcraft stall slots close Friday at 6:00 PM."
+      },
+      {
+        "id": "dg-mail",
+        "emoji": "package",
+        "lead": "Central Mailroom",
+        "body": "2 packages arrived for C-702 at Security Gate 1."
+      }
+    ]
+  },
+  "match": {
+    "label": "Interest Match",
+    "title": "Neighbours like you",
+    "description": "Four neighbours in Tower B also play PlayStation and FIFA on weekends.",
+    "totalCount": 7,
+    "people": [
+      {
+        "id": "p-kunal",
+        "name": "Kunal Mehra",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&q=80"
+      },
+      {
+        "id": "p-amit",
+        "name": "Amit Shah",
+        "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=128&q=80"
+      },
+      {
+        "id": "p-sana",
+        "name": "Sana Khan",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=128&q=80"
+      }
+    ],
+    "activeSummary": "Kunal, Amit and 2 others active today",
+    "actionLabel": "Start a group"
+  },
+  "prompt": {
+    "suggestion": "When is dry waste collection today?"
+  }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "am-gym",
+    "name": "Gym",
+    "emoji": "gym",
+    "status": "moderate",
+    "detail": "Free till 7pm"
+  },
+  {
+    "id": "am-pool",
+    "name": "Pool",
+    "emoji": "pool",
+    "status": "quiet",
+    "detail": "Free till 8pm"
+  },
+  {
+    "id": "am-badminton",
+    "name": "Badminton 1",
+    "emoji": "court",
+    "status": "booked",
+    "detail": "Busy till 7pm"
+  },
+  {
+    "id": "am-tennis",
+    "name": "Tennis Court",
+    "emoji": "court",
+    "status": "free",
+    "detail": "Free till 7pm"
+  },
+  {
+    "id": "am-cafe",
+    "name": "Cafe Lounge",
+    "emoji": "cafe",
+    "status": "open",
+    "detail": "Open now"
+  }
+]

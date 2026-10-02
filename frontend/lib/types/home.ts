@@ -34,6 +34,7 @@ export interface HomeEvent {
   imageAlt?: string;
   glyph: EventGlyph;
   goingCount: number;
+  going?: Person[];
   actionLabel: string;
   actionTone: "solid" | "soft";
   href: string;
@@ -58,12 +59,36 @@ export interface DigestItem {
   body: string;
 }
 
+/** Resident or group post shown in the society feed. */
+export interface FeedPost {
+  id: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  /** e.g. "Tower B · 404" */
+  authorMeta: string;
+  /** When set, post is surfaced in a group context. */
+  groupName?: string;
+  body: string;
+  /** ISO-8601 */
+  postedAt: string;
+  commentCount: number;
+  reactionCount: number;
+  imageUrl?: string;
+  imageAlt?: string;
+}
+
 export interface Digest {
   title: string;
   subtitle: string;
+  /** Short AI paragraph for the Today card. */
+  summary?: string;
   items: DigestItem[];
   /** Total announcements available (may exceed `items.length`). */
   totalCount: number;
+  /** Recent neighbour posts (social feed). */
+  posts?: FeedPost[];
+  /** Total posts in feed (may exceed `posts.length`). */
+  totalPostCount?: number;
 }
 
 export interface NeighbourMatch {

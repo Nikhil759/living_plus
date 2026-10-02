@@ -1,51 +1,48 @@
 import { Waves } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { AmenityChip } from "@/components/home/amenity-chip";
 import { SectionHeader } from "@/components/home/section-header";
-import type { Amenity } from "@/lib/types/home";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusDot, type StatusTone } from "@/components/ui/status-dot";
+import type { Amenity, AmenityStatus } from "@/lib/types/home";
 
-export interface AmenitiesSectionProps {
-  amenities: Amenity[];
+function statusTone(status: AmenityStatus): StatusTone {
+  if (status === "booked") return "red";
+  if (status === "moderate") return "amber";
+  return "green";
 }
 
-function LiveDot() {
-  return (
-    <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-      <span className="absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75 motion-safe:animate-ping" />
-      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-secondary" />
-    </span>
-  );
+function statusLabel(status: AmenityStatus): string {
+  if (status === "booked") return "Busy";
+  if (status === "moderate") return "Moderate";
+  if (status === "quiet") return "Quiet";
+  if (status === "free" || status === "open") return "Quiet";
+  return status;
 }
 
-export function AmenitiesSection({ amenities }: AmenitiesSectionProps) {
-  const hasAmenities = amenities.length > 0;
+export function AmenitiesSection({ amenities }: { amenities: Amenity[] }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <SectionHeader
-          title="Amenities right now"
-          adornment={hasAmenities ? <LiveDot /> : undefined}
-          action={hasAmenities ? { label: "Book", href: "/amenities" } : undefined}
-        />
-        {hasAmenities ? (
-          <span className="shrink-0 text-label-sm text-on-surface-variant">
-            Live occupancy
-          </span>
-        ) : null}
-      </div>
-
-      {hasAmenities ? (
-        <ul className="flex flex-wrap gap-2">
-          {amenities.map(({ id, ...amenity }) => (
-            <AmenityChip key={id} {...amenity} />
+    <section className="space-y-5">
+      <SectionHeader
+        title="Amenities right now"
+        action={amenities.length > 0 ? { label: "See all", href: "/amenities" } : undefined}
+      />
+      {amenities.length === 0 ? (
+        <EmptyState icon={<Waves />} title="No live amenity data" />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {amenities.map((amenity) => (
+            <li
+              key={amenity.id}
+              className="rounded-tile bg-card p-4 shadow-card"
+            >
+              <p className="text-headline text-ink">{amenity.name}</p>
+              <p className="mt-2 flex items-center gap-1.5 text-caption text-ink-secondary">
+                <StatusDot tone={statusTone(amenity.status)} />
+                {statusLabel(amenity.status)}
+              </p>
+              <p className="mt-1 text-caption text-ink-tertiary">{amenity.detail}</p>
+            </li>
           ))}
         </ul>
-      ) : (
-        <EmptyState
-          icon={<Waves className="h-6 w-6" aria-hidden="true" />}
-          title="No live amenity data"
-          description="Gym, pool and court availability will show up here once your society connects them."
-        />
       )}
     </section>
   );

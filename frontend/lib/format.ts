@@ -1,5 +1,16 @@
 const TIME_ZONE = "Asia/Kolkata";
 
+/** "Friday, 2 October · Sector 50 Residency" */
+export function formatHomeCaption(society: string, now: Date = new Date()): string {
+  const date = new Intl.DateTimeFormat("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: TIME_ZONE,
+  }).format(now);
+  return `${date} · ${society}`;
+}
+
 /** "Sat, 9:00 PM" */
 export function formatEventWhen(iso: string): string {
   const date = new Date(iso);
@@ -19,6 +30,25 @@ export function formatEventWhen(iso: string): string {
 }
 
 /** 0 -> "Free", 499 -> "₹499" */
+/** Short relative time for feed posts, e.g. "2h ago". */
+export function formatFeedAge(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso).getTime();
+  const diffMs = Math.max(0, now.getTime() - then);
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: TIME_ZONE,
+  }).format(new Date(iso));
+}
+
 export function formatPriceInr(amount: number): string {
   if (amount <= 0) return "Free";
   return new Intl.NumberFormat("en-IN", {

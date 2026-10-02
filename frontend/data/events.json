@@ -1,0 +1,124 @@
+[
+  {
+    "id": "evt-fifa-night",
+    "title": "FIFA 24 Tournament & Game Night",
+    "host": "Rohan (B-404) hosting",
+    "hostIcon": "person",
+    "schedule": { "weekday": 6, "hour": 21, "minute": 0 },
+    "location": "Club Lounge",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Friends playing a console game together",
+    "glyph": "game",
+    "goingCount": 8,
+    "going": [
+      {
+        "id": "g1",
+        "name": "Rohan",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "g2",
+        "name": "Kunal",
+        "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "g3",
+        "name": "Amit",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-fifa-night"
+  },
+  {
+    "id": "evt-salsa",
+    "title": "Community Salsa & Bachata",
+    "host": "Ananya (D-102) & Studio 7",
+    "hostIcon": "celebration",
+    "schedule": { "weekday": 0, "hour": 18, "minute": 0 },
+    "location": "Community Hall",
+    "priceInr": 499,
+    "imageUrl": "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Couple dancing in a hall",
+    "glyph": "music",
+    "goingCount": 14,
+    "going": [
+      {
+        "id": "s1",
+        "name": "Ananya",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "s2",
+        "name": "Meera",
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "s3",
+        "name": "Priya",
+        "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "Book Spot",
+    "actionTone": "soft",
+    "href": "/events/evt-salsa"
+  },
+  {
+    "id": "evt-expressway-ride",
+    "title": "Morning Expressway 25km Ride",
+    "host": "Resident Cyclists Club",
+    "hostIcon": "club",
+    "schedule": { "weekday": 6, "hour": 6, "minute": 30 },
+    "location": "Main Gate",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Cyclists on an early morning road",
+    "glyph": "ride",
+    "goingCount": 11,
+    "going": [
+      {
+        "id": "r1",
+        "name": "Ananya",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "r2",
+        "name": "Kunal",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "Join Ride",
+    "actionTone": "solid",
+    "href": "/events/evt-expressway-ride"
+  },
+  {
+    "id": "evt-terrace-yoga",
+    "title": "Sunrise Yoga on the Terrace",
+    "host": "Meera (A-301) · Yoga Circle",
+    "hostIcon": "person",
+    "schedule": { "weekday": 0, "hour": 6, "minute": 30 },
+    "location": "Clubhouse Terrace",
+    "priceInr": 0,
+    "imageUrl": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "Sunrise yoga session",
+    "glyph": "wellness",
+    "goingCount": 9,
+    "going": [
+      {
+        "id": "y1",
+        "name": "Meera",
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+      },
+      {
+        "id": "y2",
+        "name": "Sana",
+        "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80"
+      }
+    ],
+    "actionLabel": "RSVP",
+    "actionTone": "soft",
+    "href": "/events/evt-terrace-yoga"
+  }
+]

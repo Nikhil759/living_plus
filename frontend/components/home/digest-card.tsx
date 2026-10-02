@@ -1,60 +1,51 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ChevronRight, Droplets, Package, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import type { Digest } from "@/lib/types/home";
+import { GroupedList, ListRow } from "@/components/ui/grouped-list";
+import { IconTile } from "@/components/ui/icon-tile";
+import type { Digest, DigestItem } from "@/lib/types/home";
 
-export interface DigestCardProps {
-  digest: Digest;
-  href?: string;
+function noticeIcon(item: DigestItem) {
+  const key = `${item.emoji} ${item.lead}`.toLowerCase();
+  if (key.includes("water")) return <Droplets />;
+  if (key.includes("mail") || key.includes("package")) return <Package />;
+  return <Sparkles />;
 }
 
-export function DigestCard({ digest, href = "/announcements" }: DigestCardProps) {
+export function DigestCard({ digest }: { digest: Digest }) {
+  const items = digest.items.slice(0, 3);
+
   return (
-    <Card as="section" className="space-y-3 p-4 lg:p-5">
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-label-lg text-on-surface">{digest.title}</p>
-            <p className="truncate text-label-sm font-medium text-on-surface-variant">
-              {digest.subtitle}
-            </p>
-          </div>
+    <section className="space-y-4">
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 text-caption text-ink-secondary">
+          <Sparkles className="h-4 w-4 text-ink-secondary" strokeWidth={1.5} aria-hidden="true" />
+          Summarised by Living+
         </div>
-        <Badge>Today</Badge>
-      </header>
+        {digest.summary ? <p className="text-body text-ink">{digest.summary}</p> : null}
+      </Card>
 
-      <ul className="space-y-2 pt-1">
-        {digest.items.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-start gap-2.5 rounded-lg bg-surface-container-low p-2.5"
-          >
-            <span aria-hidden="true" className="mt-0.5 text-base">
-              {item.emoji}
-            </span>
-            <p className="min-w-0 flex-1 text-body-md text-on-surface">
-              <strong className="font-semibold">{item.lead}</strong> {item.body}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {items.length > 0 ? (
+        <GroupedList>
+          {items.map((item) => (
+            <ListRow
+              key={item.id}
+              href="/announcements"
+              title={item.lead.replace(/:$/, "")}
+              detail={item.body}
+              leading={<IconTile>{noticeIcon(item)}</IconTile>}
+            />
+          ))}
+        </GroupedList>
+      ) : null}
 
-      <div className="flex justify-end pt-1">
-        <Link
-          href={href}
-          className="group inline-flex items-center gap-1 text-label-md text-primary"
-        >
-          View all {digest.totalCount} announcements
-          <ArrowRight
-            className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
-      </div>
-    </Card>
+      <Link
+        href="/announcements"
+        className="inline-flex items-center gap-0.5 text-callout font-semibold text-primary"
+      >
+        All notices
+        <ChevronRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+      </Link>
+    </section>
   );
 }

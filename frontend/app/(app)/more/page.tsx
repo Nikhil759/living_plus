@@ -3,7 +3,12 @@ import {
   Bell,
   CalendarDays,
   ChevronRight,
+  Home,
+  IndianRupee,
+  LifeBuoy,
   Megaphone,
+  ShoppingBag,
+  Store,
   User,
   Users,
   Waves,
@@ -23,6 +28,36 @@ const LINKS = [
     icon: Megaphone,
   },
   {
+    href: "/marketplace",
+    label: "Marketplace",
+    description: "Buy and sell second-hand items",
+    icon: ShoppingBag,
+  },
+  {
+    href: "/local-businesses",
+    label: "Local businesses",
+    description: "Tiffin, services, and shops nearby",
+    icon: Store,
+  },
+  {
+    href: "/flat-openings",
+    label: "Flat openings",
+    description: "Rooms, flatmates & full flats",
+    icon: Home,
+  },
+  {
+    href: "/help-desk",
+    label: "Help desk",
+    description: "Issues, feedback & vendor directory",
+    icon: LifeBuoy,
+  },
+  {
+    href: "/rent",
+    label: "Rent · Coming soon",
+    description: "Track rent and recurring payments",
+    icon: IndianRupee,
+  },
+  {
     href: "/notifications",
     label: "Notifications",
     description: "Packages, RSVPs, updates",
@@ -35,7 +70,7 @@ export default function MorePage() {
   return (
     <AppPage title="More">
       <p className="text-body-md text-on-surface-variant">
-        Shortcuts to everything in the app. Help desk and marketplace arrive with the backend.
+        Shortcuts to everything in the app.
       </p>
       <ul className="space-y-2">
         {LINKS.map(({ href, label, description, icon: Icon }) => (
