@@ -16,6 +16,7 @@ function supabaseConfig(): { url: string; key: string } | null {
 
 function isProtectedAppRoute(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname.startsWith("/api/")) return false;
   if (AUTH_ROUTES.has(pathname)) return false;
   if (pathname.startsWith(AUTH_PREFIX)) return false;
   if (pathname.startsWith("/_next")) return false;

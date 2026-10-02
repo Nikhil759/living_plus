@@ -38,5 +38,10 @@ export async function lookupInviteCode(code: string): Promise<SocietyMatch | nul
     throw inviteLookupError(new Error(`lookup ${response.status}`));
   }
 
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw inviteLookupError(new TypeError("failed to fetch"));
+  }
+
   return (await response.json()) as SocietyMatch;
 }
