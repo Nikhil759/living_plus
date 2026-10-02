@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 
-from app.routers import amenities, announcements, events, health, home, me
+from app.routers import amenities, announcements, events, health, home, invites, me, societies
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(health.router)
+api_router.include_router(societies.router)
+api_router.include_router(invites.router)
 api_router.include_router(me.router)
 api_router.include_router(home.router)
 api_router.include_router(events.router)

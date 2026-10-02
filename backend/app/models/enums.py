@@ -21,6 +21,13 @@ class MembershipStatus(StrEnum):
     rejected = "rejected"
 
 
+class MembershipInviteStatus(StrEnum):
+    pending = "pending"
+    consumed = "consumed"
+    expired = "expired"
+    revoked = "revoked"
+
+
 class AmenityType(StrEnum):
     gym = "gym"
     pool = "pool"

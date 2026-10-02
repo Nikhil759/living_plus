@@ -74,6 +74,22 @@ cd backend
 PYTHONPATH=. uv run python scripts/seed.py
 ```
 
-Invite code: `AANGAN50`. Demo users use synthetic `supabase_uid` values (`seed:…@…`); they
-won’t sign in until matching Supabase Auth accounts exist. Optional: set `SEED_DEMO_PASSWORD`
-and extend the script with the Supabase Admin API (Prompt 4).
+Society bootstrap code (legacy): `AANGAN50`.
+
+**Guest demo codes** for **Prestige Meridian Park** (one use each, any Google account) — from
+`scripts/seed.py`:
+
+| Code | Flat |
+|------|------|
+| `PMG-7H4K` | C-702 |
+| `PMG-9R2N` | A-101 |
+| `PMG-3W8P` | B-105 |
+| `PMG-5K1M` | C-104 |
+| `PMG-2L6T` | D-108 |
+| `PMG-8V4C` | A-106 |
+| `PMG-1D9X` | B-102 |
+| `PMG-6F3Q` | D-101 |
+
+Re-run `seed.py` to reset consumed guest codes before the next demo session.
+
+Redeem via the app (`/join`) or `POST /v1/invites/redeem` with a Supabase access token.

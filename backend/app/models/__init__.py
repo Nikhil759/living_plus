@@ -19,6 +19,7 @@ from app.models.enums import (
     GroupMemberRole,
     JoinRequestStatus,
     JoinTargetType,
+    MembershipInviteStatus,
     MembershipRole,
     MembershipStatus,
     ReactionType,
@@ -28,6 +29,7 @@ from app.models.enums import (
 from app.models.event import Event, EventTicket, StallApplication
 from app.models.flat import Flat
 from app.models.membership import Membership
+from app.models.membership_invite import MembershipInvite
 from app.models.profile import Profile
 from app.models.society import Society
 from app.models.tower import Tower
@@ -56,6 +58,8 @@ __all__ = [
     "JoinRequestStatus",
     "JoinTargetType",
     "Membership",
+    "MembershipInvite",
+    "MembershipInviteStatus",
     "MembershipRole",
     "MembershipStatus",
     "Post",

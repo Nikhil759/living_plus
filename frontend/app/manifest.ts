@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Living+",
     short_name: "Living+",
     description: "Your society, your neighbours, your Living+.",
-    start_url: "/home",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#FBFBFD",

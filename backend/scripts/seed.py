@@ -1,4 +1,4 @@
-"""Idempotent demo data for Sector 50 Residency. Safe to re-run.
+"""Idempotent demo data for Prestige Meridian Park. Safe to re-run.
 
 Usage (from backend/):
     uv run python scripts/seed.py
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_sessionmaker
 from app.models import (
     Amenity,
+    MembershipInvite,
     AmenityBooking,
     AmenityBookingStatus,
     AmenityStatus,
@@ -37,6 +38,7 @@ from app.models import (
     GroupMember,
     GroupMemberRole,
     Membership,
+    MembershipInviteStatus,
     MembershipRole,
     MembershipStatus,
     Post,
@@ -54,6 +56,27 @@ from app.models import (
 
 SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 INVITE_CODE = "AANGAN50"
+
+from app.services.invites import OPEN_INVITE_EMAIL
+
+SOCIETY_DISPLAY_NAME = "Prestige Meridian Park"
+
+# One-time guest codes — any Google email; share with demo visitors (re-seed resets consumed guest codes).
+GUEST_MEMBERSHIP_INVITES: list[tuple[str, str, MembershipRole]] = [
+    ("PMG-7H4K", "C-702", MembershipRole.tenant),
+    ("PMG-9R2N", "A-101", MembershipRole.tenant),
+    ("PMG-3W8P", "B-105", MembershipRole.tenant),
+    ("PMG-5K1M", "C-104", MembershipRole.tenant),
+    ("PMG-2L6T", "D-108", MembershipRole.tenant),
+    ("PMG-8V4C", "A-106", MembershipRole.tenant),
+    ("PMG-1D9X", "B-102", MembershipRole.tenant),
+    ("PMG-6F3Q", "D-101", MembershipRole.tenant),
+]
+
+# Email-bound invites (testing / committee flows).
+BOUND_MEMBERSHIP_INVITES: list[tuple[str, str, str, MembershipRole]] = [
+    ("PMG-DEV-702", "demo@aangan.app", "C-702", MembershipRole.owner),
+]
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -132,13 +155,16 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
         session,
         Society,
         sid("society.sector50"),
-        name="Sector 50 Residency",
-        city="Gurgaon",
-        address="Sector 50, Gurugram, Haryana",
+        name=SOCIETY_DISPLAY_NAME,
+        city="Gurugram",
+        address="Sector 43, Gurugram, Haryana",
         invite_code=INVITE_CODE,
         plan=SocietyPlan.free,
         settings={"timezone": "Asia/Kolkata"},
     )
+    society.name = SOCIETY_DISPLAY_NAME
+    society.city = "Gurugram"
+    society.address = "Sector 43, Gurugram, Haryana"
 
     towers: dict[str, Tower] = {}
     flats: dict[str, Flat] = {}
@@ -234,7 +260,7 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
                 Profile(
                     user_id=user.id,
                     society_id=society.id,
-                    bio=f"Resident at Sector 50 · loves {', '.join(interests[:2])}.",
+                    bio=f"Resident at {SOCIETY_DISPLAY_NAME} · loves {', '.join(interests[:2])}.",
                     interests=interests,
                     is_visible=idx % 2 == 0,
                     show_flat=False,
@@ -264,7 +290,7 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
             Profile(
                 user_id=demo.id,
                 society_id=society.id,
-                bio="Tower C rep · FIFA weekends · building Aangan.",
+                bio=f"Tower C rep · FIFA weekends · {SOCIETY_DISPLAY_NAME}.",
                 interests=["FIFA", "running", "cricket", "tech"],
                 is_visible=True,
                 show_flat=False,
@@ -272,6 +298,77 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
         )
 
     return society, users, flats
+
+
+async def _upsert_invite(
+    session: AsyncSession,
+    society: Society,
+    flats: dict[str, Flat],
+    code: str,
+    email: str,
+    flat_key: str,
+    role: MembershipRole,
+    *,
+    reset_guest: bool,
+) -> None:
+    flat = flats.get(flat_key)
+    if flat is None:
+        return
+    invite_id = sid(f"invite.{code}")
+    invite = await session.get(MembershipInvite, invite_id)
+    normalized_email = email.strip().lower() if email != OPEN_INVITE_EMAIL else OPEN_INVITE_EMAIL
+    if invite is None:
+        session.add(
+            MembershipInvite(
+                id=invite_id,
+                society_id=society.id,
+                flat_id=flat.id,
+                email=normalized_email,
+                role=role,
+                code=code,
+                status=MembershipInviteStatus.pending,
+            )
+        )
+        return
+    invite.flat_id = flat.id
+    invite.role = role
+    if normalized_email == OPEN_INVITE_EMAIL:
+        if reset_guest or invite.status == MembershipInviteStatus.pending:
+            invite.email = OPEN_INVITE_EMAIL
+            invite.status = MembershipInviteStatus.pending
+            invite.consumed_at = None
+            invite.consumed_by_user_id = None
+    elif invite.status == MembershipInviteStatus.pending:
+        invite.email = normalized_email
+
+
+async def seed_membership_invites(
+    session: AsyncSession,
+    society: Society,
+    flats: dict[str, Flat],
+) -> None:
+    for code, flat_key, role in GUEST_MEMBERSHIP_INVITES:
+        await _upsert_invite(
+            session,
+            society,
+            flats,
+            code,
+            OPEN_INVITE_EMAIL,
+            flat_key,
+            role,
+            reset_guest=True,
+        )
+    for code, email, flat_key, role in BOUND_MEMBERSHIP_INVITES:
+        await _upsert_invite(
+            session,
+            society,
+            flats,
+            code,
+            email,
+            flat_key,
+            role,
+            reset_guest=False,
+        )
 
 
 async def _ensure_membership(
@@ -382,7 +479,7 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
     wa_specs = [
         ("Tower C Updates", "Notices for Tower C residents", 142),
         ("FIFA Weekend Lobby", "Pick-up games & watch parties", 38),
-        ("Society Marketplace", "Buy/sell within Sector 50", 256),
+        ("Society Marketplace", f"Buy/sell within {SOCIETY_DISPLAY_NAME}", 256),
     ]
     for idx, (name, topic, count) in enumerate(wa_specs):
         await get_or_create(
@@ -590,13 +687,18 @@ async def run_seed() -> None:
         existing = await session.scalar(
             select(Society.id).where(Society.invite_code == INVITE_CODE)
         )
-        society, users, _flats = await seed_identity(session)
+        society, users, flats = await seed_identity(session)
+        await seed_membership_invites(session, society, flats)
         await seed_amenities(session, society, users)
         await seed_community(session, society, users)
         await seed_events(session, society, users)
         await session.commit()
         action = "Updated" if existing else "Created"
-        print(f"{action} demo data for {society.name} (invite {INVITE_CODE}).")
+        print(f"{action} demo data for {society.name} (society code {INVITE_CODE}).")
+        print("\nGuest demo codes (one use each, any Google sign-in):")
+        for code, flat_key, role in GUEST_MEMBERSHIP_INVITES:
+            print(f"  {code:12}  {flat_key:8}  {role.value}")
+        print("\nRe-run seed to reset consumed guest codes for the next demo session.")
 
 
 def main() -> None:

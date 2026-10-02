@@ -40,5 +40,5 @@ cd backend && railway up
 
 ## Smoke checks
 
-- Frontend: open `/home`.
+- Frontend: open `/` → login for new visitors; members land on `/home`.
 - API: `GET https://<railway-host>/v1/health` → `{"status":"ok","db":true}`.

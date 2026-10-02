@@ -19,7 +19,7 @@ export const mockResident: Resident = {
   id: "res-nikhil",
   name: "Nikhil",
   avatarUrl: "/mock/avatar-nikhil.jpg",
-  society: "Sector 50 Residency",
+  society: "Prestige Meridian Park",
   tower: "Tower C",
   flat: "702",
   roles: ["Tower C Rep"],
