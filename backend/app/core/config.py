@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     ENV: Literal["local", "test", "staging", "production"] = "local"
     # Local only: when no Bearer token is sent, act as this seeded user (see scripts/seed.py).
     LOCAL_DEV_AUTH_EMAIL: str | None = None
+    # Reusable demo join code (any email, never consumed). Empty disables.
+    MASTER_INVITE_CODE: str = "LIVING-OPEN-50"
 
     @field_validator("DATABASE_URL")
     @classmethod

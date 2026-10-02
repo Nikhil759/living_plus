@@ -92,4 +92,7 @@ Society bootstrap code (legacy): `AANGAN50`.
 
 Re-run `seed.py` to reset consumed guest codes before the next demo session.
 
+**Master demo code (reusable, any Google account, never consumed):** `LIVING-OPEN-50`  
+Override via env `MASTER_INVITE_CODE` (empty string disables).
+
 Redeem via the app (`/join`) or `POST /v1/invites/redeem` with a Supabase access token.

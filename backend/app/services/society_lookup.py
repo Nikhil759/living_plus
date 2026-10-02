@@ -5,17 +5,17 @@ from sqlalchemy.orm import joinedload
 from app.models import Flat, Membership, MembershipInvite
 from app.models.enums import MembershipInviteStatus, MembershipStatus
 from app.schemas.society_lookup import SocietyLookupOut
-from app.services.invites import normalize_invite_code
+from app.services.invites import is_master_invite_code, normalize_invite_code
 
 
 async def lookup_invite_code(db: AsyncSession, code: str) -> SocietyLookupOut | None:
     normalized = normalize_invite_code(code)
+    filters = [MembershipInvite.code == normalized]
+    if not is_master_invite_code(normalized):
+        filters.append(MembershipInvite.status == MembershipInviteStatus.pending)
     result = await db.execute(
         select(MembershipInvite)
-        .where(
-            MembershipInvite.code == normalized,
-            MembershipInvite.status == MembershipInviteStatus.pending,
-        )
+        .where(*filters)
         .options(joinedload(MembershipInvite.society))
     )
     invite = result.scalar_one_or_none()

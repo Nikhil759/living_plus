@@ -62,6 +62,13 @@ from app.services.invites import OPEN_INVITE_EMAIL
 SOCIETY_DISPLAY_NAME = "Prestige Meridian Park"
 
 # One-time guest codes — any Google email; share with demo visitors (re-seed resets consumed guest codes).
+# Reusable for every demo / interviewer (see MASTER_INVITE_CODE in app/core/config.py).
+MASTER_MEMBERSHIP_INVITE: tuple[str, str, MembershipRole] = (
+    "LIVING-OPEN-50",
+    "C-702",
+    MembershipRole.tenant,
+)
+
 GUEST_MEMBERSHIP_INVITES: list[tuple[str, str, MembershipRole]] = [
     ("PMG-7H4K", "C-702", MembershipRole.tenant),
     ("PMG-9R2N", "A-101", MembershipRole.tenant),
@@ -347,6 +354,17 @@ async def seed_membership_invites(
     society: Society,
     flats: dict[str, Flat],
 ) -> None:
+    master_code, master_flat, master_role = MASTER_MEMBERSHIP_INVITE
+    await _upsert_invite(
+        session,
+        society,
+        flats,
+        master_code,
+        OPEN_INVITE_EMAIL,
+        master_flat,
+        master_role,
+        reset_guest=True,
+    )
     for code, flat_key, role in GUEST_MEMBERSHIP_INVITES:
         await _upsert_invite(
             session,
@@ -695,6 +713,9 @@ async def run_seed() -> None:
         await session.commit()
         action = "Updated" if existing else "Created"
         print(f"{action} demo data for {society.name} (society code {INVITE_CODE}).")
+        master_code, master_flat, master_role = MASTER_MEMBERSHIP_INVITE
+        print(f"\nMaster demo code (reusable, any Google sign-in, never expires):")
+        print(f"  {master_code:12}  {master_flat:8}  {master_role.value}")
         print("\nGuest demo codes (one use each, any Google sign-in):")
         for code, flat_key, role in GUEST_MEMBERSHIP_INVITES:
             print(f"  {code:12}  {flat_key:8}  {role.value}")

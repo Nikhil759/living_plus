@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.config import get_settings
 from app.core.errors import AppError
 from app.models import Flat, Membership, MembershipInvite, Profile, User
 from app.models.enums import MembershipInviteStatus, MembershipStatus
@@ -23,6 +24,13 @@ def normalize_email(email: str) -> str:
 
 def is_open_invite(email: str) -> bool:
     return normalize_email(email) == OPEN_INVITE_EMAIL
+
+
+def is_master_invite_code(code: str) -> bool:
+    master = get_settings().MASTER_INVITE_CODE.strip().upper()
+    if not master:
+        return False
+    return normalize_invite_code(code) == master
 
 
 def _utc_now_naive() -> datetime:
@@ -48,11 +56,12 @@ async def redeem_invite(
     if invite is None:
         raise AppError("invalid_invite", "Invite code not found.", 404)
 
-    if invite.status != MembershipInviteStatus.pending:
+    master = is_master_invite_code(code)
+    if invite.status != MembershipInviteStatus.pending and not master:
         raise AppError("invite_used", "This invite code has already been used or revoked.", 409)
 
     now = _utc_now_naive()
-    if invite.expires_at is not None and invite.expires_at < now:
+    if not master and invite.expires_at is not None and invite.expires_at < now:
         invite.status = MembershipInviteStatus.expired
         raise AppError("invite_expired", "This invite code has expired.", 410)
 
@@ -96,11 +105,12 @@ async def redeem_invite(
             )
         )
 
-    invite.status = MembershipInviteStatus.consumed
-    invite.consumed_at = now
-    invite.consumed_by_user_id = user.id
-    if is_open_invite(invite.email):
-        invite.email = normalize_email(user.email)
+    if not master:
+        invite.status = MembershipInviteStatus.consumed
+        invite.consumed_at = now
+        invite.consumed_by_user_id = user.id
+        if is_open_invite(invite.email):
+            invite.email = normalize_email(user.email)
 
     await db.commit()
 
