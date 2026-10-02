@@ -12,7 +12,8 @@
     --hairline: rgba(0, 0, 0, 0.08);
     --fill-quiet: rgba(0, 0, 0, 0.04);
     --primary: #0284c7;
-    --primary-tint: rgba(2, 132, 199, 0.1);
+    /* Opaque light sky — secondary buttons, icon tiles, header actions */
+    --primary-tint: #e0f2fe;
     --primary-pressed: #0279b7;
     --status-green: #34c759;
     --status-amber: #ff9f0a;

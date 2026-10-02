@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { LivingWordmark } from "@/components/brand/living-wordmark";
+import { headerIconButtonClass } from "@/components/layout/header-action-button";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { MAIN_GUTTER } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils";
 
@@ -53,16 +55,21 @@ export function TopBar({ title, resident }: TopBarProps) {
           )}
         </div>
 
-        <Link
-          href="/notifications"
-          aria-label={resident.hasUnreadNotifications ? "Notifications (unread)" : "Notifications"}
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors duration-premium ease-premium hover:bg-quiet"
-        >
+        <div className="flex shrink-0 items-center gap-1">
+          <PwaInstallButton />
+          <Link
+            href="/notifications"
+            aria-label={
+              resident.hasUnreadNotifications ? "Notifications (unread)" : "Notifications"
+            }
+            className={cn("relative", headerIconButtonClass())}
+          >
           <Bell className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
           {resident.hasUnreadNotifications ? (
-            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-primary ring-2 ring-card" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-primary ring-2 ring-primary-tint" />
           ) : null}
-        </Link>
+          </Link>
+        </div>
       </div>
     </header>
   );

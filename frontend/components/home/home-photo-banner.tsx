@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { MAIN_GUTTER } from "@/components/layout/page-container";
+import { headerIconButtonClass } from "@/components/layout/header-action-button";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { Avatar } from "@/components/ui/avatar";
 import { formatHomeCaption, getGreeting } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -62,13 +64,10 @@ function BannerCopy({
   );
 }
 
-function UnreadDot({ frosted }: { frosted: boolean }) {
+function UnreadDot() {
   return (
     <span
-      className={cn(
-        "absolute right-[11px] top-[11px] h-2 w-2 rounded-full bg-primary ring-2",
-        frosted ? "ring-white" : "ring-card",
-      )}
+      className="absolute right-[11px] top-[11px] h-2 w-2 rounded-full bg-primary ring-2 ring-primary-tint"
       aria-hidden="true"
     />
   );
@@ -87,21 +86,16 @@ function BannerActions({
 
   return (
     <div className="flex shrink-0 items-center gap-2.5">
+      <PwaInstallButton />
       <Link
         href="/notifications"
         aria-label={
           resident.hasUnreadNotifications ? "Notifications (unread)" : "Notifications"
         }
-        className={cn(
-          "relative flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-premium ease-premium",
-          frosted &&
-            "border border-white/[0.35] bg-white/[0.22] text-white backdrop-blur-[16px] backdrop-saturate-[180]",
-          variant === "glass" && "text-ink-secondary hover:bg-quiet",
-          variant === "plain" && "text-ink-secondary hover:bg-quiet",
-        )}
+        className={cn("relative", headerIconButtonClass())}
       >
         <Bell className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
-        {resident.hasUnreadNotifications ? <UnreadDot frosted={frosted} /> : null}
+        {resident.hasUnreadNotifications ? <UnreadDot /> : null}
       </Link>
       {showAvatar ? (
         <Link href="/profile" aria-label="Profile" className="hidden rounded-full lg:block">
