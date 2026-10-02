@@ -20,6 +20,21 @@ Check it: `curl localhost:8000/v1/health` → `{"status":"ok","db":true}`
 (`"db":false` means the app is up but cannot reach Postgres). Interactive docs are at
 `http://localhost:8000/docs`.
 
+### Wire the Next.js UI (local)
+
+1. Seed demo data (see below), then start the API as above.
+2. In `backend/.env`, set `ENV=local` and `LOCAL_DEV_AUTH_EMAIL=demo@aangan.app` so read
+   endpoints work without a Supabase JWT (dev only).
+3. Set `FRONTEND_ORIGIN` to the exact URL Next.js prints (e.g. `http://localhost:3000` or
+   `http://localhost:3001` if 3000 is busy).
+4. In `frontend/.env.local`, set `NEXT_PUBLIC_API_URL=http://localhost:8000` and restart
+   `npm run dev`.
+
+By default the UI uses bundled JSON (`NEXT_PUBLIC_DATA_SOURCE=static` in
+`frontend/.env.example`). Set `NEXT_PUBLIC_DATA_SOURCE=api` to load Home, Events,
+Amenities, and Announcements from `GET /v1/home`, `/v1/events`, etc. Use `?state=empty`
+on Home for an empty-state preview.
+
 `DATABASE_URL` must use the `postgresql+asyncpg://` scheme. Run migrations against
 Supabase's direct connection (port 5432), not the pooled one.
 

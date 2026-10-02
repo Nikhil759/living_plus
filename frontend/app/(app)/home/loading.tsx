@@ -10,7 +10,7 @@ export default function HomeLoading() {
     <>
       <HomeBannerFallback resident={resident} />
       <PageContainer className="pt-0">
-        <div className="-mt-6">
+        <div className="-mt-6 lg:-mt-10">
           <HomeSkeleton />
         </div>
       </PageContainer>

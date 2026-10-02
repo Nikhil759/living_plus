@@ -64,8 +64,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         {loadError ? <ErrorState message={loadError} /> : null}
 
         <div className="flex flex-col gap-section xl:grid xl:grid-cols-[minmax(0,1fr)_min(100%,22rem)] xl:items-start xl:gap-10">
-          <div className="relative z-10 -mt-6 flex flex-col gap-section">
-            {digest ? <DigestCard digest={digest} /> : null}
+          <div className="relative z-10 flex flex-col gap-section">
+            {digest ? (
+              <div className="-mt-6 lg:-mt-10">
+                <DigestCard digest={digest} />
+              </div>
+            ) : null}
             <EventsSection events={events} />
             <AmenitiesSection amenities={amenities} />
             <div className="xl:hidden">

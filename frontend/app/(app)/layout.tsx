@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-dvh bg-canvas">
       <AskShortcut />
       <Sidebar resident={resident} />
-      <div className="lg:pl-64">{children}</div>
+      <div className="min-w-0 lg:pl-sidebar">{children}</div>
       <BottomNav />
     </div>
   );

@@ -10,7 +10,7 @@ import { formatHomeCaption, getGreeting } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Resident } from "@/lib/types/home";
 
-const BANNER_HEIGHT = "h-[180px] lg:h-[220px]";
+const BANNER_HEIGHT = "h-[180px] md:h-[200px] lg:h-[280px]";
 const HOME_BANNER_SRC = "/home-banner.png";
 
 /** Aligns with the main column; bottom / top inset uses 32px (p-8). */
@@ -21,6 +21,8 @@ export type HomeBannerResident = Pick<
   Resident,
   "name" | "avatarUrl" | "society" | "hasUnreadNotifications"
 >;
+
+type BannerActionVariant = "frosted" | "glass" | "plain";
 
 function BannerCopy({
   resident,
@@ -39,7 +41,9 @@ function BannerCopy({
       <p
         className={cn(
           "text-caption",
-          light ? "text-white/80" : "text-ink-secondary",
+          light
+            ? "text-white/90 [text-shadow:0_1px_12px_rgba(0,0,0,0.25)]"
+            : "text-ink-secondary",
         )}
       >
         {formatHomeCaption(resident.society)}
@@ -58,7 +62,29 @@ function BannerCopy({
   );
 }
 
-function BannerActions({ resident, frosted }: { resident: HomeBannerResident; frosted: boolean }) {
+function UnreadDot({ frosted }: { frosted: boolean }) {
+  return (
+    <span
+      className={cn(
+        "absolute right-[11px] top-[11px] h-2 w-2 rounded-full bg-primary ring-2",
+        frosted ? "ring-white" : "ring-card",
+      )}
+      aria-hidden="true"
+    />
+  );
+}
+
+function BannerActions({
+  resident,
+  variant,
+  showAvatar = true,
+}: {
+  resident: HomeBannerResident;
+  variant: BannerActionVariant;
+  showAvatar?: boolean;
+}) {
+  const frosted = variant === "frosted";
+
   return (
     <div className="flex shrink-0 items-center gap-2.5">
       <Link
@@ -68,29 +94,25 @@ function BannerActions({ resident, frosted }: { resident: HomeBannerResident; fr
         }
         className={cn(
           "relative flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-premium ease-premium",
-          frosted
-            ? "border border-white/30 bg-white/[0.22] text-white backdrop-blur-[16px] backdrop-saturate-[180]"
-            : "text-ink-secondary hover:bg-quiet",
+          frosted &&
+            "border border-white/[0.35] bg-white/[0.22] text-white backdrop-blur-[16px] backdrop-saturate-[180]",
+          variant === "glass" && "text-ink-secondary hover:bg-quiet",
+          variant === "plain" && "text-ink-secondary hover:bg-quiet",
         )}
       >
         <Bell className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
-        {resident.hasUnreadNotifications ? (
-          <span
-            className={cn(
-              "absolute right-2 top-2 h-2 w-2 rounded-full bg-primary",
-              frosted ? "ring-2 ring-white/40" : "ring-2 ring-card",
-            )}
+        {resident.hasUnreadNotifications ? <UnreadDot frosted={frosted} /> : null}
+      </Link>
+      {showAvatar ? (
+        <Link href="/profile" aria-label="Profile" className="hidden rounded-full lg:block">
+          <Avatar
+            name={resident.name}
+            src={resident.avatarUrl}
+            size="sm"
+            className={cn(frosted && "ring-2 ring-white")}
           />
-        ) : null}
-      </Link>
-      <Link href="/profile" aria-label="Profile" className="rounded-full">
-        <Avatar
-          name={resident.name}
-          src={resident.avatarUrl}
-          size="sm"
-          className={cn(frosted && "ring-2 ring-white")}
-        />
-      </Link>
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -107,7 +129,7 @@ export function HomeBannerFallback({ resident }: { resident: HomeBannerResident 
           BANNER_PAD_X,
         )}
       >
-        <BannerActions resident={resident} frosted={false} />
+        <BannerActions resident={resident} variant="plain" showAvatar={false} />
       </div>
       <div className={cn("absolute inset-x-0 bottom-0", BANNER_PAD_X, BANNER_PAD_BOTTOM)}>
         <BannerCopy resident={resident} variant="dark" greetingRef={greetingRef} />
@@ -147,7 +169,7 @@ export function HomePhotoBanner({ resident }: { resident: HomeBannerResident }) 
       >
         <div className={cn("flex h-14 items-center justify-between gap-3", MAIN_GUTTER)}>
           <p className="truncate text-headline text-ink">Home</p>
-          <BannerActions resident={resident} frosted={false} />
+          <BannerActions resident={resident} variant="glass" />
         </div>
       </header>
 
@@ -160,38 +182,42 @@ export function HomePhotoBanner({ resident }: { resident: HomeBannerResident }) 
           aria-hidden={imageLoaded}
         />
 
-        <Image
-          src={HOME_BANNER_SRC}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className={cn(
-            "object-cover object-[center_60%] saturate-[0.9] transition-opacity duration-premium ease-premium motion-reduce:transition-none",
-            imageLoaded ? "opacity-100" : "opacity-0",
-          )}
-          onLoad={() => setImageLoaded(true)}
-        />
+        <div className="banner-edge-mask absolute inset-0">
+          <Image
+            src={HOME_BANNER_SRC}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className={cn(
+              "object-cover object-[70%_55%] saturate-[0.9] transition-opacity duration-premium ease-premium motion-reduce:transition-none",
+              imageLoaded ? "opacity-100" : "opacity-0",
+            )}
+            onLoad={() => setImageLoaded(true)}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: "linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 60%)",
+            }}
+            aria-hidden="true"
+          />
+        </div>
 
         <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 60%), linear-gradient(to bottom, transparent 40%, var(--bg) 100%)",
-          }}
-          aria-hidden="true"
-        />
-
-        <div
           className={cn(
-            "absolute inset-x-0 top-0 flex justify-end pt-[calc(env(safe-area-inset-top,0px)+12px)]",
+            "absolute inset-x-0 top-0 z-10 flex justify-end pt-[calc(env(safe-area-inset-top,0px)+12px)]",
             BANNER_PAD_X,
           )}
         >
-          <BannerActions resident={resident} frosted={imageLoaded} />
+          <BannerActions
+            resident={resident}
+            variant={imageLoaded ? "frosted" : "plain"}
+            showAvatar={imageLoaded}
+          />
         </div>
 
-        <div className={cn("absolute inset-x-0 bottom-0", BANNER_PAD_X, BANNER_PAD_BOTTOM)}>
+        <div className={cn("absolute inset-x-0 bottom-0 z-10", BANNER_PAD_X, BANNER_PAD_BOTTOM)}>
           <BannerCopy
             resident={resident}
             variant={imageLoaded ? "light" : "dark"}

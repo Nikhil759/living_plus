@@ -6,7 +6,7 @@ import { LivingWordmark } from "@/components/brand/living-wordmark";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { isNavActive, NAV_ITEMS } from "@/components/layout/nav-items";
+import { isNavActive, sidebarNavItems } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 import type { Resident } from "@/lib/types/home";
 
@@ -16,11 +16,11 @@ export interface SidebarProps {
 
 export function Sidebar({ resident }: SidebarProps) {
   const pathname = usePathname();
-  const links = NAV_ITEMS.filter((item) => !item.primary);
+  const links = sidebarNavItems();
   const role = resident.roles[0];
 
   return (
-    <aside className="glass fixed inset-y-0 left-0 z-40 hidden w-64 flex-col lg:flex">
+    <aside className="glass fixed inset-y-0 left-0 z-40 hidden w-sidebar flex-col lg:flex">
       <div className="px-5 pb-3 pt-8">
         <Link href="/home" aria-label="Living+ home">
           <LivingWordmark />
@@ -63,7 +63,7 @@ export function Sidebar({ resident }: SidebarProps) {
         </ul>
       </nav>
 
-      <div className="p-4">
+      <div className="hidden p-4 lg:block">
         <Link
           href="/profile"
           className="flex items-center gap-3 rounded-tile p-2 transition-colors duration-premium ease-premium hover:bg-quiet"

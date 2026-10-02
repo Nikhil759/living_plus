@@ -1,6 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/** Horizontal inset for the main column — matches top bar padding. */
+export const MAIN_GUTTER =
+  "px-4 sm:px-5 lg:px-8 xl:px-10 xl:pr-12";
+
 export function PageContainer({
   className,
   ...props
@@ -8,8 +12,9 @@ export function PageContainer({
   return (
     <main
       className={cn(
-        "mx-auto flex w-full max-w-content flex-col gap-section px-6 pb-28 pt-16",
-        "lg:px-10 lg:pb-16 lg:pt-14",
+        "flex w-full max-w-none flex-col gap-section pb-28 pt-[calc(3.5rem+env(safe-area-inset-top,0px))]",
+        "lg:pb-16 lg:pt-[calc(3rem+env(safe-area-inset-top,0px))]",
+        MAIN_GUTTER,
         className,
       )}
       {...props}

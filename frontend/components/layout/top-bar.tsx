@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { LivingWordmark } from "@/components/brand/living-wordmark";
+import { MAIN_GUTTER } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils";
 
 export interface TopBarProps {
@@ -12,10 +14,11 @@ export interface TopBarProps {
 
 export function TopBar({ title, resident }: TopBarProps) {
   const [scrolled, setScrolled] = useState(false);
+  const isHome = title === "Home";
 
   useEffect(() => {
     function onScroll() {
-      setScrolled(window.scrollY > 48);
+      setScrolled(window.scrollY > 8);
     }
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -25,20 +28,39 @@ export function TopBar({ title, resident }: TopBarProps) {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-opacity duration-premium ease-premium lg:left-64",
-        scrolled ? "opacity-100" : "pointer-events-none opacity-0",
+        "glass fixed inset-x-0 top-0 z-50 pt-safe transition-shadow duration-premium ease-premium lg:left-sidebar",
+        scrolled ? "shadow-[0_1px_0_var(--hairline)]" : null,
       )}
     >
-      <div className="glass mx-auto flex h-12 max-w-content items-center justify-between px-6 pt-safe">
-        <p className="truncate text-headline text-ink">{title}</p>
+      <div className={cn("flex h-14 items-center gap-3 lg:h-12", MAIN_GUTTER)}>
+        <div className="min-w-0 flex-1">
+          {isHome ? (
+            <>
+              <Link href="/home" className="inline-flex lg:hidden" aria-label="Living+ home">
+                <LivingWordmark />
+              </Link>
+              <p
+                className={cn(
+                  "hidden truncate text-headline text-ink transition-opacity duration-premium ease-premium lg:block",
+                  scrolled ? "opacity-100" : "opacity-0",
+                )}
+              >
+                {title}
+              </p>
+            </>
+          ) : (
+            <p className="truncate text-headline text-ink">{title}</p>
+          )}
+        </div>
+
         <Link
           href="/notifications"
           aria-label={resident.hasUnreadNotifications ? "Notifications (unread)" : "Notifications"}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-secondary"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors duration-premium ease-premium hover:bg-quiet"
         >
           <Bell className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
           {resident.hasUnreadNotifications ? (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-primary ring-2 ring-card" />
           ) : null}
         </Link>
       </div>

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     FRONTEND_ORIGIN: str
     REDIS_URL: str
     ENV: Literal["local", "test", "staging", "production"] = "local"
+    # Local only: when no Bearer token is sent, act as this seeded user (see scripts/seed.py).
+    LOCAL_DEV_AUTH_EMAIL: str | None = None
 
     @field_validator("DATABASE_URL")
     @classmethod

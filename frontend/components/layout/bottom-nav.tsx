@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { isNavActive, NAV_ITEMS } from "@/components/layout/nav-items";
+import { bottomNavItems, isNavActive } from "@/components/layout/nav-items";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -11,10 +11,10 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="glass fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-2xl pb-safe lg:hidden"
+      className="glass fixed inset-x-0 bottom-0 z-[60] mx-auto w-full max-w-2xl pb-safe lg:hidden"
     >
       <ul className="flex h-16 items-center justify-around px-2">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {bottomNavItems().map(({ href, label, icon: Icon }) => {
           const active = isNavActive(pathname, href);
           return (
             <li key={href}>

@@ -115,9 +115,15 @@ const config: Config = {
         gutter: "1rem",
         margin: "1.25rem",
         section: "3.5rem",
+        sidebar: "var(--sidebar-width)",
       },
       maxWidth: {
         content: "1120px",
+        /** Main column cap on very wide screens — left-aligned next to sidebar. */
+        main: "90rem",
+      },
+      width: {
+        sidebar: "var(--sidebar-width)",
       },
       fontFamily: {
         sans: [

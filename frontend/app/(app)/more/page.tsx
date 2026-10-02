@@ -24,7 +24,7 @@ const LINKS = [
   { href: "/local-businesses", label: "Local businesses", detail: "Tiffin, services, shops", icon: Store },
   { href: "/flat-openings", label: "Flat openings", detail: "Rooms, flatmates, full flats", icon: Home },
   { href: "/help-desk", label: "Help desk", detail: "Issues, feedback, directory", icon: LifeBuoy },
-  { href: "/rent", label: "Rent · Coming soon", detail: "Track rent and recurring payments", icon: IndianRupee },
+  { href: "/rent", label: "Rent", detail: "Due date, payment history, auto-pay", icon: IndianRupee },
   { href: "/notifications", label: "Notifications", detail: "Packages, RSVPs, updates", icon: Bell },
   { href: "/profile", label: "Profile", detail: "Your flat and roles", icon: User },
 ] as const;
