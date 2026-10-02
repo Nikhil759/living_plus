@@ -27,25 +27,12 @@ export function LoginPageClient({ supabaseConfigured = true }: { supabaseConfigu
   const supabase = createBrowserSupabaseClient();
 
   function afterSignIn() {
-    let pending: string | null = null;
-    try {
-      pending = window.sessionStorage.getItem(PENDING_INVITE_KEY);
-    } catch {
-      /* ignore */
-    }
-    router.replace(pending ? "/join" : "/home");
+    router.replace("/join");
     router.refresh();
   }
 
   function googleRedirectTo(): string {
-    let pending: string | null = null;
-    try {
-      pending = window.sessionStorage.getItem(PENDING_INVITE_KEY);
-    } catch {
-      /* ignore */
-    }
-    const next = pending ? "/join" : "/home";
-    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    return `${window.location.origin}/auth/callback?next=${encodeURIComponent("/join")}`;
   }
 
   return (

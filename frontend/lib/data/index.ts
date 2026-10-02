@@ -1,6 +1,9 @@
+import { ApiError } from "@/lib/api/client";
+import { getServerAccessToken } from "@/lib/api/server-auth";
 import { fetchAnnouncements, fetchAmenities } from "@/lib/api/amenities";
 import { fetchEventBySlug, fetchEvents } from "@/lib/api/events";
 import { fetchCurrentResident, fetchHomeData } from "@/lib/api/home";
+import { loadSessionResidentFallback } from "@/lib/auth/session-resident";
 import { getDataSource } from "@/lib/data/source";
 import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog } from "@/lib/types/community";
@@ -21,14 +24,31 @@ import type {
 export { getDataSource };
 
 export async function loadResident(): Promise<Resident> {
+  const token = await getServerAccessToken();
+  if (token) {
+    try {
+      return await fetchCurrentResident();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        throw err;
+      }
+      const sessionResident = await loadSessionResidentFallback();
+      if (sessionResident) return sessionResident;
+      throw err;
+    }
+  }
   if (getDataSource() === "api") {
-    return fetchCurrentResident();
+    throw new ApiError("Sign in required.", 401, "unauthorised");
   }
   return staticData.getStaticResident();
 }
 
 export async function loadHomeData(options?: { empty?: boolean }): Promise<HomeData> {
+  const token = await getServerAccessToken();
   if (getDataSource() === "api") {
+    if (!token) {
+      throw new ApiError("Sign in required.", 401, "unauthorised");
+    }
     return fetchHomeData();
   }
   return staticData.getStaticHomeData(options);

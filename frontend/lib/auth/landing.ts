@@ -1,4 +1,4 @@
-import { fetchMembershipStatus, membershipRequiresApi, postAuthPath } from "@/lib/auth/membership";
+import { fetchMembershipStatus, postAuthPath } from "@/lib/auth/membership";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type LandingRoute = "/login" | "/join" | "/home";
@@ -21,7 +21,5 @@ export async function resolveLandingRoute(): Promise<LandingRoute> {
 export async function isApprovedMember(accessToken: string | null | undefined): Promise<boolean> {
   if (!accessToken) return false;
   const status = await fetchMembershipStatus(accessToken);
-  if (status === "member") return true;
-  if (status === "not_member") return false;
-  return !membershipRequiresApi();
+  return status === "member";
 }

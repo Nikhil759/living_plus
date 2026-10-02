@@ -6,8 +6,8 @@
 2. Set **Root Directory** to `frontend`.
 3. Environment variables (Production) — see `frontend/.env.example`:
    - **Required for auth:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_DATA_SOURCE=api` and `NEXT_PUBLIC_API_URL=https://<your-railway-host>` for real membership + home feed
-   - Use `static` only for a mock-data demo without login (not recommended once auth is enabled).
+   - **`NEXT_PUBLIC_DATA_SOURCE=api`** and **`NEXT_PUBLIC_API_URL=https://<your-railway-host>`** — required for invite join, real profile name, and home feed (not `localhost`).
+   - `static` keeps demo JSON and skips strict join routing; use only for UI-only demos.
 4. In Supabase → Authentication → URL configuration, add your Vercel site plus `/auth/callback` and `/auth/reset`.
 5. Deploy. The default build command is `next build` inside `frontend`.
 

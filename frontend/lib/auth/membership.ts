@@ -31,16 +31,10 @@ export async function fetchMembershipStatus(accessToken: string): Promise<Member
   }
 }
 
-export function membershipRequiresApi(): boolean {
-  return process.env.NEXT_PUBLIC_DATA_SOURCE?.trim().toLowerCase() === "api";
-}
-
 /** Where to send a signed-in user when API says they are not a member yet. */
 export async function postAuthPath(accessToken: string | null | undefined): Promise<"/home" | "/join"> {
   if (!accessToken) return "/join";
   const status = await fetchMembershipStatus(accessToken);
   if (status === "member") return "/home";
-  if (status === "not_member") return "/join";
-  // API unreachable: strict in api mode, permissive in static demo mode.
-  return membershipRequiresApi() ? "/join" : "/home";
+  return "/join";
 }

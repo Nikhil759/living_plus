@@ -1,10 +1,10 @@
-import { apiGet } from "@/lib/api/client";
+import { apiGetAsUser } from "@/lib/api/server-auth";
 import type { HomeData, Resident } from "@/lib/types/home";
 
 export async function fetchHomeData(): Promise<HomeData> {
-  return apiGet<HomeData>("/v1/home");
+  return apiGetAsUser<HomeData>("/v1/home");
 }
 
 export async function fetchCurrentResident(): Promise<Resident> {
-  return apiGet<Resident>("/v1/me");
+  return apiGetAsUser<Resident>("/v1/me");
 }
