@@ -7,6 +7,12 @@ import { extendTailwindMerge } from "tailwind-merge";
  * silently drops e.g. `text-on-primary` when both are present.
  */
 const FONT_SIZE_TOKENS = [
+  "large-title",
+  "title",
+  "headline",
+  "body",
+  "callout",
+  "caption",
   "label-sm",
   "label-md",
   "label-lg",
