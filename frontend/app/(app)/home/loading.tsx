@@ -1,15 +1,18 @@
 import { PageContainer } from "@/components/layout/page-container";
-import { TopBar } from "@/components/layout/top-bar";
+import { HomeBannerFallback } from "@/components/home/home-photo-banner";
 import { HomeSkeleton } from "@/components/home/home-skeleton";
 import { getStaticResident } from "@/lib/data/static";
 
 export default function HomeLoading() {
-  // The top bar is static chrome, so it renders immediately while data loads.
+  const resident = getStaticResident();
+
   return (
     <>
-      <TopBar title="Home" resident={getStaticResident()} />
-      <PageContainer>
-        <HomeSkeleton />
+      <HomeBannerFallback resident={resident} />
+      <PageContainer className="pt-0">
+        <div className="-mt-6">
+          <HomeSkeleton />
+        </div>
       </PageContainer>
     </>
   );
