@@ -22,7 +22,15 @@ import {
   loadMarketplaceListings,
   loadRentDashboard,
 } from "@/lib/data";
-import { getStaticHomeData } from "@/lib/data/static";
+import {
+  getStaticFlatOpenings,
+  getStaticHelpDeskTickets,
+  getStaticHelpDeskVendors,
+  getStaticHomeData,
+  getStaticLocalBusinesses,
+  getStaticMarketplaceListings,
+  getStaticRentDashboard,
+} from "@/lib/data/static";
 
 interface HomePageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -34,24 +42,35 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   let loadError: string | null = null;
   let data;
+  let listings;
+  let businesses;
+  let openings;
+  let tickets;
+  let vendors;
+  let rent;
   try {
-    data = await loadHomeData({ empty });
+    [data, listings, businesses, openings, tickets, vendors, rent] = await Promise.all([
+      loadHomeData({ empty }),
+      loadMarketplaceListings(),
+      loadLocalBusinesses(),
+      loadFlatOpenings(),
+      loadHelpDeskTickets(),
+      loadHelpDeskVendors(),
+      loadRentDashboard(),
+    ]);
   } catch {
     loadError =
       getDataSource() === "api"
         ? "Could not reach the API. Check that the backend is running."
         : "Could not load home data.";
-    data = getStaticHomeData({ empty: true });
+    data = getStaticHomeData({ empty });
+    listings = getStaticMarketplaceListings();
+    businesses = getStaticLocalBusinesses();
+    openings = getStaticFlatOpenings();
+    tickets = getStaticHelpDeskTickets();
+    vendors = getStaticHelpDeskVendors();
+    rent = getStaticRentDashboard();
   }
-
-  const [listings, businesses, openings, tickets, vendors, rent] = await Promise.all([
-    loadMarketplaceListings(),
-    loadLocalBusinesses(),
-    loadFlatOpenings(),
-    loadHelpDeskTickets(),
-    loadHelpDeskVendors(),
-    loadRentDashboard(),
-  ]);
 
   const { resident, digest, events, amenities, match } = data;
   const posts = digest?.posts ?? [];
