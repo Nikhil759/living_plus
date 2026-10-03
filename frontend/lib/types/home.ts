@@ -4,6 +4,25 @@ export interface Person {
   id: string;
   name: string;
   avatarUrl?: string;
+  /** When false, neighbours do not see this attendee’s avatar or first name. */
+  isVisible?: boolean;
+}
+
+export type EventAudience = "society" | "towers" | "group";
+
+export interface EventAttendee extends Person {
+  fullName?: string;
+  tower?: string;
+  guestCount?: number;
+  checkedIn?: boolean;
+}
+
+export interface EventHostProfile {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  tower?: string;
+  eventsHosted: number;
 }
 
 export interface Resident extends Person {
@@ -83,6 +102,18 @@ export interface HomeEvent {
   viewerGoing?: boolean;
   isHost?: boolean;
   isCommittee?: boolean;
+  whatToBring?: string;
+  guestLimit?: number;
+  audience?: EventAudience;
+  recurrenceLabel?: string;
+  amenityId?: string;
+  changeSummary?: string;
+  cancelReason?: string;
+  rejectionReason?: string;
+  stallsEnabled?: boolean;
+  hostProfile?: EventHostProfile;
+  /** Host and committee only. Neighbours get `null`. */
+  attendees?: EventAttendee[] | null;
 }
 
 export type AmenityStatus = "free" | "open" | "quiet" | "moderate" | "booked";

@@ -24,8 +24,11 @@ import {
 import { demoListUserRsvpEventIds } from "@/lib/demo-store/events-write";
 import { demoHomeResidentForUser, mergeSessionIntoResident } from "@/lib/demo-store/resident-write";
 import { getDemoSessionUser } from "@/lib/demo-store/session-user";
+import { attachHostProfile } from "@/lib/events/detail";
 import {
+  annotateEvent,
   annotateEvents,
+  canViewEvent,
   eventViewerFromResident,
   filterEvents,
   type EventListQuery,
@@ -88,16 +91,31 @@ export async function loadEventList(query: EventListQuery = {}): Promise<HomeEve
   return filterEvents(annotateEvents(events, viewer), query);
 }
 
+async function eventViewerRsvpIds(residentId: string): Promise<string[]> {
+  if (!useDemoStore()) return [];
+  const session = await getDemoSessionUser();
+  return session ? demoListUserRsvpEventIds(session.id) : demoListUserRsvpEventIds(residentId);
+}
+
 export async function loadEventById(id: string): Promise<HomeEvent | undefined> {
-  if (useDemoStore()) return demoGetEventById(id);
-  if (getDataSource() === "api") {
+  let raw: HomeEvent | undefined;
+  if (useDemoStore()) raw = demoGetEventById(id);
+  else if (getDataSource() === "api") {
     try {
-      return await apiGetAsUser<HomeEvent>(`/v1/events/${encodeURIComponent(id)}`);
+      raw = await apiGetAsUser<HomeEvent>(`/v1/events/${encodeURIComponent(id)}`);
     } catch {
       return undefined;
     }
+  } else {
+    raw = staticData.getStaticEventById(id);
   }
-  return staticData.getStaticEventById(id);
+  if (!raw) return undefined;
+
+  const [catalog, resident] = await Promise.all([loadEvents(), loadResident()]);
+  const viewer = eventViewerFromResident(resident, await eventViewerRsvpIds(resident.id));
+  const annotated = annotateEvent(raw, viewer);
+  if (!canViewEvent(annotated)) return undefined;
+  return attachHostProfile(annotated, catalog, resident);
 }
 
 export async function loadAmenities(): Promise<Amenity[]> {

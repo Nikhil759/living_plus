@@ -25,7 +25,11 @@
       {
         "id": "g3",
         "name": "Amit",
-        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80"
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80",
+        "isVisible": false,
+        "fullName": "Amit Khanna",
+        "tower": "Tower B",
+        "guestCount": 0
       }
     ],
     "actionLabel": "RSVP",
@@ -63,7 +67,10 @@
     ],
     "actionLabel": "Book Spot",
     "actionTone": "soft",
-    "href": "/events/evt-salsa"
+    "href": "/events/evt-salsa",
+    "description": "Beginner-friendly salsa and bachata in the hall. Partners not required.",
+    "changeSummary": "Time changed to 6:00 PM",
+    "guestLimit": 1
   },
   {
     "id": "evt-expressway-ride",
@@ -119,7 +126,10 @@
     ],
     "actionLabel": "RSVP",
     "actionTone": "soft",
-    "href": "/events/evt-terrace-yoga"
+    "href": "/events/evt-terrace-yoga",
+    "recurrenceLabel": "Every Sunday",
+    "whatToBring": "A mat and water.",
+    "guestLimit": 0
   },
   {
     "id": "evt-ipl-screening",
@@ -205,12 +215,27 @@
       {
         "id": "bk2",
         "name": "Divya",
-        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80"
+        "avatarUrl": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&q=80",
+        "fullName": "Divya Rao",
+        "tower": "Tower A",
+        "guestCount": 1
+      },
+      {
+        "id": "bk3",
+        "name": "Amit",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=96&q=80",
+        "isVisible": false,
+        "fullName": "Amit Khanna",
+        "tower": "Tower B",
+        "guestCount": 2
       }
     ],
     "actionLabel": "RSVP",
     "actionTone": "solid",
-    "href": "/events/evt-book-club"
+    "href": "/events/evt-book-club",
+    "description": "April pick is The Ministry of Time. Come even if you are a chapter behind.",
+    "whatToBring": "The book, or notes on your favourite scene.",
+    "guestLimit": 1
   },
   {
     "id": "evt-tennis-mixer",
@@ -238,7 +263,10 @@
     ],
     "actionLabel": "RSVP",
     "actionTone": "soft",
-    "href": "/events/evt-tennis-mixer"
+    "href": "/events/evt-tennis-mixer",
+    "amenityId": "am-tennis",
+    "capacity": 16,
+    "description": "Mixed doubles, rotate partners every two games."
   },
   {
     "id": "evt-food-stalls",
@@ -271,7 +299,10 @@
     ],
     "actionLabel": "RSVP",
     "actionTone": "solid",
-    "href": "/events/evt-food-stalls"
+    "href": "/events/evt-food-stalls",
+    "eventType": "society",
+    "stallsEnabled": true,
+    "description": "Committee-run weekend mela. Residents can apply for a stall."
   },
   {
     "id": "evt-senior-walk",
@@ -377,7 +408,8 @@
     "category": "fitness",
     "capacity": 20,
     "tags": ["walking"],
-    "description": "Easy loop from the park gate."
+    "description": "Easy loop from the park gate.",
+    "whatToBring": "Comfortable shoes."
   },
   {
     "id": "evt-hall-pending",
@@ -425,7 +457,8 @@
     "status": "cancelled",
     "category": "fitness",
     "capacity": 25,
-    "tags": ["running"]
+    "tags": ["running"],
+    "cancelReason": "Rain — we'll pick a new Sunday."
   },
   {
     "id": "evt-past-meetup",
@@ -453,5 +486,28 @@
     "category": "social",
     "capacity": 16,
     "tags": ["games"]
+  },
+  {
+    "id": "evt-hall-rejected",
+    "title": "Tower C karaoke night",
+    "host": "Nikhil (C-702) hosting",
+    "hostUserId": "res-nikhil",
+    "hostIcon": "person",
+    "schedule": { "weekday": 5, "hour": 20, "minute": 0 },
+    "location": "Community Hall",
+    "priceInr": 0,
+    "glyph": "music",
+    "goingCount": 0,
+    "going": [],
+    "actionLabel": "RSVP",
+    "actionTone": "solid",
+    "href": "/events/evt-hall-rejected",
+    "eventType": "free",
+    "status": "rejected",
+    "category": "music",
+    "capacity": 30,
+    "tags": ["karaoke"],
+    "description": "Open-mic karaoke for Tower C.",
+    "rejectionReason": "Hall is already booked that evening."
   }
 ]

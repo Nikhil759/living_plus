@@ -11,22 +11,45 @@ export function formatHomeCaption(society: string, now: Date = new Date()): stri
   return `${date} · ${society}`;
 }
 
-/** "Sat, 9:00 PM" */
-export function formatEventWhen(iso: string): string {
-  const date = new Date(iso);
-  const day = new Intl.DateTimeFormat("en-IN", {
+function formatEventDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
     weekday: "short",
     timeZone: TIME_ZONE,
-  }).format(date);
-  const time = new Intl.DateTimeFormat("en-IN", {
+  }).format(new Date(iso));
+}
+
+function formatEventTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
     timeZone: TIME_ZONE,
   })
-    .format(date)
+    .format(new Date(iso))
     .toUpperCase();
-  return `${day}, ${time}`;
+}
+
+function eventDateKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** "Sat, 9:00 PM" */
+export function formatEventWhen(iso: string): string {
+  return `${formatEventDay(iso)}, ${formatEventTime(iso)}`;
+}
+
+/** "Sat, 9:00 PM – 11:00 PM" or "Sat, 9:00 PM – Sun, 11:00 AM" */
+export function formatEventRange(startsAt: string, endsAt?: string): string {
+  if (!endsAt) return formatEventWhen(startsAt);
+  if (eventDateKey(startsAt) === eventDateKey(endsAt)) {
+    return `${formatEventWhen(startsAt)} – ${formatEventTime(endsAt)}`;
+  }
+  return `${formatEventWhen(startsAt)} – ${formatEventWhen(endsAt)}`;
 }
 
 /** 0 -> "Free", 499 -> "₹499" */

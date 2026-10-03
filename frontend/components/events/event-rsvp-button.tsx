@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import { rsvpEventApi, rsvpEventDemo } from "@/lib/api/events-client";
 import { buttonVariants } from "@/components/ui/button";
+import { eventMainAction } from "@/lib/events/detail";
 import type { HomeEvent } from "@/lib/types/home";
 
 interface EventRsvpButtonProps {
@@ -18,9 +19,10 @@ export function EventRsvpButton({ event, backend, alreadyGoing }: EventRsvpButto
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [going, setGoing] = useState(alreadyGoing);
+  const action = eventMainAction({ ...event, viewerGoing: event.viewerGoing || going });
 
   async function onRsvp() {
-    if (going || event.priceInr > 0) return;
+    if (!action.enabled || action.kind !== "rsvp") return;
     setPending(true);
     setError(null);
     try {
@@ -38,18 +40,15 @@ export function EventRsvpButton({ event, backend, alreadyGoing }: EventRsvpButto
     }
   }
 
-  const label = going ? "Going" : event.actionLabel;
-  const variant = going ? "secondary" : event.actionTone === "solid" ? "primary" : "secondary";
-
   return (
     <div className="space-y-2">
       <button
         type="button"
-        className={buttonVariants({ variant })}
-        disabled={pending || going || event.priceInr > 0}
+        className={buttonVariants({ variant: action.kind === "rsvp" ? "primary" : "secondary" })}
+        disabled={pending || !action.enabled}
         onClick={() => void onRsvp()}
       >
-        {pending ? "Saving…" : label}
+        {pending ? "Saving…" : action.label}
       </button>
       {error ? <p className="text-caption text-error">{error}</p> : null}
     </div>

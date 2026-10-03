@@ -1,0 +1,183 @@
+import { formatPriceInr } from "@/lib/format";
+import type { EventHostProfile, HomeEvent, Resident } from "@/lib/types/home";
+
+const SOCIETY_VENUES: Record<string, string> = {
+  "tennis courts": "am-tennis",
+  "tennis court": "am-tennis",
+  gym: "am-gym",
+  pool: "am-pool",
+  "cafe lounge": "am-cafe",
+};
+
+export type EventMainActionKind =
+  | "rsvp"
+  | "pay"
+  | "waitlist"
+  | "leave"
+  | "stall"
+  | "ended"
+  | "cancelled"
+  | "pending"
+  | "draft"
+  | "rejected";
+
+export interface EventMainAction {
+  kind: EventMainActionKind;
+  label: string;
+  enabled: boolean;
+}
+
+export interface EventBanner {
+  tone: "warn" | "danger" | "info";
+  text: string;
+}
+
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
+function parseHostTower(host: string): string | undefined {
+  const match = host.match(/\(([A-Za-z0-9]+)-/);
+  if (!match) return undefined;
+  const token = match[1];
+  return /^tower/i.test(token) ? token : `Tower ${token}`;
+}
+
+export function hostedEventCount(event: HomeEvent, catalog: HomeEvent[]): number {
+  return catalog.filter((item) => {
+    const status = item.status ?? "published";
+    if (status !== "published" && status !== "completed") return false;
+    if (event.hostUserId && item.hostUserId) return item.hostUserId === event.hostUserId;
+    return item.host === event.host;
+  }).length;
+}
+
+export function buildHostProfile(
+  event: HomeEvent,
+  catalog: HomeEvent[],
+  resident?: Pick<Resident, "name" | "avatarUrl" | "tower">,
+): EventHostProfile {
+  const name = event.hostName ?? firstName(event.host);
+  const fromGoing = (event.going ?? []).find((person) => person.name === name);
+  return {
+    id: event.hostUserId ?? "host",
+    name,
+    avatarUrl: event.isHost ? resident?.avatarUrl : fromGoing?.avatarUrl,
+    tower: event.isHost ? resident?.tower : parseHostTower(event.host),
+    eventsHosted: hostedEventCount(event, catalog),
+  };
+}
+
+export function attachHostProfile(
+  event: HomeEvent,
+  catalog: HomeEvent[],
+  resident?: Pick<Resident, "name" | "avatarUrl" | "tower">,
+): HomeEvent {
+  if (event.hostProfile) return event;
+  return { ...event, hostProfile: buildHostProfile(event, catalog, resident) };
+}
+
+export function eventVenueHref(event: Pick<HomeEvent, "location" | "amenityId">): string | undefined {
+  const amenityId = event.amenityId ?? SOCIETY_VENUES[event.location.trim().toLowerCase()];
+  return amenityId ? `/amenities#${amenityId}` : undefined;
+}
+
+export function eventCapacityLabel(event: Pick<HomeEvent, "goingCount" | "capacity">): string | undefined {
+  if (event.capacity == null) return undefined;
+  return `${event.goingCount} of ${event.capacity} spots taken`;
+}
+
+export function eventGuestLabel(guestLimit: number | undefined): string | undefined {
+  if (guestLimit == null) return undefined;
+  if (guestLimit <= 0) return "Residents only";
+  return `Guests welcome · up to ${guestLimit} each`;
+}
+
+export function eventBanners(event: HomeEvent): EventBanner[] {
+  const banners: EventBanner[] = [];
+  const status = event.status ?? "published";
+  if (status === "pending_approval") {
+    banners.push({ tone: "warn", text: "Pending approval" });
+  }
+  if (status === "rejected") {
+    banners.push({
+      tone: "danger",
+      text: event.rejectionReason ? `Rejected: ${event.rejectionReason}` : "Rejected",
+    });
+  }
+  if (status === "cancelled") {
+    banners.push({
+      tone: "danger",
+      text: event.cancelReason ? `Cancelled: ${event.cancelReason}` : "Cancelled",
+    });
+  }
+  if (event.changeSummary) {
+    const text = /^changed\b/i.test(event.changeSummary)
+      ? event.changeSummary
+      : `Changed: ${event.changeSummary}`;
+    banners.push({ tone: "info", text });
+  }
+  return banners;
+}
+
+export function eventMainAction(event: HomeEvent, now: number = Date.now()): EventMainAction {
+  const status = event.status ?? "published";
+  const ends = Date.parse(event.endsAt ?? event.startsAt);
+  const full = event.capacity != null && event.goingCount >= event.capacity;
+
+  if (status === "cancelled") return { kind: "cancelled", label: "Cancelled", enabled: false };
+  if (status === "completed" || ends < now) {
+    return { kind: "ended", label: "Event ended", enabled: false };
+  }
+  if (status === "draft") return { kind: "draft", label: "Draft", enabled: false };
+  if (status === "rejected") return { kind: "rejected", label: "Rejected", enabled: false };
+  if (status === "pending_approval") {
+    return { kind: "pending", label: "Pending approval", enabled: false };
+  }
+  if (event.viewerGoing) {
+    return { kind: "leave", label: "You're going · Can't make it?", enabled: false };
+  }
+  if (event.eventType === "society" && event.stallsEnabled) {
+    return { kind: "stall", label: "Apply for a stall", enabled: false };
+  }
+  if (full) return { kind: "waitlist", label: "Join waitlist", enabled: false };
+  if ((event.eventType ?? "free") === "paid" || event.priceInr > 0) {
+    return { kind: "pay", label: `Book ticket · ${formatPriceInr(event.priceInr)}`, enabled: false };
+  }
+  return { kind: "rsvp", label: "I'm going", enabled: true };
+}
+
+function icsUtc(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+function icsText(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+
+export function eventIcs(event: HomeEvent, url: string): string {
+  const endsAt = event.endsAt ?? event.startsAt;
+  const description = [event.description, event.whatToBring ? `What to bring: ${event.whatToBring}` : ""]
+    .filter(Boolean)
+    .join("\n");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Living+//Events//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${event.id}@living.plus`,
+    `DTSTAMP:${icsUtc(new Date().toISOString())}`,
+    `DTSTART:${icsUtc(event.startsAt)}`,
+    `DTEND:${icsUtc(endsAt)}`,
+    `SUMMARY:${icsText(event.title)}`,
+    `LOCATION:${icsText(event.location)}`,
+    description ? `DESCRIPTION:${icsText(description)}` : "",
+    url ? `URL:${icsText(url)}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+}

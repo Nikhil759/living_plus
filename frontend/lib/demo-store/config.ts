@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export const DEMO_DB_VERSION = "4";
+export const DEMO_DB_VERSION = "5";
 
 export const DEFAULT_RESIDENT_USER_ID = "__default__";
 

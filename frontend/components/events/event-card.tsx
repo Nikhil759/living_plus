@@ -23,6 +23,7 @@ export function EventCard({
   className,
   ...event
 }: Omit<HomeEvent, "id"> & { className?: string; layout?: "rail" | "fill" }) {
+  const publicGoing = (going ?? []).filter((person) => person.isVisible !== false);
   const pills = eventStatusPills({
     status: event.status,
     capacity: event.capacity,
@@ -68,7 +69,7 @@ export function EventCard({
         <p className="text-caption text-ink-secondary">{location}</p>
         <p className="text-caption text-ink-tertiary">{hostName ?? host}</p>
         <div className="flex items-center gap-2">
-          {going && going.length > 0 ? <AvatarStack people={going} total={goingCount} size="xs" /> : null}
+          {publicGoing.length > 0 ? <AvatarStack people={publicGoing} total={goingCount} size="xs" /> : null}
           <p className="text-caption text-ink-secondary">{goingCount} neighbours going</p>
         </div>
       </div>

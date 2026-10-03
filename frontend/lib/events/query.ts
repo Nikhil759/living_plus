@@ -1,4 +1,12 @@
-import type { EventCategory, EventListTab, EventType, HomeEvent, Resident } from "@/lib/types/home";
+import type {
+  EventAttendee,
+  EventCategory,
+  EventListTab,
+  EventType,
+  HomeEvent,
+  Person,
+  Resident,
+} from "@/lib/types/home";
 
 const TIME_ZONE = "Asia/Kolkata";
 const HOST_ONLY = new Set(["draft", "pending_approval", "rejected"]);
@@ -57,15 +65,48 @@ export function isEventHost(event: HomeEvent, viewer: EventViewer): boolean {
   return Boolean(viewer.firstName) && tokens.some((token) => host.includes(token));
 }
 
+export function publicGoingPeople(people: Person[] | undefined): Person[] {
+  return (people ?? [])
+    .filter((person) => person.isVisible !== false)
+    .map((person) => ({
+      id: person.id,
+      name: firstName(person.name),
+      avatarUrl: person.avatarUrl,
+    }));
+}
+
+export function fullAttendees(people: Person[] | undefined): EventAttendee[] {
+  return (people ?? []).map((person) => {
+    const extra = person as EventAttendee;
+    return {
+      id: person.id,
+      name: firstName(person.name),
+      avatarUrl: person.avatarUrl,
+      fullName: extra.fullName ?? person.name,
+      tower: extra.tower,
+      guestCount: extra.guestCount ?? 0,
+      checkedIn: extra.checkedIn ?? false,
+    };
+  });
+}
+
+export function canViewEvent(event: HomeEvent): boolean {
+  return matchesAudience(event);
+}
+
 export function annotateEvent(event: HomeEvent, viewer: EventViewer): HomeEvent {
   const rsvpSet = new Set(viewer.rsvpIds);
   const going = event.going ?? [];
+  const isHost = isEventHost(event, viewer);
+  const isCommittee = viewer.isCommittee;
   return {
     ...event,
-    isHost: isEventHost(event, viewer),
-    isCommittee: viewer.isCommittee,
-    viewerGoing:
-      rsvpSet.has(event.id) || going.some((person) => person.id === viewer.id),
+    isHost,
+    isCommittee,
+    viewerGoing: rsvpSet.has(event.id) || going.some((person) => person.id === viewer.id),
+    going: publicGoingPeople(going),
+    attendees: isHost || isCommittee ? (event.attendees ?? fullAttendees(going)) : null,
+    rejectionReason: isHost ? event.rejectionReason : undefined,
   };
 }
 
