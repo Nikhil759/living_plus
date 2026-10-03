@@ -28,6 +28,11 @@ export function ListingCard({ listing }: { listing: MarketplaceCard }) {
             Reserved
           </Badge>
         ) : null}
+        {listing.reported ? (
+          <Badge tone="overlay" dot="red" className="absolute right-2.5 top-2.5 font-semibold">
+            Reported
+          </Badge>
+        ) : null}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <PriceTag priceInr={listing.priceInr} isFree={listing.isFree} className="self-start" />
