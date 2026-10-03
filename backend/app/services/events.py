@@ -907,6 +907,8 @@ async def join_waitlist(
                 society_id=member.society_id,
                 user_id=member.user.id,
                 qty=body.qty,
+                # SQLite's now() is whole seconds; FIFO needs finer ordering.
+                created_at=datetime.now(UTC),
             )
         )
     await db.commit()
