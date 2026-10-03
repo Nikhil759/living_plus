@@ -143,7 +143,7 @@ function EventDetailsCard({
       {canManage ? (
         <>
           <div className="border-t border-hairline" />
-          <EventManageActions layout="stack" />
+          <EventManageActions eventId={event.id} canEdit={Boolean(event.isHost)} layout="stack" />
         </>
       ) : null}
     </Card>

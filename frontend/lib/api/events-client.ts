@@ -1,14 +1,24 @@
 "use client";
 
-import { apiDelete, apiPost, ApiError } from "@/lib/api/client";
+import { apiDelete, apiPatch, apiPost, ApiError } from "@/lib/api/client";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import type { HomeEvent } from "@/lib/types/home";
+import type { EventCategory, HomeEvent } from "@/lib/types/home";
 
-export interface EventCreateInput {
+export interface EventWriteInput {
   title: string;
   locationLabel: string;
   startsAt: string;
+  endsAt?: string;
+  description?: string | null;
+  category?: EventCategory;
+  capacity?: number;
+  guestLimit?: number;
+  whatToBring?: string | null;
+  coverUrl?: string | null;
   tags?: string[];
+  eventType?: "free";
+  saveAsDraft?: boolean;
+  publish?: boolean;
 }
 
 async function getBrowserAccessToken(): Promise<string> {
@@ -23,19 +33,37 @@ async function getBrowserAccessToken(): Promise<string> {
   return token;
 }
 
-export async function createEventApi(body: EventCreateInput): Promise<HomeEvent> {
+function writeBody(body: EventWriteInput): Record<string, unknown> {
+  return {
+    title: body.title,
+    locationLabel: body.locationLabel,
+    startsAt: body.startsAt,
+    endsAt: body.endsAt,
+    description: body.description,
+    category: body.category,
+    capacity: body.capacity,
+    guestLimit: body.guestLimit,
+    whatToBring: body.whatToBring,
+    coverUrl: body.coverUrl,
+    tags: body.tags ?? [],
+    eventType: body.eventType ?? "free",
+    saveAsDraft: body.saveAsDraft,
+    publish: body.publish,
+  };
+}
+
+export async function createEventApi(body: EventWriteInput): Promise<HomeEvent> {
   const token = await getBrowserAccessToken();
-  return apiPost<HomeEvent>(
-    "/v1/events",
-    {
-      title: body.title,
-      locationLabel: body.locationLabel,
-      startsAt: body.startsAt,
-      eventType: "free",
-      tags: body.tags ?? [],
-    },
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
+  return apiPost<HomeEvent>("/v1/events", writeBody(body), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function updateEventApi(slug: string, body: EventWriteInput): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPatch<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}`, writeBody(body), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function rsvpEventApi(slug: string): Promise<HomeEvent> {

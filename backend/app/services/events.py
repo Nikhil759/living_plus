@@ -18,7 +18,13 @@ from app.models.enums import (
     EventType,
     MembershipRole,
 )
-from app.schemas.event import EventCreate, EventDetailOut, EventListItemOut, EventRsvpIn
+from app.schemas.event import (
+    EventCreate,
+    EventDetailOut,
+    EventListItemOut,
+    EventRsvpIn,
+    EventUpdate,
+)
 from app.schemas.home import HomeEventOut
 from app.services import mappers
 
@@ -29,6 +35,7 @@ _HOST_ONLY_STATUSES = {
     EventStatus.rejected,
 }
 _PAST_STATUSES = {EventStatus.published, EventStatus.cancelled, EventStatus.completed}
+_LOCKED_STATUSES = {EventStatus.cancelled, EventStatus.completed}
 
 
 def _slugify(title: str) -> str:
@@ -233,11 +240,37 @@ async def get_event_detail(
     )
 
 
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _event_window(starts: datetime, ends: datetime | None) -> tuple[datetime, datetime]:
+    starts_utc = _as_utc(starts)
+    ends_utc = _as_utc(ends) if ends is not None else starts_utc + timedelta(hours=2)
+    if ends_utc <= starts_utc:
+        raise AppError("validation_error", "End time must be after start time.", 422)
+    return starts_utc, ends_utc
+
+
+async def _event_for_society(db: AsyncSession, member: CurrentMember, slug: str) -> Event:
+    event = await db.scalar(
+        select(Event).where(
+            Event.society_id == member.society_id,
+            Event.public_slug == slug,
+        )
+    )
+    if event is None:
+        raise AppError("not_found", "Event not found.", 404)
+    return event
+
+
 async def create_event(
     db: AsyncSession,
     member: CurrentMember,
     body: EventCreate,
-) -> HomeEventOut:
+) -> EventDetailOut:
     if body.event_type != EventType.free:
         raise AppError(
             "validation_error",
@@ -245,19 +278,8 @@ async def create_event(
             422,
         )
 
-    starts = body.starts_at
-    if starts.tzinfo is None:
-        starts = starts.replace(tzinfo=UTC)
-    ends = body.ends_at
-    if ends is None:
-        ends = starts + timedelta(hours=2)
-    elif ends.tzinfo is None:
-        ends = ends.replace(tzinfo=UTC)
-    if ends <= starts:
-        raise AppError("validation_error", "End time must be after start time.", 422)
-
-    status = EventStatus.published
-
+    starts, ends = _event_window(body.starts_at, body.ends_at)
+    status = EventStatus.draft if body.save_as_draft else EventStatus.published
     slug = await _unique_slug(db, member.society_id, _slugify(body.title))
 
     event = Event(
@@ -271,17 +293,98 @@ async def create_event(
         location_label=body.location_label.strip(),
         starts_at=starts,
         ends_at=ends,
-        capacity=50,
+        capacity=body.capacity,
         price_paise=0,
         status=status,
         tags=body.tags,
+        category=body.category,
+        guest_limit=body.guest_limit,
+        what_to_bring=body.what_to_bring,
     )
     db.add(event)
     await db.commit()
     await db.refresh(event)
+    return await get_event_detail(db, member, slug)
 
-    host = await mappers.host_label_for(db, event.host_id)
-    return mappers.event_to_home_event(event, host_label=host, going_count=0)
+
+async def update_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventUpdate,
+) -> EventDetailOut:
+    event = await _event_for_society(db, member, slug)
+    if event.host_id != member.user.id:
+        raise AppError("forbidden", "Only the host can edit this event.", 403)
+    if event.status in _LOCKED_STATUSES:
+        raise AppError("validation_error", "This event can no longer be edited.", 422)
+
+    provided = body.model_fields_set
+    was_published = event.status == EventStatus.published
+    time_changed = False
+    venue_changed = False
+
+    if "title" in provided and body.title is not None:
+        event.title = body.title.strip()
+    if "location_label" in provided and body.location_label is not None:
+        if body.location_label.strip() != (event.location_label or ""):
+            venue_changed = True
+        event.location_label = body.location_label.strip()
+    if "description" in provided:
+        event.description = body.description
+    if "cover_url" in provided:
+        event.cover_url = body.cover_url
+    if "category" in provided and body.category is not None:
+        event.category = body.category
+    if "tags" in provided and body.tags is not None:
+        event.tags = body.tags
+    if "what_to_bring" in provided:
+        event.what_to_bring = body.what_to_bring
+    if "guest_limit" in provided and body.guest_limit is not None:
+        event.guest_limit = body.guest_limit
+    if "capacity" in provided and body.capacity is not None:
+        going = await mappers.going_count_for(db, event.id)
+        if body.capacity < going:
+            raise AppError(
+                "validation_error",
+                "Capacity cannot be below the number of people going.",
+                422,
+            )
+        event.capacity = body.capacity
+
+    next_starts = event.starts_at
+    next_ends = event.ends_at
+    if "starts_at" in provided and body.starts_at is not None:
+        next_starts = body.starts_at
+    if "ends_at" in provided:
+        next_ends = body.ends_at
+    if "starts_at" in provided or "ends_at" in provided:
+        starts, ends = _event_window(next_starts, next_ends)
+        if starts != _as_utc(event.starts_at) or ends != _as_utc(event.ends_at):
+            time_changed = True
+        event.starts_at = starts
+        event.ends_at = ends
+
+    if body.publish:
+        if event.event_type != EventType.free:
+            raise AppError(
+                "validation_error",
+                "Only free events can be published right now.",
+                422,
+            )
+        event.status = EventStatus.published
+
+    if was_published and (time_changed or venue_changed):
+        if time_changed and venue_changed:
+            event.change_summary = "Time and venue changed"
+        elif time_changed:
+            event.change_summary = "Time changed"
+        else:
+            event.change_summary = "Venue changed"
+        event.changed_at = datetime.now(UTC)
+
+    await db.commit()
+    return await get_event_detail(db, member, slug)
 
 
 async def rsvp_event(

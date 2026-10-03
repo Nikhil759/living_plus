@@ -3,7 +3,13 @@ from fastapi import APIRouter
 from app.auth import CurrentMemberDep
 from app.core.db import DbSession
 from app.models.enums import EventCategory, EventListTab, EventType
-from app.schemas.event import EventCreate, EventDetailOut, EventListItemOut, EventRsvpIn
+from app.schemas.event import (
+    EventCreate,
+    EventDetailOut,
+    EventListItemOut,
+    EventRsvpIn,
+    EventUpdate,
+)
 from app.schemas.home import HomeEventOut
 from app.services import events as event_service
 
@@ -29,13 +35,23 @@ async def get_event(slug: str, db: DbSession, member: CurrentMemberDep) -> Event
     return await event_service.get_event_detail(db, member, slug)
 
 
-@router.post("", response_model=HomeEventOut, status_code=201)
+@router.post("", response_model=EventDetailOut, status_code=201)
 async def create_event(
     body: EventCreate,
     db: DbSession,
     member: CurrentMemberDep,
-) -> HomeEventOut:
+) -> EventDetailOut:
     return await event_service.create_event(db, member, body)
+
+
+@router.patch("/{slug}", response_model=EventDetailOut)
+async def update_event(
+    slug: str,
+    body: EventUpdate,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.update_event(db, member, slug, body)
 
 
 @router.post("/{slug}/rsvp", response_model=HomeEventOut)
