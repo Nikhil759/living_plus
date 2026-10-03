@@ -9,6 +9,7 @@ from app.models import Flat, Membership, Society
 from app.schemas.home import AanganPromptOut, HomeDataOut
 from app.services import amenities as amenity_service
 from app.services import mappers
+from app.services import notifications as notification_service
 from app.services import profile as profile_service
 
 
@@ -44,6 +45,7 @@ async def get_home_data(db: AsyncSession, member: CurrentMember) -> HomeDataOut:
         tower_name=tower_name,
         flat_no=flat_no,
         profile=profile,
+        has_unread_notifications=await notification_service.has_unread(db, member),
     )
 
     interests = profile.interests

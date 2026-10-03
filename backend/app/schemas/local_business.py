@@ -1,7 +1,7 @@
 import re
 import uuid
 from datetime import datetime
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, StringConstraints, field_validator, model_validator
 
@@ -129,6 +129,25 @@ class BusinessOwnerOut(CamelModel):
     member_since: int
 
 
+class LatestUpdateOut(CamelModel):
+    text: str
+    created_at: datetime
+
+
+class RecommendationOut(CamelModel):
+    id: uuid.UUID
+    first_name: str
+    tower: str | None
+    note: str
+    created_at: datetime
+
+
+class BusinessViewerOut(CamelModel):
+    following: bool
+    recommended: bool
+    my_note: str | None
+
+
 class BusinessDetailOut(BusinessCardOut):
     about: str | None
     photos: list[str]
@@ -138,7 +157,40 @@ class BusinessDetailOut(BusinessCardOut):
     serves: BusinessServes
     contact_method: ListingContactMethod
     owner: BusinessOwnerOut
+    latest_update: LatestUpdateOut | None
+    # Two or three newest notes, only from residents whose profile is visible.
+    recommendations: list[RecommendationOut]
+    viewer: BusinessViewerOut
+    # Owner and committee only.
+    follower_count: int | None
     can_manage: bool
     # Only shown to the owner and the committee.
     rejection_reason: str | None
     can_review: bool
+
+
+class UpdateIn(CamelModel):
+    text: Annotated[Text, StringConstraints(min_length=1, max_length=280)]
+
+
+class RecommendIn(CamelModel):
+    note: Annotated[Text, StringConstraints(max_length=140)] | None = None
+
+
+class FeaturedIn(CamelModel):
+    featured: bool
+
+
+class ReasonIn(CamelModel):
+    reason: Reason
+
+
+class ReviewIn(CamelModel):
+    decision: Literal["approve", "reject"]
+    reason: Reason | None = None
+
+    @model_validator(mode="after")
+    def _reject_needs_reason(self) -> Self:
+        if self.decision == "reject" and not self.reason:
+            raise ValueError("Give a reason for rejecting this business.")
+        return self

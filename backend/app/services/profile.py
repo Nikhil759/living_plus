@@ -7,6 +7,7 @@ from app.schemas.home import ResidentOut
 from app.schemas.identity import ProfileUpdate
 from app.services import home as home_service
 from app.services import mappers
+from app.services import notifications as notification_service
 
 
 async def ensure_profile(db: AsyncSession, member: CurrentMember) -> tuple[Profile, bool]:
@@ -48,6 +49,7 @@ async def build_resident_out(db: AsyncSession, member: CurrentMember) -> Residen
         tower_name=tower_name,
         flat_no=flat_no,
         profile=profile,
+        has_unread_notifications=await notification_service.has_unread(db, member),
     )
 
 

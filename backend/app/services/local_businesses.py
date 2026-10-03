@@ -21,6 +21,7 @@ from app.schemas.local_business import (
     OfferingOut,
     StartingPrice,
 )
+from app.services import business_social
 from app.services.marketplace import apply_phone, first_name, is_committee, towers_by_user
 
 _BROWSE_LIMIT = 200
@@ -182,6 +183,14 @@ async def detail(
             avatar_url=owner.avatar_url,
             tower=card.tower,
             member_since=owner.created_at.year,
+        ),
+        latest_update=await business_social.latest_update(db, business.id),
+        recommendations=await business_social.recent_recommendations(db, member, business.id),
+        viewer=await business_social.viewer_state(db, member, business.id),
+        follower_count=(
+            await business_social.follower_count(db, business)
+            if is_owner or is_committee(member)
+            else None
         ),
         can_manage=is_owner,
         rejection_reason=business.rejection_reason if is_owner or is_committee(member) else None,

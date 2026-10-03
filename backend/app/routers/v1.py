@@ -10,6 +10,7 @@ from app.routers import (
     local_businesses,
     marketplace,
     me,
+    notifications,
     societies,
     uploads,
 )
@@ -24,5 +25,6 @@ api_router.include_router(events.router)
 api_router.include_router(amenities.router)
 api_router.include_router(local_businesses.router)
 api_router.include_router(marketplace.router)
+api_router.include_router(notifications.router)
 api_router.include_router(announcements.router)
 api_router.include_router(uploads.router)
