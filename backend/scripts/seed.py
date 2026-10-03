@@ -38,6 +38,11 @@ from app.models import (
     Group,
     GroupMember,
     GroupMemberRole,
+    ListingCategory,
+    ListingCondition,
+    ListingContactMethod,
+    ListingStatus,
+    MarketplaceListing,
     Membership,
     MembershipInviteStatus,
     MembershipRole,
@@ -871,6 +876,68 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
                     )
 
 
+# (key, seller key, title, category, condition, price, negotiable, status, days ago, contact,
+#  photos, description)
+Cat, Cond, St, Via = ListingCategory, ListingCondition, ListingStatus, ListingContactMethod
+MARKETPLACE_SEED: list[tuple[Any, ...]] = [
+    ("desk", "resident.6", "IKEA Micke study desk (white)", Cat.furniture, Cond.good, 4500, True,
+     St.available, 3, Via.whatsapp, ["study-desk", "study-desk-2"],
+     "Used for 2 years, minor scratch on the edge. Includes the drawer. Easy to dismantle."),
+    ("stroller", "resident.1", "Chicco LiteWay stroller", Cat.kids, Cond.like_new, 3200, False,
+     St.reserved, 4, Via.whatsapp, ["stroller", "stroller-2"],
+     "Barely used. Folds compactly, rain cover and cup holder included."),
+    ("ps5", "resident.3", "PS5 games bundle (FIFA 24 + GT7)", Cat.electronics, Cond.like_new,
+     2800, False, St.available, 1, Via.whatsapp, ["ps5-games"],
+     "Both discs with cases, no scratches. Happy to meet at the club lounge."),
+    ("cycle", "resident.9", "Hero Sprint 26T hybrid cycle", Cat.sports, Cond.good, 5500, True,
+     St.available, 6, Via.call, ["hybrid-cycle"],
+     "21-speed, serviced last month. New tyres. Ideal for the society loop and commutes."),
+    ("books", "resident.5", "Kids' picture book set (8 books)", Cat.kids, Cond.good, 0, False,
+     St.available, 2, Via.whatsapp, ["kids-books"],
+     "Hardcover animal picture books, ages 2 to 6. Free to a good home."),
+    ("yoga", "resident.2", "Yoga mat, 6mm", Cat.sports, Cond.like_new, 400, False,
+     St.available, 5, Via.whatsapp, ["yoga-mat"],
+     "Non-slip, used a handful of times. Cleaned and rolled."),
+    ("microwave", "demo", "Samsung 28L microwave oven", Cat.home_kitchen, Cond.good, 2000, True,
+     St.available, 2, Via.whatsapp, ["microwave"],
+     "Works perfectly, selling because we upgraded. Turntable included."),
+    ("airfryer", "demo", "Philips air fryer 4.1L", Cat.home_kitchen, Cond.like_new, 2500, False,
+     St.sold, 9, Via.whatsapp, ["air-fryer"], "Used only a few times. Sold to a neighbour."),
+    ("bookcase", "resident.7", "Oak finish 5-shelf bookcase", Cat.furniture, Cond.fair, 1800,
+     True, St.reserved, 7, Via.call, ["bookcase"],
+     "Sturdy, a few marks on the side panel. Needs two people to carry."),
+    ("lego", "resident.8", "Building bricks box with storage bin", Cat.kids, Cond.good, 900,
+     False, St.sold, 11, Via.whatsapp, ["lego-bricks"], "Around 5 kg of mixed bricks."),
+    ("speaker", "resident.11", "Bluetooth speaker (teal)", Cat.electronics, Cond.good, 3500,
+     True, St.available, 8, Via.whatsapp, ["bluetooth-speaker"],
+     "Great bass, battery lasts a full day. Charging cable included."),
+]
+
+
+async def seed_marketplace(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
+    """Re-running resets each demo listing to its seeded state."""
+    now = datetime.now(UTC)
+    for idx, row in enumerate(MARKETPLACE_SEED):
+        key, seller_key, title, category, condition, price, negotiable = row[:7]
+        status, days, via, photos, desc = row[7:]
+        seller = users[seller_key]
+        if not seller.phone:
+            # Fake numbers: the app only ever uses them to build a contact link.
+            seller.phone = f"+9198765{sid(f'phone.{seller_key}').int % 100000:05d}"
+        listing = await session.get(MarketplaceListing, sid(f"listing.{key}"))
+        if listing is None:
+            listing = MarketplaceListing(id=sid(f"listing.{key}"), society_id=society.id)
+            session.add(listing)
+        listing.seller_id = seller.id
+        listing.title, listing.category, listing.condition = title, category, condition
+        listing.price_inr, listing.negotiable, listing.status = price, negotiable, status
+        listing.description, listing.contact_method = desc, via
+        listing.photos = [f"/images/marketplace/{name}.jpg" for name in photos]
+        listing.pickup_note = "Pickup in society"
+        listing.listed_at = now - timedelta(days=days, hours=idx)
+        listing.removed_reason = listing.removed_by_id = None
+
+
 async def run_seed() -> None:
     session_factory = get_sessionmaker()
     async with session_factory() as session:
@@ -882,6 +949,7 @@ async def run_seed() -> None:
         await seed_amenities(session, society, users)
         await seed_community(session, society, users)
         await seed_events(session, society, users)
+        await seed_marketplace(session, society, users)
         await session.commit()
         action = "Updated" if existing else "Created"
         print(f"{action} demo data for {society.name} (society code {INVITE_CODE}).")
