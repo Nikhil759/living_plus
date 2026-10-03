@@ -1,12 +1,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import Boolean, ForeignKey, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import text
 
 from app.models.base import Base
+from app.models.types import JsonList, UTCDateTime
 
 
 class Profile(Base):
@@ -15,20 +14,18 @@ class Profile(Base):
     __tablename__ = "profiles"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     society_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("societies.id", ondelete="CASCADE"), index=True
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
     )
     bio: Mapped[str | None] = mapped_column(String(2000), nullable=True)
-    interests: Mapped[list[str]] = mapped_column(
-        ARRAY(String(100)), server_default=text("'{}'::varchar[]")
-    )
-    is_visible: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
-    show_flat: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    interests: Mapped[list[str]] = mapped_column(JsonList(), default=list)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    show_flat: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        UTCDateTime, server_default=func.now(), onupdate=func.now()
     )
 
     user: Mapped["User"] = relationship(back_populates="profile")

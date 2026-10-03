@@ -24,10 +24,9 @@ class Settings(BaseSettings):
 
     @field_validator("DATABASE_URL")
     @classmethod
-    def require_asyncpg_driver(cls, value: str) -> str:
-        # A plain postgresql:// URL would pick the sync driver and fail at first query.
-        if not value.startswith("postgresql+asyncpg://"):
-            raise ValueError("DATABASE_URL must start with postgresql+asyncpg://")
+    def require_sqlite_driver(cls, value: str) -> str:
+        if not value.startswith("sqlite+aiosqlite://"):
+            raise ValueError("DATABASE_URL must start with sqlite+aiosqlite://")
         return value
 
     @field_validator("FRONTEND_ORIGIN")

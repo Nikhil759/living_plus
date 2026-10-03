@@ -2,7 +2,7 @@ import re
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, exists, func, or_, select
+from sqlalchemy import String, and_, cast, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 
@@ -82,7 +82,7 @@ def _audience_visible(
     else:
         towers_ok = and_(
             Event.audience_type == EventAudience.towers,
-            Event.audience_tower_ids.contains([tower_id]),
+            cast(Event.audience_tower_ids, String).like(f"%{tower_id}%"),
         )
     return or_(society_ok, group_ok, towers_ok, Event.host_id == member.user.id)
 
@@ -180,7 +180,7 @@ async def list_events(
             or_(
                 Event.title.ilike(pattern),
                 Event.description.ilike(pattern),
-                func.array_to_string(Event.tags, " ").ilike(pattern),
+                cast(Event.tags, String).ilike(pattern),
             )
         )
 

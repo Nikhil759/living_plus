@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends
+from sqlalchemy import event
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -14,17 +16,28 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import get_settings
 
 
+def _ensure_sqlite_parent(url: str) -> None:
+    database = make_url(url).database
+    if not database or database == ":memory:":
+        return
+    Path(database).expanduser().parent.mkdir(parents=True, exist_ok=True)
+
+
 def build_engine(url: str, **kwargs: Any) -> AsyncEngine:
-    # Supabase's pooler runs pgbouncer in transaction mode, which breaks asyncpg's
-    # prepared-statement caches. Disabling them is harmless on a direct connection.
-    # SQLAlchemy only accepts its own cache setting as a URL query parameter.
-    url_no_cache = make_url(url).update_query_dict({"prepared_statement_cache_size": "0"})
-    return create_async_engine(
-        url_no_cache,
-        connect_args={"statement_cache_size": 0, "timeout": 5},
-        pool_pre_ping=True,
+    _ensure_sqlite_parent(url)
+    engine = create_async_engine(
+        url,
+        connect_args={"check_same_thread": False},
         **kwargs,
     )
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fks(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
 
 
 @lru_cache

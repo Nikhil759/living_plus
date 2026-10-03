@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "@/lib/api/config";
+import { resolveApiUrl } from "@/lib/api/config";
 
 export class ApiError extends Error {
   constructor(
@@ -25,7 +25,7 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = resolveApiUrl(path);
   const response = await fetch(url, {
     ...init,
     method: "GET",
@@ -48,7 +48,7 @@ export async function apiPost<T>(
   body: unknown,
   init?: RequestInit,
 ): Promise<T> {
-  const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = resolveApiUrl(path);
   const response = await fetch(url, {
     ...init,
     method: "POST",
@@ -73,7 +73,7 @@ export async function apiPatch<T>(
   body: unknown,
   init?: RequestInit,
 ): Promise<T> {
-  const url = `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = resolveApiUrl(path);
   const response = await fetch(url, {
     ...init,
     method: "PATCH",

@@ -15,7 +15,6 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_sessionmaker
@@ -414,11 +413,35 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
     specs: list[tuple[str, str, AmenityType, int, CrowdLevel, str, dict[str, Any] | None]] = [
         ("am-gym", "Gym", AmenityType.gym, 30, CrowdLevel.moderate, "Moderate · 6 active", None),
         ("am-pool", "Pool", AmenityType.pool, 20, CrowdLevel.quiet, "Quiet · 2 swimmers", None),
-        ("am-badminton-1", "Badminton 1", AmenityType.court, 4, CrowdLevel.busy, "Booked till 7:00 PM", None),
+        (
+            "am-badminton-1",
+            "Badminton 1",
+            AmenityType.court,
+            4,
+            CrowdLevel.busy,
+            "Booked till 7:00 PM",
+            None,
+        ),
         ("am-badminton-2", "Badminton 2", AmenityType.court, 4, CrowdLevel.quiet, "Free now", None),
         ("am-tennis", "Tennis Court", AmenityType.court, 4, CrowdLevel.quiet, "Free now", None),
-        ("am-hall", "Community Hall", AmenityType.hall, 120, CrowdLevel.quiet, "Available", HALL_RULES),
-        ("am-amphitheatre", "Amphitheatre", AmenityType.amphitheatre, 200, CrowdLevel.closed, "Closed today", HALL_RULES),
+        (
+            "am-hall",
+            "Community Hall",
+            AmenityType.hall,
+            120,
+            CrowdLevel.quiet,
+            "Available",
+            HALL_RULES,
+        ),
+        (
+            "am-amphitheatre",
+            "Amphitheatre",
+            AmenityType.amphitheatre,
+            200,
+            CrowdLevel.closed,
+            "Closed today",
+            HALL_RULES,
+        ),
         ("am-cafe", "Café Lounge", AmenityType.other, 40, CrowdLevel.moderate, "Open", None),
     ]
     for key, name, atype, capacity, crowd, note, rules in specs:
@@ -455,7 +478,8 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
                 amenity_id=badminton.id,
                 society_id=society.id,
                 user_id=users["resident.0"].id,
-                time_range=Range(start, end, bounds="[)"),
+                starts_at=start,
+                ends_at=end,
                 status=AmenityBookingStatus.confirmed,
             )
         )
@@ -464,7 +488,12 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
 async def seed_community(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
     group_specs = [
         ("FIFA & Game Night", "Weekend console tournaments", ["FIFA", "gaming"], False),
-        ("Resident Cyclists", "Early-morning rides on the expressway", ["cycling", "running"], False),
+        (
+            "Resident Cyclists",
+            "Early-morning rides on the expressway",
+            ["cycling", "running"],
+            False,
+        ),
         ("Yoga Circle", "Sunrise flows on the terrace", ["yoga", "wellness"], False),
         ("Salsa Saturdays", "Community Hall workshops", ["dance", "salsa"], False),
         ("Book Club", "Tower-wise reading circles", ["books"], True),

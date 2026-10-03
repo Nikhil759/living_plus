@@ -7,7 +7,7 @@ Community app for Indian gated housing societies. Residents join interest groups
 - `/backend`: FastAPI, being built now
 
 ## Backend stack
-Python 3.12, uv, FastAPI, Pydantic v2, SQLAlchemy 2.0 async + asyncpg, Alembic, Postgres on Supabase (pgvector enabled), Supabase Auth (email/password + Google) verified server-side, Redis (Upstash) for rate limits and cache, arq for background jobs, LangGraph for agents, Langfuse for tracing, Razorpay, Resend, Twilio WhatsApp sandbox.
+Python 3.12, uv, FastAPI, Pydantic v2, SQLAlchemy 2.0 async + aiosqlite, Alembic, SQLite, Supabase Auth (email/password + Google) verified server-side, Redis (Upstash) for rate limits and cache, arq for background jobs, LangGraph for agents, Langfuse for tracing, Razorpay, Resend, Twilio WhatsApp sandbox.
 Tests: pytest + pytest-asyncio + httpx AsyncClient. Lint: ruff.
 
 ## Rules

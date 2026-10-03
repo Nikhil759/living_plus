@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import pool, text
+from sqlalchemy import inspect, pool
 
 from app.core.db import build_engine
 
@@ -22,6 +22,7 @@ DOMAIN_TABLES = frozenset(
         "posts",
         "events",
         "event_tickets",
+        "membership_invites",
     }
 )
 
@@ -32,32 +33,36 @@ def _alembic_config() -> Config:
     return config
 
 
-def _reset_public_schema(database_url: str) -> None:
+def _reset_schema(database_url: str) -> None:
     async def _run() -> None:
         engine = build_engine(database_url, poolclass=pool.NullPool)
         try:
-            async with engine.connect() as conn:
-                await conn.execute(text("DROP SCHEMA public CASCADE"))
-                await conn.execute(text("CREATE SCHEMA public"))
-                await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-                await conn.commit()
+            async with engine.begin() as conn:
+
+                def _drop_all(sync_conn):
+                    inspector = inspect(sync_conn)
+                    sync_conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+                    for table in inspector.get_table_names():
+                        sync_conn.exec_driver_sql(f'DROP TABLE IF EXISTS "{table}"')
+                    sync_conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+
+                await conn.run_sync(_drop_all)
         finally:
             await engine.dispose()
 
     asyncio.run(_run())
 
 
-def _list_public_tables(database_url: str) -> set[str]:
+def _list_tables(database_url: str) -> set[str]:
     async def _run() -> set[str]:
         engine = build_engine(database_url, poolclass=pool.NullPool)
         try:
             async with engine.connect() as conn:
-                rows = (
-                    await conn.execute(
-                        text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
-                    )
-                ).fetchall()
-                return {row[0] for row in rows}
+
+                def _tables(sync_conn) -> set[str]:
+                    return set(inspect(sync_conn).get_table_names())
+
+                return await conn.run_sync(_tables)
         finally:
             await engine.dispose()
 
@@ -65,12 +70,12 @@ def _list_public_tables(database_url: str) -> set[str]:
 
 
 def test_identity_migration_applies_on_empty_database() -> None:
-    """Downgrade to bare public schema, then upgrade head (same as a fresh Postgres)."""
+    """Wipe the SQLite file schema, then upgrade head (same as a fresh database)."""
     database_url = os.environ["DATABASE_URL"]
-    _reset_public_schema(database_url)
+    _reset_schema(database_url)
 
     command.upgrade(_alembic_config(), "head")
-    tables = _list_public_tables(database_url)
+    tables = _list_tables(database_url)
 
     assert IDENTITY_TABLES.issubset(tables)
     assert DOMAIN_TABLES.issubset(tables)

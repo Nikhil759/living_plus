@@ -1,12 +1,11 @@
 # Aangan backend
 
-FastAPI + SQLAlchemy 2.0 (async) + Postgres. Layers: `routers` (HTTP only) → `services`
+FastAPI + SQLAlchemy 2.0 (async) + SQLite. Layers: `routers` (HTTP only) → `services`
 (business logic) → `models`.
 
 ## Run backend locally
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) and a Postgres 15+ database
-(a Supabase project, or local Postgres).
+Prerequisites: [uv](https://docs.astral.sh/uv/). Supabase is used for Auth only.
 
 ```bash
 cd backend
@@ -17,7 +16,7 @@ uv run uvicorn app.main:app --reload --port 8000
 ```
 
 Check it: `curl localhost:8000/v1/health` → `{"status":"ok","db":true}`
-(`"db":false` means the app is up but cannot reach Postgres). Interactive docs are at
+(`"db":false` means the app is up but cannot open the SQLite file). Interactive docs are at
 `http://localhost:8000/docs`.
 
 ### Wire the Next.js UI (local)
@@ -35,17 +34,15 @@ By default the UI uses bundled JSON (`NEXT_PUBLIC_DATA_SOURCE=static` in
 Amenities, and Announcements from `GET /v1/home`, `/v1/events`, etc. Use `?state=empty`
 on Home for an empty-state preview.
 
-`DATABASE_URL` must use the `postgresql+asyncpg://` scheme. Run migrations against
-Supabase's direct connection (port 5432), not the pooled one.
+`DATABASE_URL` must use the `sqlite+aiosqlite://` scheme. The default local file is
+`backend/.demo/aangan.db`.
 
 ### Tests
 
-Tests need a separate Postgres database whose name ends in `_test` (the suite refuses to run
-otherwise). Point `TEST_DATABASE_URL` at it; the default is
-`postgresql+asyncpg://postgres:postgres@localhost:5432/aangan_test`.
+Tests use a separate SQLite file whose name contains `_test` (the suite refuses to run
+otherwise). The default is `sqlite+aiosqlite:///./.demo/aangan_test.db`.
 
 ```bash
-createdb aangan_test         # once (or create it from the Supabase SQL editor / a local tool)
 uv run pytest                # migrates the test DB, then runs each test in a rolled-back transaction
 ```
 

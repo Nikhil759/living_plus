@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdTimestampMixin
 from app.models.enums import MembershipInviteStatus, MembershipRole
+from app.models.types import UTCDateTime, enum_column
 
 
 class MembershipInvite(Base, IdTimestampMixin):
@@ -17,24 +17,24 @@ class MembershipInvite(Base, IdTimestampMixin):
     )
 
     society_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("societies.id", ondelete="CASCADE"), index=True
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
     )
     flat_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("flats.id", ondelete="CASCADE"), index=True
+        Uuid(as_uuid=True), ForeignKey("flats.id", ondelete="CASCADE"), index=True
     )
     email: Mapped[str] = mapped_column(String(320))
     role: Mapped[MembershipRole] = mapped_column(
-        SAEnum(MembershipRole, name="membership_role", create_constraint=False)
+        enum_column(MembershipRole, "membership_role", create_constraint=False)
     )
     code: Mapped[str] = mapped_column(String(32))
     status: Mapped[MembershipInviteStatus] = mapped_column(
-        SAEnum(MembershipInviteStatus, name="membership_invite_status"),
+        enum_column(MembershipInviteStatus, "membership_invite_status"),
         default=MembershipInviteStatus.pending,
     )
-    expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    consumed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     consumed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     society: Mapped["Society"] = relationship()

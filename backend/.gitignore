@@ -3,5 +3,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .env
+.demo/
+*.db
+*.db-wal
+*.db-shm
 # The repo-level .gitignore ignores .env*; keep the committed template.
 !.env.example

@@ -1,10 +1,10 @@
-"""Merge Postgres demo data into frontend/.demo/demo.db (after JSON seed).
+"""Copy FastAPI SQLite demo rows into frontend/.demo/demo.db (after JSON seed).
 
 Usage (from backend/, DATABASE_URL must be set):
     uv run python scripts/export_demo_sqlite.py
 
 Run `npm run demo:seed --prefix frontend` first for full catalog (marketplace, etc.).
-This script overwrites events, amenities, announcements, and per-user residents from PG.
+This script overwrites events, amenities, announcements, and per-user residents from the API DB.
 """
 
 from __future__ import annotations

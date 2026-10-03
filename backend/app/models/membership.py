@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdTimestampMixin
 from app.models.enums import MembershipRole, MembershipStatus
+from app.models.types import enum_column
 
 
 class Membership(Base, IdTimestampMixin):
@@ -16,19 +16,19 @@ class Membership(Base, IdTimestampMixin):
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     society_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("societies.id", ondelete="CASCADE"), index=True
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
     )
     flat_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("flats.id", ondelete="SET NULL"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("flats.id", ondelete="SET NULL"), nullable=True
     )
     role: Mapped[MembershipRole] = mapped_column(
-        SAEnum(MembershipRole, name="membership_role"), default=MembershipRole.tenant
+        enum_column(MembershipRole, "membership_role"), default=MembershipRole.tenant
     )
     status: Mapped[MembershipStatus] = mapped_column(
-        SAEnum(MembershipStatus, name="membership_status"), default=MembershipStatus.pending
+        enum_column(MembershipStatus, "membership_status"), default=MembershipStatus.pending
     )
 
     user: Mapped["User"] = relationship(back_populates="memberships")

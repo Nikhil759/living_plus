@@ -11,7 +11,7 @@ async def check_database(db: AsyncSession) -> bool:
     try:
         await db.execute(text("SELECT 1"))
     except (SQLAlchemyError, OSError):
-        # OSError: asyncpg raises connection-refused/timeouts without SQLAlchemy wrapping them.
+        # OSError: some drivers raise connection-refused/timeouts without SQLAlchemy wrapping them.
         logger.warning("database health check failed", exc_info=True)
         return False
     return True
