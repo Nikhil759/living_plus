@@ -2,9 +2,11 @@ import type {
   BusinessAvailability,
   BusinessCard,
   BusinessCategory,
+  BusinessServes,
   BusinessSort,
   OfferingUnit,
   StartingPrice,
+  Weekday,
 } from "@/lib/types/local-business";
 
 export const BUSINESS_CATEGORY_LABEL: Record<BusinessCategory, string> = {
@@ -124,4 +126,51 @@ export function homePicks(cards: BusinessCard[], limit: number): BusinessCard[] 
   const featured = open.filter((card) => card.isFeatured);
   const rest = open.filter((card) => !card.isFeatured);
   return [...featured, ...rest].slice(0, limit);
+}
+
+export const SERVES_LABEL: Record<BusinessServes, string> = {
+  within_society: "Within the society",
+  all_towers: "Delivers to all towers",
+};
+
+const WEEK: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_LABEL: Record<Weekday, string> = {
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+  sun: "Sun",
+};
+
+/** "Every day", "Mon to Fri" or "Sat, Sun". */
+export function daysLabel(days: Weekday[]): string {
+  const picked = WEEK.filter((day) => days.includes(day));
+  if (picked.length === 7) return "Every day";
+  const first = WEEK.indexOf(picked[0]);
+  const contiguous = picked.every((day, index) => WEEK.indexOf(day) === first + index);
+  if (picked.length >= 3 && contiguous) {
+    return `${DAY_LABEL[picked[0]]} to ${DAY_LABEL[picked[picked.length - 1]]}`;
+  }
+  return picked.map((day) => DAY_LABEL[day]).join(", ");
+}
+
+export const WEEKDAYS = WEEK;
+export const WEEKDAY_LABEL = DAY_LABEL;
+
+/** "just now", "2h ago", "3d ago", then a short date. */
+export function shortAgo(iso: string, now: Date = new Date()): string {
+  const mins = Math.floor(Math.max(0, now.getTime() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(iso));
 }

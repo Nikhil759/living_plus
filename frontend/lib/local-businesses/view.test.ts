@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   browseQueryString,
+  daysLabel,
   DEFAULT_FILTERS,
   hasActiveFilters,
   homePicks,
   ownerLine,
   priceWithUnit,
   recommendedLabel,
+  shortAgo,
   startingPriceLabel,
 } from "./view";
 import type { BusinessCard } from "@/lib/types/local-business";
@@ -69,4 +71,19 @@ test("home shows featured first, then the rest, up to the limit", () => {
     homePicks(cards, 3).map((item) => item.id),
     ["b", "d", "a"],
   );
+});
+
+test("days read naturally", () => {
+  assert.equal(daysLabel(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]), "Every day");
+  assert.equal(daysLabel(["fri", "mon", "tue", "wed", "thu"]), "Mon to Fri");
+  assert.equal(daysLabel(["sat", "sun"]), "Sat, Sun");
+  assert.equal(daysLabel(["mon", "wed", "fri"]), "Mon, Wed, Fri");
+});
+
+test("updates show a short age", () => {
+  const now = new Date("2026-10-03T12:00:00Z");
+  assert.equal(shortAgo("2026-10-03T11:59:40Z", now), "just now");
+  assert.equal(shortAgo("2026-10-03T11:30:00Z", now), "30m ago");
+  assert.equal(shortAgo("2026-10-03T10:00:00Z", now), "2h ago");
+  assert.equal(shortAgo("2026-10-01T12:00:00Z", now), "2d ago");
 });
