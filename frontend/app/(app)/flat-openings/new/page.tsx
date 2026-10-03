@@ -1,23 +1,17 @@
-import Link from "next/link";
-import { Home } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { OpeningForm } from "@/components/openings/opening-form";
+import { ErrorState } from "@/components/ui/error-state";
+import { fetchOpeningOptions } from "@/lib/api/openings";
+import { marketplaceIsLive } from "@/lib/data";
 
-export default function NewFlatOpeningPage() {
+export default async function NewFlatOpeningPage() {
   return (
-    <AppPage title="Post an opening">
-      <Card>
-        <EmptyState
-          icon={<Home />}
-          title="Posting connects to the API next."
-          action={
-            <Link href="/flat-openings" className="text-callout font-semibold text-primary">
-              Browse openings
-            </Link>
-          }
-        />
-      </Card>
+    <AppPage title="Post an opening" backHref="/flat-openings" backLabel="Flat openings">
+      {marketplaceIsLive() ? (
+        <OpeningForm options={await fetchOpeningOptions()} />
+      ) : (
+        <ErrorState message="Posting an opening needs the live backend. Set NEXT_PUBLIC_DATA_SOURCE=api." />
+      )}
     </AppPage>
   );
 }

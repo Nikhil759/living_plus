@@ -33,7 +33,9 @@ export function OpeningCard({
     >
       <div className="flex items-start justify-between gap-3">
         <Badge tone="primary">{KIND_LABEL[opening.kind]}</Badge>
-        <p className="shrink-0 text-title text-ink">{formatRent(opening.rentInr)}</p>
+        <p className="shrink-0 text-title text-ink">
+          {opening.rentInr > 0 ? formatRent(opening.rentInr) : "₹ /mo"}
+        </p>
       </div>
 
       {preview ? (

@@ -1,8 +1,9 @@
 "use client";
 
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, apiPut } from "@/lib/api/client";
 import { getBrowserAccessToken } from "@/lib/api/browser-auth";
 import type { ContactLink } from "@/lib/contact-link";
+import type { openingPayload } from "@/lib/openings/form";
 import { browseQueryString, type BrowseFilters } from "@/lib/openings/view";
 import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
 
@@ -42,4 +43,14 @@ export async function removeOpeningApi(id: string, reason?: string): Promise<voi
   await apiPost<void>(path(id, "/remove"), reason ? { reason } : {}, {
     headers: await authHeaders(),
   });
+}
+
+type OpeningBody = ReturnType<typeof openingPayload>;
+
+export async function createOpeningApi(body: OpeningBody): Promise<FlatOpeningDetail> {
+  return apiPost<FlatOpeningDetail>("/v1/flat-openings", body, { headers: await authHeaders() });
+}
+
+export async function updateOpeningApi(id: string, body: OpeningBody): Promise<FlatOpeningDetail> {
+  return apiPut<FlatOpeningDetail>(path(id), body, { headers: await authHeaders() });
 }
