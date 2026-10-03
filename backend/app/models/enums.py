@@ -163,3 +163,8 @@ class ListingSort(StrEnum):
     newest = "newest"
     price_asc = "price_asc"
     price_desc = "price_desc"
+
+
+class ListingTab(StrEnum):
+    active = "active"
+    sold = "sold"

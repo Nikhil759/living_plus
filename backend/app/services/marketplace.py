@@ -1,5 +1,7 @@
+import re
 import uuid
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,12 +18,20 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import ListingCategory, ListingSort, ListingStatus
+from app.models.enums import (
+    ListingCategory,
+    ListingContactMethod,
+    ListingSort,
+    ListingStatus,
+    ListingTab,
+)
 from app.schemas.marketplace import (
+    ContactOut,
     ListingCardOut,
     ListingDetailOut,
     ListingIn,
     ListingSellerOut,
+    ReportOut,
     SellerProfileOut,
 )
 
@@ -252,3 +262,123 @@ async def update_listing(
     _apply_fields(listing, body)
     await db.commit()
     return await _detail(db, member, listing)
+
+
+# Which statuses a listing may move to from its current one. Sold -> available is "Relist".
+_TRANSITIONS: dict[ListingStatus, set[ListingStatus]] = {
+    ListingStatus.available: {ListingStatus.reserved, ListingStatus.sold},
+    ListingStatus.reserved: {ListingStatus.available, ListingStatus.sold},
+    ListingStatus.sold: {ListingStatus.available},
+}
+
+
+async def set_status(
+    db: AsyncSession, member: CurrentMember, listing_id: uuid.UUID, status: ListingStatus
+) -> ListingDetailOut:
+    listing = await manageable_listing(db, member, listing_id)
+    if status != listing.status:
+        if status not in _TRANSITIONS[listing.status]:
+            raise AppError(
+                "invalid_status",
+                f"A {listing.status.value} listing can't be marked {status.value}.",
+                409,
+            )
+        if listing.status == ListingStatus.sold:
+            listing.listed_at = now()  # relisting puts it back at the top of Browse
+        listing.status = status
+        await db.commit()
+    return await _detail(db, member, listing)
+
+
+async def my_listings(
+    db: AsyncSession, member: CurrentMember, tab: ListingTab
+) -> list[ListingCardOut]:
+    statuses = (ListingStatus.sold,) if tab == ListingTab.sold else _VISIBLE
+    stmt = (
+        _scoped(member)
+        .where(MarketplaceListing.seller_id == member.user.id)
+        .where(MarketplaceListing.status.in_(statuses))
+        .order_by(MarketplaceListing.listed_at.desc(), MarketplaceListing.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return await _to_cards(db, member, list(result.scalars()))
+
+
+async def remove_listing(
+    db: AsyncSession, member: CurrentMember, listing_id: uuid.UUID, reason: str | None
+) -> None:
+    listing = await manageable_listing(db, member, listing_id)
+    if listing.seller_id != member.user.id and not reason:
+        raise AppError("reason_required", "Give a reason for removing this listing.", 422)
+    listing.status = ListingStatus.removed
+    listing.removed_reason = reason
+    listing.removed_by_id = member.user.id
+    await db.commit()
+
+
+async def report_listing(
+    db: AsyncSession, member: CurrentMember, listing_id: uuid.UUID, reason: str
+) -> ReportOut:
+    listing = await _get_listing(db, member, listing_id)
+    if listing.seller_id == member.user.id:
+        raise AppError("invalid_report", "You can't report your own listing.", 422)
+    existing = await db.execute(
+        select(ListingReport).where(
+            ListingReport.listing_id == listing.id,
+            ListingReport.reporter_id == member.user.id,
+        )
+    )
+    report = existing.scalar_one_or_none()
+    if report is None:
+        db.add(
+            ListingReport(
+                id=uuid.uuid4(),
+                listing_id=listing.id,
+                society_id=member.society_id,
+                reporter_id=member.user.id,
+                reason=reason,
+            )
+        )
+    else:
+        report.reason = reason  # one report per resident; a repeat updates the reason
+    await db.commit()
+    return ReportOut(message="Thanks, the committee will take a look")
+
+
+def _phone_digits(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone)
+    return f"91{digits}" if len(digits) == 10 else digits
+
+
+def _contact_url(
+    method: ListingContactMethod, phone: str, buyer: str, tower: str | None, title: str
+) -> str:
+    digits = _phone_digits(phone)
+    if method == ListingContactMethod.call:
+        return f"tel:+{digits}"
+    who = f"{buyer} from {tower}" if tower else buyer
+    text = f"Hi, I'm {who}. Is your {title} on Living+ still available?"
+    return f"https://wa.me/{digits}?text={quote(text)}"
+
+
+async def contact_seller(
+    db: AsyncSession, member: CurrentMember, listing_id: uuid.UUID
+) -> ContactOut:
+    """The seller's number only ever leaves the server inside this on-demand link."""
+    listing = await _get_listing(db, member, listing_id)
+    if listing.seller_id == member.user.id:
+        raise AppError("own_listing", "This is your own listing.", 422)
+    if listing.status == ListingStatus.sold:
+        raise AppError("listing_sold", "This item has been sold.", 409)
+    seller = await db.get(User, listing.seller_id)
+    if seller is None or not seller.phone:
+        raise AppError("seller_unreachable", "The seller can't be reached right now.", 409)
+    towers = await _towers_by_user(db, member.society_id, {member.user.id})
+    url = _contact_url(
+        listing.contact_method,
+        seller.phone,
+        first_name(member.user),
+        towers.get(member.user.id),
+        listing.title,
+    )
+    return ContactOut(method=listing.contact_method, url=url)

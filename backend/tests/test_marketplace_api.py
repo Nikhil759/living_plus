@@ -417,3 +417,201 @@ async def test_listing_photo_upload_and_fetch(
     assert bad.status_code == 422
     assert bad.json()["code"] == "validation_error"
     assert (await client.get("/v1/uploads/listing-photos/../config.py")).status_code == 404
+
+
+async def _status(client: AsyncClient, listing: MarketplaceListing, status: str):
+    return await client.patch(
+        f"/v1/marketplace/listings/{listing.id}/status", json={"status": status}
+    )
+
+
+async def test_status_flow_reserve_sell_and_relist(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    old = datetime.now(UTC) - timedelta(days=5)
+    mine = add_listing(db_session, world, seller_id=world.member.id, listed_at=old)
+    newer = add_listing(db_session, world, title="Other", listed_at=old + timedelta(days=1))
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+
+    reserved = await _status(client, mine, "reserved")
+    assert reserved.status_code == 200
+    assert reserved.json()["status"] == "reserved"
+    titles = [c["title"] for c in (await client.get("/v1/marketplace/listings")).json()]
+    assert "IKEA study desk" in titles
+
+    assert (await _status(client, mine, "available")).json()["status"] == "available"
+    assert (await _status(client, mine, "reserved")).status_code == 200
+    assert (await _status(client, mine, "sold")).json()["status"] == "sold"
+    browse = [c["title"] for c in (await client.get("/v1/marketplace/listings")).json()]
+    assert browse == ["Other"]
+    sold_tab = await client.get("/v1/marketplace/listings/mine?tab=sold")
+    assert [c["title"] for c in sold_tab.json()] == ["IKEA study desk"]
+    assert (await client.get("/v1/marketplace/listings/mine")).json() == []
+
+    relisted = await _status(client, mine, "available")
+    assert relisted.json()["status"] == "available"
+    browse = [c["title"] for c in (await client.get("/v1/marketplace/listings")).json()]
+    assert browse[0] == "IKEA study desk"
+    assert newer.title in browse
+
+
+async def test_status_validation_and_invalid_transition(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sold = add_listing(db_session, world, seller_id=world.member.id, status=ListingStatus.sold)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    assert (await _status(client, sold, "reserved")).status_code == 409
+    assert (await _status(client, sold, "removed")).status_code == 422
+    assert (await _status(client, sold, "bogus")).status_code == 422
+    assert (await _status(client, sold, "sold")).status_code == 200
+
+
+async def test_status_and_remove_forbidden_for_other_resident(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    status = await _status(client, listing, "sold")
+    assert (status.status_code, status.json()["code"]) == (403, "forbidden")
+    removal = await client.post(f"/v1/marketplace/listings/{listing.id}/remove", json={})
+    assert removal.status_code == 403
+    await db_session.refresh(listing)
+    assert listing.status == ListingStatus.available
+
+
+async def test_status_and_remove_wrong_society_and_unauthorised(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    foreign = add_listing(
+        db_session, world, society_id=world.other_society.id, seller_id=world.outsider.id
+    )
+    await db_session.flush()
+    anon = await _status(client, foreign, "sold")
+    assert anon.status_code == 401
+    _enable_local_dev_auth(monkeypatch)
+    world.membership.role = MembershipRole.committee
+    await db_session.flush()
+    assert (await _status(client, foreign, "sold")).status_code == 404
+    path = f"/v1/marketplace/listings/{foreign.id}"
+    assert (await client.post(f"{path}/remove", json={"reason": "spam"})).status_code == 404
+    assert (await client.post(f"{path}/report", json={"reason": "spam"})).status_code == 404
+    assert (await client.post(f"{path}/contact")).status_code == 404
+
+
+async def test_seller_deletes_own_listing(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world, seller_id=world.member.id)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(f"/v1/marketplace/listings/{listing.id}/remove", json={})
+    assert response.status_code == 204
+    assert (await client.get(f"/v1/marketplace/listings/{listing.id}")).status_code == 404
+    assert (await client.get("/v1/marketplace/listings")).json() == []
+    assert (await client.get("/v1/marketplace/listings/mine")).json() == []
+
+
+async def test_committee_removal_needs_a_reason(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world)
+    world.membership.role = MembershipRole.committee
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    path = f"/v1/marketplace/listings/{listing.id}/remove"
+    missing = await client.post(path, json={})
+    assert (missing.status_code, missing.json()["code"]) == (422, "reason_required")
+    short = await client.post(path, json={"reason": "x"})
+    assert short.status_code == 422
+    removed = await client.post(path, json={"reason": "Prohibited item"})
+    assert removed.status_code == 204
+    await db_session.refresh(listing)
+    assert listing.status == ListingStatus.removed
+    assert listing.removed_reason == "Prohibited item"
+    assert listing.removed_by_id == world.member.id
+    assert (await client.get("/v1/marketplace/listings")).json() == []
+
+
+async def test_report_flags_listing_for_committee_only(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    path = f"/v1/marketplace/listings/{listing.id}/report"
+    assert (await client.post(path, json={"reason": ""})).status_code == 422
+    first = await client.post(path, json={"reason": "Looks like a scam"})
+    assert first.status_code == 201
+    assert first.json() == {"message": "Thanks, the committee will take a look"}
+    again = await client.post(path, json={"reason": "Still a scam"})
+    assert again.status_code == 201
+
+    resident_view = (await client.get("/v1/marketplace/listings")).json()
+    assert resident_view[0]["reported"] is False
+    world.membership.role = MembershipRole.committee
+    await db_session.flush()
+    committee_view = (await client.get("/v1/marketplace/listings")).json()
+    assert committee_view[0]["reported"] is True
+    detail = await client.get(f"/v1/marketplace/listings/{listing.id}")
+    assert detail.json()["reported"] is True
+
+
+async def test_cannot_report_own_listing(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world, seller_id=world.member.id)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(
+        f"/v1/marketplace/listings/{listing.id}/report", json={"reason": "just testing"}
+    )
+    assert (response.status_code, response.json()["code"]) == (422, "invalid_report")
+
+
+async def test_contact_builds_prefilled_whatsapp_link(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listing = add_listing(db_session, world, title="PS5 games bundle")
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(f"/v1/marketplace/listings/{listing.id}/contact")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["method"] == "whatsapp"
+    assert data["url"].startswith("https://wa.me/919900011122?text=")
+    assert (
+        "Hi%2C%20I%27m%20Nikhil%20from%20Tower%20B.%20Is%20your%20PS5%20games%20bundle"
+        in (data["url"])
+    )
+    detail = await client.get(f"/v1/marketplace/listings/{listing.id}")
+    assert "9900011122" not in detail.text
+
+
+async def test_contact_call_link_and_guards(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    call = add_listing(db_session, world, contact_method=ListingContactMethod.call)
+    sold = add_listing(db_session, world, status=ListingStatus.sold)
+    own = add_listing(db_session, world, seller_id=world.member.id)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(f"/v1/marketplace/listings/{call.id}/contact")
+    assert response.json() == {"method": "call", "url": "tel:+919900011122"}
+    gone = await client.post(f"/v1/marketplace/listings/{sold.id}/contact")
+    assert (gone.status_code, gone.json()["code"]) == (409, "listing_sold")
+    mine = await client.post(f"/v1/marketplace/listings/{own.id}/contact")
+    assert (mine.status_code, mine.json()["code"]) == (422, "own_listing")
+    world.seller.phone = None
+    await db_session.flush()
+    unreachable = await client.post(f"/v1/marketplace/listings/{call.id}/contact")
+    assert (unreachable.status_code, unreachable.json()["code"]) == (409, "seller_unreachable")
+
+
+async def test_contact_requires_auth(client: AsyncClient) -> None:
+    assert (
+        await client.post(f"/v1/marketplace/listings/{uuid.uuid4()}/contact")
+    ).status_code == 401
+    assert (await client.get("/v1/marketplace/listings/mine")).status_code == 401
