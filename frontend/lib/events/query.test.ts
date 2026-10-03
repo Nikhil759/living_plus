@@ -54,6 +54,14 @@ describe("annotateEvent", () => {
     assert.equal(annotated.isHost, true);
     assert.equal(annotated.viewerGoing, true);
   });
+
+  it("keeps viewerGoing from the API when local RSVP ids are empty", () => {
+    const annotated = annotateEvent(
+      event({ id: "evt-api", startsAt: "2030-01-01T01:30:00.000Z", viewerGoing: true }),
+      { ...viewer, rsvpIds: [] },
+    );
+    assert.equal(annotated.viewerGoing, true);
+  });
 });
 
 describe("filterEvents", () => {

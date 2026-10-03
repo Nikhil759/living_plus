@@ -147,6 +147,36 @@ async def test_events_rsvp_happy_path(
     assert again.status_code == 200
     assert again.json()["goingCount"] == 1
 
+    left = await client.delete(f"/v1/events/{slug}/rsvp")
+    assert left.status_code == 200
+    assert left.json()["goingCount"] == 0
+
+    detail = await client.get(f"/v1/events/{slug}")
+    assert detail.status_code == 200
+    assert detail.json()["viewerGoing"] is False
+    assert detail.json()["goingCount"] == 0
+
+    revived = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+    assert revived.status_code == 200
+    assert revived.json()["goingCount"] == 1
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_leave_requires_auth(client: AsyncClient) -> None:
+    response = await client.delete("/v1/events/board-games/rsvp")
+    assert response.status_code == 401
+
+
+async def test_events_leave_not_found(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.delete("/v1/events/missing-event/rsvp")
+    assert response.status_code == 404
+
     from app.core.config import get_settings
 
     get_settings.cache_clear()
@@ -201,6 +231,9 @@ async def test_events_rsvp_wrong_society(
     _enable_local_dev_auth(monkeypatch)
     response = await client.post("/v1/events/other-meetup/rsvp", json={"qty": 1})
     assert response.status_code == 404
+
+    leave = await client.delete("/v1/events/other-meetup/rsvp")
+    assert leave.status_code == 404
 
     from app.core.config import get_settings
 

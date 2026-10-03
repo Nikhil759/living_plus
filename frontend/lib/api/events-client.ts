@@ -1,6 +1,6 @@
 "use client";
 
-import { apiPost, ApiError } from "@/lib/api/client";
+import { apiDelete, apiPost, ApiError } from "@/lib/api/client";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { HomeEvent } from "@/lib/types/home";
 
@@ -45,6 +45,13 @@ export async function rsvpEventApi(slug: string): Promise<HomeEvent> {
     { qty: 1 },
     { headers: { Authorization: `Bearer ${token}` } },
   );
+}
+
+export async function leaveEventApi(slug: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiDelete<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/rsvp`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function createEventDemo(body: {

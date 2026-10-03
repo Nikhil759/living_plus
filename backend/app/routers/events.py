@@ -46,3 +46,8 @@ async def rsvp_event(
     member: CurrentMemberDep,
 ) -> HomeEventOut:
     return await event_service.rsvp_event(db, member, slug, body)
+
+
+@router.delete("/{slug}/rsvp", response_model=HomeEventOut)
+async def leave_event(slug: str, db: DbSession, member: CurrentMemberDep) -> HomeEventOut:
+    return await event_service.leave_event(db, member, slug)

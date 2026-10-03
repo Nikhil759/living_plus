@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { CalendarPlus, Link2 } from "lucide-react";
 import { eventIcs } from "@/lib/events/detail";
+import { cn } from "@/lib/utils";
 import type { HomeEvent } from "@/lib/types/home";
 
 interface EventShareActionsProps {
   event: HomeEvent;
+  className?: string;
 }
 
-export function EventShareActions({ event }: EventShareActionsProps) {
+export function EventShareActions({ event, className }: EventShareActionsProps) {
   const [copied, setCopied] = useState(false);
 
   function addToCalendar() {
@@ -34,7 +36,7 @@ export function EventShareActions({ event }: EventShareActionsProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-4">
+    <div className={cn("flex flex-wrap gap-4", className)}>
       <button
         type="button"
         onClick={addToCalendar}

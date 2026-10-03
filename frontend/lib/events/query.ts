@@ -103,7 +103,10 @@ export function annotateEvent(event: HomeEvent, viewer: EventViewer): HomeEvent 
     ...event,
     isHost,
     isCommittee,
-    viewerGoing: rsvpSet.has(event.id) || going.some((person) => person.id === viewer.id),
+    viewerGoing:
+      Boolean(event.viewerGoing) ||
+      rsvpSet.has(event.id) ||
+      going.some((person) => person.id === viewer.id),
     going: publicGoingPeople(going),
     attendees: isHost || isCommittee ? (event.attendees ?? fullAttendees(going)) : null,
     rejectionReason: isHost ? event.rejectionReason : undefined,

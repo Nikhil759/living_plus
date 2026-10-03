@@ -92,3 +92,25 @@ export async function apiPatch<T>(
 
   return (await response.json()) as T;
 }
+
+export async function apiDelete<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = resolveApiUrl(path);
+  const response = await fetch(url, {
+    ...init,
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}

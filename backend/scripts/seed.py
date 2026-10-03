@@ -28,6 +28,7 @@ from app.models import (
     Comment,
     CrowdLevel,
     Event,
+    EventCategory,
     EventStatus,
     EventTicket,
     EventTicketStatus,
@@ -608,6 +609,8 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "price_paise": 0,
             "capacity": 24,
             "tags": ["FIFA", "gaming"],
+            "category": EventCategory.sports,
+            "cover_url": "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80",
         },
         {
             "slug": "evt-salsa",
@@ -621,6 +624,9 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "price_paise": 49900,
             "capacity": 40,
             "tags": ["dance", "salsa"],
+            "category": EventCategory.music,
+            "cover_url": "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=1200&q=80",
+            "guest_limit": 1,
         },
         {
             "slug": "evt-expressway-ride",
@@ -633,6 +639,8 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "price_paise": 0,
             "capacity": 30,
             "tags": ["cycling"],
+            "category": EventCategory.fitness,
+            "cover_url": "https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&w=1200&q=80",
         },
         {
             "slug": "evt-terrace-yoga",
@@ -645,6 +653,9 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "price_paise": 0,
             "capacity": 20,
             "tags": ["yoga"],
+            "category": EventCategory.fitness,
+            "cover_url": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80",
+            "what_to_bring": "A mat and water.",
         },
         {
             "slug": "evt-diwali-mela",
@@ -658,6 +669,8 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "capacity": 500,
             "tags": ["society", "diwali"],
             "status": EventStatus.published,
+            "category": EventCategory.social,
+            "cover_url": "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=1200&q=80",
         },
     ]
 
@@ -684,10 +697,21 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
                 price_paise=spec["price_paise"],
                 status=spec.get("status", EventStatus.published),
                 tags=spec["tags"],
+                category=spec.get("category", EventCategory.other),
+                cover_url=spec.get("cover_url"),
+                guest_limit=spec.get("guest_limit", 0),
+                what_to_bring=spec.get("what_to_bring"),
             )
             session.add(event)
         else:
-            continue
+            event.title = spec["title"]
+            event.location_label = spec["location"]
+            event.capacity = spec["capacity"]
+            event.tags = spec["tags"]
+            event.category = spec.get("category", EventCategory.other)
+            event.cover_url = spec.get("cover_url")
+            event.guest_limit = spec.get("guest_limit", 0)
+            event.what_to_bring = spec.get("what_to_bring")
 
         for t_idx in range(3):
             attendee = users[f"resident.{t_idx}"]

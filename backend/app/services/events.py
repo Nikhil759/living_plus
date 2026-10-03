@@ -308,25 +308,53 @@ async def rsvp_event(
         select(EventTicket).where(
             EventTicket.event_id == event.id,
             EventTicket.user_id == member.user.id,
-            EventTicket.status == EventTicketStatus.confirmed,
         )
     )
-    if existing is not None:
+    if existing is not None and existing.status == EventTicketStatus.confirmed:
         return await _event_out(db, event)
 
     if going + body.qty > event.capacity:
         raise AppError("capacity_full", "This event is full.", 409)
 
-    ticket = EventTicket(
-        event_id=event.id,
-        society_id=member.society_id,
-        user_id=member.user.id,
-        qty=body.qty,
-        amount_paise=0,
-        status=EventTicketStatus.confirmed,
-    )
-    db.add(ticket)
+    if existing is not None:
+        existing.status = EventTicketStatus.confirmed
+        existing.qty = body.qty
+        existing.amount_paise = 0
+    else:
+        db.add(
+            EventTicket(
+                event_id=event.id,
+                society_id=member.society_id,
+                user_id=member.user.id,
+                qty=body.qty,
+                amount_paise=0,
+                status=EventTicketStatus.confirmed,
+            )
+        )
     await db.commit()
+    return await _event_out(db, event)
+
+
+async def leave_event(db: AsyncSession, member: CurrentMember, slug: str) -> HomeEventOut:
+    event = await db.scalar(
+        select(Event).where(
+            Event.society_id == member.society_id,
+            Event.public_slug == slug,
+        )
+    )
+    if event is None:
+        raise AppError("not_found", "Event not found.", 404)
+
+    ticket = await db.scalar(
+        select(EventTicket).where(
+            EventTicket.event_id == event.id,
+            EventTicket.user_id == member.user.id,
+            EventTicket.status == EventTicketStatus.confirmed,
+        )
+    )
+    if ticket is not None:
+        ticket.status = EventTicketStatus.cancelled
+        await db.commit()
     return await _event_out(db, event)
 
 

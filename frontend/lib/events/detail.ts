@@ -1,5 +1,5 @@
 import { formatPriceInr } from "@/lib/format";
-import type { EventHostProfile, HomeEvent, Resident } from "@/lib/types/home";
+import type { EventAudience, EventHostProfile, HomeEvent, Resident } from "@/lib/types/home";
 
 const SOCIETY_VENUES: Record<string, string> = {
   "tennis courts": "am-tennis",
@@ -87,10 +87,42 @@ export function eventCapacityLabel(event: Pick<HomeEvent, "goingCount" | "capaci
   return `${event.goingCount} of ${event.capacity} spots taken`;
 }
 
+export function eventSpotsLabel(event: Pick<HomeEvent, "goingCount" | "capacity">): string | undefined {
+  if (event.capacity == null) return undefined;
+  return `${event.goingCount} of ${event.capacity} spots`;
+}
+
+export function eventCapacityRatio(event: Pick<HomeEvent, "goingCount" | "capacity">): number | undefined {
+  if (event.capacity == null || event.capacity <= 0) return undefined;
+  return Math.min(1, Math.max(0, event.goingCount / event.capacity));
+}
+
 export function eventGuestLabel(guestLimit: number | undefined): string | undefined {
-  if (guestLimit == null) return undefined;
-  if (guestLimit <= 0) return "Residents only";
+  if (guestLimit == null || guestLimit <= 0) return undefined;
   return `Guests welcome · up to ${guestLimit} each`;
+}
+
+const AUDIENCE_LABEL: Record<EventAudience, string> = {
+  society: "Residents only",
+  group: "Group members",
+  towers: "Selected towers",
+};
+
+export function eventAudienceLabel(
+  event: Pick<HomeEvent, "audience" | "guestLimit">,
+): string {
+  if (event.audience === "group" || event.audience === "towers") {
+    return AUDIENCE_LABEL[event.audience];
+  }
+  if (event.guestLimit != null && event.guestLimit > 0) {
+    return `Guests welcome · up to ${event.guestLimit} each`;
+  }
+  return AUDIENCE_LABEL.society;
+}
+
+export function eventCoverPill(event: Pick<HomeEvent, "eventType" | "priceInr">): string {
+  if (event.eventType === "society") return "Society";
+  return formatPriceInr(event.priceInr);
 }
 
 export function eventBanners(event: HomeEvent): EventBanner[] {
@@ -135,7 +167,7 @@ export function eventMainAction(event: HomeEvent, now: number = Date.now()): Eve
     return { kind: "pending", label: "Pending approval", enabled: false };
   }
   if (event.viewerGoing) {
-    return { kind: "leave", label: "You're going · Can't make it?", enabled: false };
+    return { kind: "leave", label: "Can't make it", enabled: true };
   }
   if (event.eventType === "society" && event.stallsEnabled) {
     return { kind: "stall", label: "Apply for a stall", enabled: false };

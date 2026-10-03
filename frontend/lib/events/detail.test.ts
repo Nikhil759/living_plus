@@ -3,11 +3,15 @@ import { describe, it } from "node:test";
 import { formatEventRange } from "../format";
 import {
   attachHostProfile,
+  eventAudienceLabel,
   eventBanners,
   eventCapacityLabel,
+  eventCapacityRatio,
+  eventCoverPill,
   eventGuestLabel,
   eventIcs,
   eventMainAction,
+  eventSpotsLabel,
   eventVenueHref,
   hostedEventCount,
 } from "./detail";
@@ -112,8 +116,8 @@ describe("eventMainAction", () => {
     });
     assert.deepEqual(eventMainAction({ ...future, viewerGoing: true }), {
       kind: "leave",
-      label: "You're going · Can't make it?",
-      enabled: false,
+      label: "Can't make it",
+      enabled: true,
     });
     assert.deepEqual(eventMainAction({ ...future, eventType: "society", stallsEnabled: true }), {
       kind: "stall",
@@ -163,8 +167,15 @@ describe("eventBanners and labels", () => {
       "Rejected: Hall is booked.",
     );
     assert.equal(eventCapacityLabel({ goingCount: 14, capacity: 20 }), "14 of 20 spots taken");
+    assert.equal(eventSpotsLabel({ goingCount: 9, capacity: 20 }), "9 of 20 spots");
+    assert.equal(eventCapacityRatio({ goingCount: 9, capacity: 20 }), 0.45);
     assert.equal(eventGuestLabel(1), "Guests welcome · up to 1 each");
-    assert.equal(eventGuestLabel(0), "Residents only");
+    assert.equal(eventGuestLabel(0), undefined);
+    assert.equal(eventAudienceLabel({}), "Residents only");
+    assert.equal(eventAudienceLabel({ guestLimit: 1 }), "Guests welcome · up to 1 each");
+    assert.equal(eventAudienceLabel({ audience: "group" }), "Group members");
+    assert.equal(eventCoverPill({ eventType: "free", priceInr: 0 }), "Free");
+    assert.equal(eventCoverPill({ eventType: "society", priceInr: 0 }), "Society");
     assert.equal(eventVenueHref({ location: "Tennis Courts", amenityId: "am-tennis" }), "/amenities#am-tennis");
     assert.equal(eventVenueHref({ location: "Park gate" }), undefined);
   });

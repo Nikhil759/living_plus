@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { categoryCoverSrc } from "@/lib/events/categories";
+import { EVENT_CARD_COVER_WIDTH, EVENT_HERO_COVER_WIDTH, sizedEventCoverUrl } from "@/lib/events/cover";
 import { cn } from "@/lib/utils";
 import type { EventCategory } from "@/lib/types/home";
 
@@ -13,7 +14,13 @@ interface EventCoverProps {
   sizes: string;
   className?: string;
   priority?: boolean;
+  frame?: "card" | "hero";
 }
+
+const FRAME: Record<NonNullable<EventCoverProps["frame"]>, string> = {
+  card: "aspect-[16/10]",
+  hero: "aspect-[16/10] lg:aspect-auto lg:h-[360px]",
+};
 
 export function EventCover({
   title,
@@ -22,13 +29,15 @@ export function EventCover({
   sizes,
   className,
   priority,
+  frame = "card",
 }: EventCoverProps) {
   const fallback = categoryCoverSrc(category);
   const [failed, setFailed] = useState(false);
-  const photo = imageUrl && !failed ? imageUrl : null;
+  const minWidth = frame === "hero" ? EVENT_HERO_COVER_WIDTH : EVENT_CARD_COVER_WIDTH;
+  const photo = !failed ? sizedEventCoverUrl(imageUrl, minWidth) : null;
 
   return (
-    <div className={cn("relative aspect-[16/10] overflow-hidden bg-quiet", className)}>
+    <div className={cn("relative overflow-hidden bg-quiet", FRAME[frame], className)}>
       {/* Fallback is always painted so a broken cover never shows alt text. */}
       <img
         src={fallback}
@@ -43,6 +52,7 @@ export function EventCover({
           fill
           sizes={sizes}
           priority={priority}
+          quality={frame === "hero" ? 90 : 80}
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY3Ii8+PC9zdmc+"
           className="object-cover"
