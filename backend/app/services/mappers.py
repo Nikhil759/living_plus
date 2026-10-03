@@ -20,7 +20,8 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import CrowdLevel, EventStatus
+from app.models.enums import CrowdLevel, EventRecurrence, EventStatus
+from app.schemas.event import EventAttendeeFullOut, EventDetailOut, EventHostOut, EventListItemOut
 from app.schemas.home import (
     AmenityOut,
     DigestItemOut,
@@ -118,11 +119,27 @@ def _emoji_for_announcement(lead: str, body: str) -> str:
     return "📢"
 
 
+def _first_name(name: str | None) -> str:
+    if not name or not name.strip():
+        return "Neighbour"
+    return name.strip().split()[0]
+
+
+def _recurrence_label(event: Event) -> str | None:
+    labels = {
+        EventRecurrence.weekly: "Every week",
+        EventRecurrence.biweekly: "Every two weeks",
+        EventRecurrence.monthly: "Every month",
+    }
+    return labels.get(event.recurrence)
+
+
 def event_to_home_event(
     event: Event,
     *,
     host_label: str,
     going_count: int,
+    going: list[PersonOut] | None = None,
 ) -> HomeEventOut:
     slug = event.public_slug or str(event.id)
     price_inr = event.price_paise // 100
@@ -140,11 +157,41 @@ def event_to_home_event(
         starts_at=event.starts_at.isoformat(),
         location=event.location_label or "On campus",
         price_inr=price_inr,
+        image_url=event.cover_url,
+        image_alt=event.title if event.cover_url else None,
         glyph=glyph,  # type: ignore[arg-type]
         going_count=going_count,
+        going=going or [],
         action_label=action_label,
         action_tone=action_tone,  # type: ignore[arg-type]
         href=f"/events/{slug}",
+    )
+
+
+def event_to_list_item(
+    event: Event,
+    *,
+    host_label: str,
+    going_count: int,
+    going: list[PersonOut],
+    viewer_going: bool,
+    is_host: bool,
+) -> EventListItemOut:
+    card = event_to_home_event(event, host_label=host_label, going_count=going_count, going=going)
+    return EventListItemOut(
+        **card.model_dump(),
+        event_type=event.event_type,
+        status=event.status,
+        category=event.category,
+        ends_at=event.ends_at.isoformat() if event.ends_at else None,
+        capacity=event.capacity,
+        spots_taken=going_count,
+        viewer_going=viewer_going,
+        is_host=is_host,
+        tags=list(event.tags or []),
+        amenity_id=str(event.amenity_id) if event.amenity_id else None,
+        change_summary=event.change_summary,
+        cancel_reason=event.cancel_reason,
     )
 
 
@@ -178,6 +225,145 @@ async def going_count_for(db: AsyncSession, event_id: uuid.UUID) -> int:
     )
 
 
+async def public_going_for(
+    db: AsyncSession, event_id: uuid.UUID, *, limit: int = 5
+) -> list[PersonOut]:
+    rows = (
+        (
+            await db.execute(
+                select(User)
+                .join(EventTicket, EventTicket.user_id == User.id)
+                .join(Profile, Profile.user_id == User.id)
+                .where(
+                    EventTicket.event_id == event_id,
+                    EventTicket.status == EventTicketStatus.confirmed,
+                    Profile.is_visible.is_(True),
+                )
+                .order_by(EventTicket.created_at)
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        PersonOut(id=str(user.id), name=_first_name(user.name), avatar_url=user.avatar_url)
+        for user in rows
+    ]
+
+
+async def viewer_going_for(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    ticket_id = await db.scalar(
+        select(EventTicket.id).where(
+            EventTicket.event_id == event_id,
+            EventTicket.user_id == user_id,
+            EventTicket.status == EventTicketStatus.confirmed,
+        )
+    )
+    return ticket_id is not None
+
+
+async def hosted_count_for(db: AsyncSession, host_id: uuid.UUID, society_id: uuid.UUID) -> int:
+    return int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Event)
+            .where(
+                Event.host_id == host_id,
+                Event.society_id == society_id,
+                Event.status.in_((EventStatus.published, EventStatus.completed)),
+            )
+        )
+        or 0
+    )
+
+
+async def host_profile_for(db: AsyncSession, event: Event) -> EventHostOut:
+    host = await db.get(User, event.host_id)
+    name = host.name if host and host.name else "A neighbour"
+    avatar = host.avatar_url if host else None
+    row = await db.execute(
+        select(Tower.name)
+        .join(Flat, Flat.tower_id == Tower.id)
+        .join(Membership, Membership.flat_id == Flat.id)
+        .where(Membership.user_id == event.host_id)
+        .limit(1)
+    )
+    tower_name = row.scalar_one_or_none()
+    hosted = await hosted_count_for(db, event.host_id, event.society_id)
+    return EventHostOut(
+        id=str(event.host_id),
+        name=name,
+        avatar_url=avatar,
+        tower=tower_name,
+        events_hosted=hosted,
+    )
+
+
+async def full_attendees_for(db: AsyncSession, event_id: uuid.UUID) -> list[EventAttendeeFullOut]:
+    rows = (
+        await db.execute(
+            select(EventTicket, User, Tower.name)
+            .join(User, User.id == EventTicket.user_id)
+            .outerjoin(
+                Membership,
+                (Membership.user_id == User.id) & (Membership.society_id == EventTicket.society_id),
+            )
+            .outerjoin(Flat, Flat.id == Membership.flat_id)
+            .outerjoin(Tower, Tower.id == Flat.tower_id)
+            .where(
+                EventTicket.event_id == event_id,
+                EventTicket.status == EventTicketStatus.confirmed,
+            )
+            .order_by(EventTicket.created_at)
+        )
+    ).all()
+    seen: set[uuid.UUID] = set()
+    out: list[EventAttendeeFullOut] = []
+    for ticket, user, tower_name in rows:
+        if user.id in seen:
+            continue
+        seen.add(user.id)
+        full = user.name or "Neighbour"
+        out.append(
+            EventAttendeeFullOut(
+                id=str(user.id),
+                name=_first_name(user.name),
+                avatar_url=user.avatar_url,
+                full_name=full,
+                tower=tower_name,
+                guest_count=max(ticket.qty - 1, 0),
+                checked_in=ticket.checked_in_at is not None,
+            )
+        )
+    return out
+
+
+def event_to_detail(
+    event: Event,
+    *,
+    list_item: EventListItemOut,
+    host_profile: EventHostOut,
+    attendees: list[EventAttendeeFullOut] | None,
+    is_committee: bool,
+    show_rejection: bool,
+) -> EventDetailOut:
+    return EventDetailOut(
+        **list_item.model_dump(),
+        description=event.description,
+        what_to_bring=event.what_to_bring,
+        guest_limit=event.guest_limit,
+        audience=event.audience_type,
+        recurrence=event.recurrence,
+        recurrence_label=_recurrence_label(event),
+        host_profile=host_profile,
+        attendees=attendees,
+        rejection_reason=event.rejection_reason if show_rejection else None,
+        stalls_enabled=event.stalls_enabled,
+        is_committee=is_committee,
+    )
+
+
 async def map_events(db: AsyncSession, society_id: uuid.UUID) -> list[HomeEventOut]:
     result = await db.execute(
         select(Event)
@@ -193,7 +379,8 @@ async def map_events(db: AsyncSession, society_id: uuid.UUID) -> list[HomeEventO
     for event in result.scalars().all():
         host = await host_label_for(db, event.host_id)
         going = await going_count_for(db, event.id)
-        out.append(event_to_home_event(event, host_label=host, going_count=going))
+        people = await public_going_for(db, event.id)
+        out.append(event_to_home_event(event, host_label=host, going_count=going, going=people))
     return out
 
 
@@ -226,13 +413,17 @@ async def map_digest(
     db: AsyncSession, society_id: uuid.UUID, *, tower_name: str
 ) -> DigestOut | None:
     posts = (
-        await db.execute(
-            select(Post)
-            .where(Post.society_id == society_id, Post.group_id.is_(None))
-            .order_by(Post.created_at.desc())
-            .limit(5)
+        (
+            await db.execute(
+                select(Post)
+                .where(Post.society_id == society_id, Post.group_id.is_(None))
+                .order_by(Post.created_at.desc())
+                .limit(5)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not posts:
         return None
     items: list[DigestItemOut] = []
@@ -247,9 +438,9 @@ async def map_digest(
             )
         )
     total = await db.scalar(
-        select(func.count()).select_from(Post).where(
-            Post.society_id == society_id, Post.group_id.is_(None)
-        )
+        select(func.count())
+        .select_from(Post)
+        .where(Post.society_id == society_id, Post.group_id.is_(None))
     )
     return DigestOut(
         title="Society Digest",

@@ -38,6 +38,7 @@ class HomeEventOut(CamelModel):
     image_alt: str | None = None
     glyph: Literal["ride", "game", "music", "wellness", "general"]
     going_count: int
+    going: list[PersonOut] = Field(default_factory=list)
     action_label: str
     action_tone: Literal["solid", "soft"]
     href: str

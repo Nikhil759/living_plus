@@ -82,8 +82,40 @@ class EventStatus(StrEnum):
     draft = "draft"
     pending_approval = "pending_approval"
     published = "published"
+    rejected = "rejected"
     cancelled = "cancelled"
     completed = "completed"
+
+
+class EventCategory(StrEnum):
+    sports = "sports"
+    fitness = "fitness"
+    kids = "kids"
+    food = "food"
+    music = "music"
+    learning = "learning"
+    social = "social"
+    other = "other"
+
+
+class EventAudience(StrEnum):
+    society = "society"
+    group = "group"
+    towers = "towers"
+
+
+class EventRecurrence(StrEnum):
+    none = "none"
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+
+
+class EventListTab(StrEnum):
+    upcoming = "upcoming"
+    going = "going"
+    hosting = "hosting"
+    past = "past"
 
 
 class EventTicketStatus(StrEnum):

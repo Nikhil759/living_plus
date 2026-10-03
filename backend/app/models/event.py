@@ -1,13 +1,19 @@
 import uuid
+from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import text
 
 from app.models.base import Base, IdTimestampMixin
 from app.models.enums import (
+    EventAudience,
+    EventCategory,
+    EventRecurrence,
     EventStatus,
     EventTicketStatus,
     EventType,
@@ -46,6 +52,47 @@ class Event(Base, IdTimestampMixin):
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(String(50)), server_default=text("'{}'::varchar[]")
     )
+    category: Mapped[EventCategory] = mapped_column(
+        SAEnum(EventCategory, name="event_category"),
+        default=EventCategory.other,
+        server_default=text("'other'"),
+    )
+    what_to_bring: Mapped[str | None] = mapped_column(Text, nullable=True)
+    guest_limit: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    audience_type: Mapped[EventAudience] = mapped_column(
+        SAEnum(EventAudience, name="event_audience"),
+        default=EventAudience.society,
+        server_default=text("'society'"),
+    )
+    audience_group_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("groups.id", ondelete="SET NULL"), nullable=True
+    )
+    audience_tower_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(PG_UUID(as_uuid=True)), server_default=text("'{}'::uuid[]")
+    )
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    change_summary: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    series_id: Mapped[uuid.UUID | None] = mapped_column(index=True, nullable=True)
+    occurrence_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recurrence: Mapped[EventRecurrence] = mapped_column(
+        SAEnum(EventRecurrence, name="event_recurrence"),
+        default=EventRecurrence.none,
+        server_default=text("'none'"),
+    )
+    recurrence_ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    recurrence_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stalls_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    stall_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stall_fee_paise: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    stall_categories: Mapped[list[Any]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    stall_application_deadline: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     tickets: Mapped[list["EventTicket"]] = relationship(back_populates="event")
     stall_applications: Mapped[list["StallApplication"]] = relationship(back_populates="event")
@@ -53,6 +100,7 @@ class Event(Base, IdTimestampMixin):
 
 class EventTicket(Base, IdTimestampMixin):
     __tablename__ = "event_tickets"
+    __table_args__ = (UniqueConstraint("event_id", "user_id", name="uq_event_tickets_event_user"),)
 
     event_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("events.id", ondelete="CASCADE"), index=True
@@ -69,6 +117,7 @@ class EventTicket(Base, IdTimestampMixin):
     status: Mapped[EventTicketStatus] = mapped_column(
         SAEnum(EventTicketStatus, name="event_ticket_status"), default=EventTicketStatus.confirmed
     )
+    checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     event: Mapped["Event"] = relationship(back_populates="tickets")
 
