@@ -1,4 +1,4 @@
-import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
 import { EVENT_CATEGORIES } from "@/lib/events/categories";
 
 export interface EventFormValues {
@@ -15,6 +15,8 @@ export interface EventFormValues {
   tags: string[];
   eventType: EventType;
   priceInr: number;
+  recurrence: EventRecurrence;
+  recurrenceCount: number;
 }
 
 function pad(n: number): string {
@@ -60,6 +62,8 @@ export function eventFormDefaults(event?: HomeEvent): EventFormValues {
     tags: event?.tags ?? [],
     eventType: event?.eventType ?? "free",
     priceInr: event?.priceInr && event.priceInr > 0 ? event.priceInr : 250,
+    recurrence: event?.recurrence && event.recurrence !== "none" ? event.recurrence : "none",
+    recurrenceCount: 4,
   };
 }
 
@@ -78,6 +82,8 @@ export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?:
     tags: values.tags,
     eventType: values.eventType,
     priceInr: values.eventType === "paid" ? values.priceInr : undefined,
+    recurrence: values.recurrence,
+    recurrenceCount: values.recurrence === "none" ? undefined : values.recurrenceCount,
     ...extra,
   };
 }

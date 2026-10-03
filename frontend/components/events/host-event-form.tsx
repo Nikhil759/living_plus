@@ -20,7 +20,7 @@ import {
   eventFormPayload,
   parseTagList,
 } from "@/lib/events/form";
-import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
 
 const inputClassName =
   "w-full rounded-tile border border-outline-variant/40 bg-surface-container-lowest px-3 py-2.5 text-body text-ink outline-none ring-primary/30 focus:ring-2";
@@ -38,6 +38,8 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
   const initial = eventFormDefaults(event);
   const [eventType, setEventType] = useState<EventType>(initial.eventType);
   const [priceInr, setPriceInr] = useState(String(initial.priceInr));
+  const [recurrence, setRecurrence] = useState<EventRecurrence>(initial.recurrence);
+  const [recurrenceCount, setRecurrenceCount] = useState(String(initial.recurrenceCount));
   const [title, setTitle] = useState(initial.title);
   const [location, setLocation] = useState(initial.locationLabel);
   const [startsAtLocal, setStartsAtLocal] = useState(initial.startsAt);
@@ -118,6 +120,8 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
       tags: parseTagList(tagsText),
       eventType,
       priceInr: Math.min(10_000, Math.max(50, Number(priceInr) || 250)),
+      recurrence,
+      recurrenceCount: Math.min(12, Math.max(2, Number(recurrenceCount) || 4)),
     };
   }
 
@@ -265,6 +269,45 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
             />
           </label>
         </div>
+        {isEdit ? (
+          event?.seriesId ? (
+            <p className="text-caption text-ink-tertiary">
+              This is one date in a series. Changes apply to this occurrence only.
+            </p>
+          ) : null
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-caption font-medium text-ink-secondary">Repeat</span>
+              <select
+                className={inputClassName}
+                value={recurrence}
+                onChange={(e) => setRecurrence(e.target.value as EventRecurrence)}
+              >
+                <option value="none">Does not repeat</option>
+                <option value="weekly">Every week</option>
+                <option value="biweekly">Every two weeks</option>
+                <option value="monthly">Every month</option>
+              </select>
+            </label>
+            {recurrence !== "none" ? (
+              <label className="block space-y-1.5">
+                <span className="text-caption font-medium text-ink-secondary">Ends after</span>
+                <select
+                  className={inputClassName}
+                  value={recurrenceCount}
+                  onChange={(e) => setRecurrenceCount(e.target.value)}
+                >
+                  {Array.from({ length: 11 }, (_, index) => index + 2).map((count) => (
+                    <option key={count} value={count}>
+                      {count} occurrences
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        )}
         <label className="block space-y-1.5">
           <span className="text-caption font-medium text-ink-secondary">Category</span>
           <select

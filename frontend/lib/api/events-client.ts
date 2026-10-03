@@ -3,7 +3,7 @@
 import { apiDelete, apiPatch, apiPost, ApiError } from "@/lib/api/client";
 import { resolveApiUrl } from "@/lib/api/config";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
 
 export interface EventWriteInput {
   title: string;
@@ -19,6 +19,8 @@ export interface EventWriteInput {
   tags?: string[];
   eventType?: EventType;
   priceInr?: number;
+  recurrence?: EventRecurrence;
+  recurrenceCount?: number;
   saveAsDraft?: boolean;
   publish?: boolean;
 }
@@ -50,6 +52,8 @@ function writeBody(body: EventWriteInput): Record<string, unknown> {
     tags: body.tags ?? [],
     eventType: body.eventType ?? "free",
     priceInr: body.priceInr,
+    recurrence: body.recurrence,
+    recurrenceCount: body.recurrenceCount,
     saveAsDraft: body.saveAsDraft,
     publish: body.publish,
   };
@@ -128,11 +132,15 @@ export async function leaveEventApi(slug: string): Promise<HomeEvent> {
   });
 }
 
-export async function cancelEventApi(slug: string, reason: string): Promise<HomeEvent> {
+export async function cancelEventApi(
+  slug: string,
+  reason: string,
+  scope: "this" | "series" = "this",
+): Promise<HomeEvent> {
   const token = await getBrowserAccessToken();
   return apiPost<HomeEvent>(
     `/v1/events/${encodeURIComponent(slug)}/cancel`,
-    { reason },
+    { reason, scope },
     { headers: { Authorization: `Bearer ${token}` } },
   );
 }

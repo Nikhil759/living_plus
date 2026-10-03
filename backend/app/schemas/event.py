@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import Field, field_validator
 
@@ -61,6 +62,9 @@ class EventCreate(CamelModel):
     guest_limit: int = Field(default=0, ge=0, le=10)
     what_to_bring: str | None = Field(default=None, max_length=500)
     price_inr: int | None = Field(default=None, ge=50, le=10_000)
+    recurrence: EventRecurrence = EventRecurrence.none
+    recurrence_count: int | None = Field(default=None, ge=2, le=12)
+    recurrence_ends_on: date | None = None
     save_as_draft: bool = False
 
     @field_validator("tags")
@@ -118,6 +122,7 @@ class EventRsvpIn(CamelModel):
 
 class EventCancelIn(CamelModel):
     reason: str = Field(min_length=3, max_length=200)
+    scope: Literal["this", "series"] = "this"
 
     @field_validator("reason")
     @classmethod
@@ -171,6 +176,8 @@ class EventListItemOut(HomeEventOut):
     amenity_id: str | None = None
     change_summary: str | None = None
     cancel_reason: str | None = None
+    series_id: str | None = None
+    recurrence: EventRecurrence = EventRecurrence.none
 
 
 class EventDetailOut(EventListItemOut):

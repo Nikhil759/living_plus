@@ -126,13 +126,22 @@ def _first_name(name: str | None) -> str:
     return name.strip().split()[0]
 
 
+def _ordinal(day: int) -> str:
+    suffix = "th" if 10 <= day % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return f"{day}{suffix}"
+
+
 def _recurrence_label(event: Event) -> str | None:
-    labels = {
-        EventRecurrence.weekly: "Every week",
-        EventRecurrence.biweekly: "Every two weeks",
-        EventRecurrence.monthly: "Every month",
-    }
-    return labels.get(event.recurrence)
+    if event.recurrence == EventRecurrence.none:
+        return None
+    weekday = event.starts_at.strftime("%A")
+    if event.recurrence == EventRecurrence.weekly:
+        return f"Every {weekday}"
+    if event.recurrence == EventRecurrence.biweekly:
+        return f"Every two weeks on {weekday}"
+    if event.recurrence == EventRecurrence.monthly:
+        return f"Monthly on the {_ordinal(event.starts_at.day)}"
+    return None
 
 
 def event_to_home_event(
@@ -199,6 +208,8 @@ def event_to_list_item(
         amenity_id=str(event.amenity_id) if event.amenity_id else None,
         change_summary=event.change_summary,
         cancel_reason=event.cancel_reason,
+        series_id=str(event.series_id) if event.series_id else None,
+        recurrence=event.recurrence,
     )
 
 
@@ -386,7 +397,6 @@ def event_to_detail(
         what_to_bring=event.what_to_bring,
         guest_limit=event.guest_limit,
         audience=event.audience_type,
-        recurrence=event.recurrence,
         recurrence_label=_recurrence_label(event),
         host_profile=host_profile,
         attendees=attendees,

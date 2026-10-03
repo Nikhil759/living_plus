@@ -42,6 +42,7 @@ export function EventManageActions({
   const canDuplicate = (isHost || isCommittee) && backend === "api";
   const canReview = isCommittee && event.status === "pending_approval" && backend === "api";
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelSeries, setCancelSeries] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -63,7 +64,7 @@ export function EventManageActions({
     setPending("cancel");
     setError(null);
     try {
-      await cancelEventApi(event.id, cleaned);
+      await cancelEventApi(event.id, cleaned, cancelSeries && event.seriesId ? "series" : "this");
       setCancelOpen(false);
       router.refresh();
     } catch (err) {
@@ -238,6 +239,17 @@ export function EventManageActions({
               placeholder="Neighbours will see this reason"
             />
           </label>
+          {event.seriesId ? (
+            <label className="flex items-start gap-2 text-caption text-ink-secondary">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={cancelSeries}
+                onChange={(e) => setCancelSeries(e.target.checked)}
+              />
+              <span>Also cancel later dates in this series</span>
+            </label>
+          ) : null}
           <div className={cn("flex gap-2", stack ? "flex-col" : "flex-wrap")}>
             <button
               type="button"

@@ -1503,3 +1503,162 @@ async def test_events_waitlist_paid_does_not_auto_promote(
     assert still.json()["viewerGoing"] is False
     assert still.json()["goingCount"] == 0
     get_settings.cache_clear()
+
+
+async def test_events_create_weekly_series_and_cancel_one(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Tower C Book Club",
+            "locationLabel": "Cafe lounge",
+            "startsAt": _future_start(14),
+            "recurrence": "weekly",
+            "recurrenceCount": 4,
+        },
+    )
+    assert created.status_code == 201
+    first = created.json()
+    assert first["recurrence"] == "weekly"
+    assert first["seriesId"]
+    assert first["recurrenceLabel"]
+    assert first["status"] == "published"
+
+    hosting = await client.get("/v1/events", params={"tab": "hosting"})
+    series = [item for item in hosting.json() if item.get("seriesId") == first["seriesId"]]
+    assert len(series) == 4
+    starts = sorted(item["startsAt"] for item in series)
+    first_start = datetime.fromisoformat(starts[0])
+    assert datetime.fromisoformat(starts[1]) - first_start == timedelta(days=7)
+    assert datetime.fromisoformat(starts[3]) - first_start == timedelta(days=21)
+
+    cancelled = await client.post(
+        f"/v1/events/{first['id']}/cancel",
+        json={"reason": "Host is travelling", "scope": "this"},
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+
+    hosting = await client.get("/v1/events", params={"tab": "hosting"})
+    series = [item for item in hosting.json() if item.get("seriesId") == first["seriesId"]]
+    assert sum(1 for item in series if item["status"] == "published") == 3
+    assert sum(1 for item in series if item["status"] == "cancelled") == 1
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_later_series_dates(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Saturday Ride",
+            "locationLabel": "Gate 2",
+            "startsAt": _future_start(10),
+            "recurrence": "weekly",
+            "recurrenceCount": 4,
+        },
+    )
+    series_id = created.json()["seriesId"]
+    hosting = await client.get("/v1/events", params={"tab": "hosting"})
+    ordered = sorted(
+        (item for item in hosting.json() if item.get("seriesId") == series_id),
+        key=lambda item: item["startsAt"],
+    )
+    second = ordered[1]
+    cancelled = await client.post(
+        f"/v1/events/{second['id']}/cancel",
+        json={"reason": "Break week onwards", "scope": "series"},
+    )
+    assert cancelled.status_code == 200
+
+    hosting = await client.get("/v1/events", params={"tab": "hosting"})
+    by_id = {
+        item["id"]: item["status"]
+        for item in hosting.json()
+        if item.get("seriesId") == series_id
+    }
+    assert by_id[ordered[0]["id"]] == "published"
+    assert by_id[ordered[1]["id"]] == "cancelled"
+    assert by_id[ordered[2]["id"]] == "cancelled"
+    assert by_id[ordered[3]["id"]] == "cancelled"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_draft_does_not_expand_series(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Draft Series",
+            "locationLabel": "Hall",
+            "startsAt": _future_start(),
+            "recurrence": "weekly",
+            "recurrenceCount": 4,
+            "saveAsDraft": True,
+        },
+    )
+    assert created.status_code == 201
+    assert created.json()["status"] == "draft"
+    assert created.json()["seriesId"] is None
+
+    hosting = await client.get("/v1/events", params={"tab": "hosting"})
+    titles = [item["title"] for item in hosting.json() if item["title"] == "Draft Series"]
+    assert len(titles) == 1
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_series_count_too_high(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(
+        "/v1/events",
+        json={
+            "title": "Too Many",
+            "locationLabel": "Hall",
+            "startsAt": _future_start(),
+            "recurrence": "weekly",
+            "recurrenceCount": 13,
+        },
+    )
+    assert response.status_code == 422
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_series_requires_a_series(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={"title": "One Off", "locationLabel": "Park", "startsAt": _future_start()},
+    )
+    slug = created.json()["id"]
+    response = await client.post(
+        f"/v1/events/{slug}/cancel",
+        json={"reason": "Not a series", "scope": "series"},
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()

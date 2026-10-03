@@ -39,6 +39,7 @@ describe("event form helpers", () => {
     assert.equal(payload.publish, true);
     assert.equal(payload.coverUrl, "https://images.unsplash.com/photo-1");
     assert.equal(payload.eventType, "free");
+    assert.equal(payload.recurrence, "none");
   });
 
   it("labels paid and society submits as needing approval", () => {

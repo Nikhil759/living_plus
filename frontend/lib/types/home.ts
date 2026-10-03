@@ -52,6 +52,8 @@ export type EventHostIcon = "person" | "celebration" | "club";
 
 export type EventType = "free" | "paid" | "society";
 
+export type EventRecurrence = "none" | "weekly" | "biweekly" | "monthly";
+
 export type EventStatus =
   | "draft"
   | "pending_approval"
@@ -108,7 +110,9 @@ export interface HomeEvent {
   whatToBring?: string;
   guestLimit?: number;
   audience?: EventAudience;
+  recurrence?: EventRecurrence;
   recurrenceLabel?: string;
+  seriesId?: string;
   amenityId?: string;
   changeSummary?: string;
   cancelReason?: string;

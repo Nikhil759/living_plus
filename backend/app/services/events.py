@@ -13,6 +13,7 @@ from app.models.enums import (
     EventAudience,
     EventCategory,
     EventListTab,
+    EventRecurrence,
     EventStatus,
     EventTicketStatus,
     EventType,
@@ -28,7 +29,7 @@ from app.schemas.event import (
     EventUpdate,
 )
 from app.schemas.home import HomeEventOut
-from app.services import mappers
+from app.services import event_series, mappers
 
 _COMMITTEE_ROLES = {MembershipRole.committee.value, MembershipRole.admin.value}
 _HOST_ONLY_STATUSES = {
@@ -312,6 +313,68 @@ async def _require_host_or_committee(
     return event
 
 
+async def _expand_series(db: AsyncSession, event: Event) -> None:
+    if event.recurrence == EventRecurrence.none:
+        return
+    if event.series_id is not None:
+        already = await db.scalar(
+            select(Event.id).where(
+                Event.series_id == event.series_id,
+                Event.id != event.id,
+            )
+        )
+        if already is not None:
+            return
+
+    windows = event_series.series_windows(
+        _as_utc(event.starts_at),
+        _as_utc(event.ends_at),
+        event.recurrence,
+        count=event.recurrence_count,
+        ends_on=event.recurrence_ends_on,
+    )
+    if len(windows) < 2:
+        return
+
+    series_id = event.series_id or uuid.uuid4()
+    event.series_id = series_id
+    event.occurrence_index = 0
+    await db.flush()
+    for index, (starts, ends) in enumerate(windows[1:], start=1):
+        slug = await _unique_slug(db, event.society_id, _slugify(event.title))
+        db.add(
+            Event(
+                society_id=event.society_id,
+                public_slug=slug,
+                event_type=event.event_type,
+                title=event.title,
+                description=event.description,
+                cover_url=event.cover_url,
+                host_id=event.host_id,
+                amenity_id=event.amenity_id,
+                location_label=event.location_label,
+                starts_at=starts,
+                ends_at=ends,
+                capacity=event.capacity,
+                price_paise=event.price_paise,
+                status=event.status,
+                tags=list(event.tags or []),
+                category=event.category,
+                guest_limit=event.guest_limit,
+                what_to_bring=event.what_to_bring,
+                audience_type=event.audience_type,
+                audience_group_id=event.audience_group_id,
+                audience_tower_ids=list(event.audience_tower_ids or []),
+                recurrence=event.recurrence,
+                recurrence_count=event.recurrence_count,
+                recurrence_ends_on=event.recurrence_ends_on,
+                series_id=series_id,
+                occurrence_index=index,
+            )
+        )
+        await db.flush()
+
+
 async def create_event(
     db: AsyncSession,
     member: CurrentMember,
@@ -348,8 +411,14 @@ async def create_event(
         category=body.category,
         guest_limit=body.guest_limit,
         what_to_bring=body.what_to_bring,
+        recurrence=body.recurrence,
+        recurrence_count=body.recurrence_count,
+        recurrence_ends_on=body.recurrence_ends_on,
     )
     db.add(event)
+    await db.flush()
+    if status == EventStatus.published:
+        await _expand_series(db, event)
     await db.commit()
     await db.refresh(event)
     return await get_event_detail(db, member, slug)
@@ -425,6 +494,8 @@ async def update_event(
         event.status = _submit_status(event.event_type)
         if event.status == EventStatus.pending_approval:
             event.rejection_reason = None
+        if event.status == EventStatus.published:
+            await _expand_series(db, event)
 
     if was_published and (time_changed or venue_changed):
         if time_changed and venue_changed:
@@ -439,18 +510,11 @@ async def update_event(
     return await get_event_detail(db, member, slug)
 
 
-async def cancel_event(
-    db: AsyncSession,
-    member: CurrentMember,
-    slug: str,
-    body: EventCancelIn,
-) -> EventDetailOut:
-    event = await _require_host_or_committee(db, member, slug)
+async def _close_occurrence(db: AsyncSession, event: Event, reason: str) -> None:
     if event.status in _LOCKED_STATUSES:
-        raise AppError("validation_error", "This event is already closed.", 422)
-
+        return
     event.status = EventStatus.cancelled
-    event.cancel_reason = body.reason
+    event.cancel_reason = reason
     tickets = (
         await db.scalars(
             select(EventTicket).where(
@@ -466,6 +530,34 @@ async def cancel_event(
     ).all()
     for entry in waiting:
         await db.delete(entry)
+
+
+async def cancel_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventCancelIn,
+) -> EventDetailOut:
+    event = await _require_host_or_committee(db, member, slug)
+    if event.status in _LOCKED_STATUSES:
+        raise AppError("validation_error", "This event is already closed.", 422)
+
+    targets = [event]
+    if body.scope == "series":
+        if event.series_id is None:
+            raise AppError("validation_error", "This event is not part of a series.", 422)
+        targets = (
+            await db.scalars(
+                select(Event).where(
+                    Event.society_id == member.society_id,
+                    Event.series_id == event.series_id,
+                    Event.starts_at >= event.starts_at,
+                    ~Event.status.in_(tuple(_LOCKED_STATUSES)),
+                )
+            )
+        ).all()
+    for item in targets:
+        await _close_occurrence(db, item, body.reason)
     await db.commit()
     return await get_event_detail(db, member, slug)
 
@@ -481,6 +573,7 @@ async def approve_event(
         raise AppError("validation_error", "Only pending events can be approved.", 422)
     event.status = EventStatus.published
     event.rejection_reason = None
+    await _expand_series(db, event)
     await db.commit()
     return await get_event_detail(db, member, slug)
 
