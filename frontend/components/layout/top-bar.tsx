@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils";
 export interface TopBarProps {
   title: string;
   resident: { hasUnreadNotifications: boolean };
+  backHref?: string;
+  backLabel?: string;
 }
 
-export function TopBar({ title, resident }: TopBarProps) {
+export function TopBar({ title, resident, backHref, backLabel = "Back" }: TopBarProps) {
   const [scrolled, setScrolled] = useState(false);
   const isHome = title === "Home";
 
@@ -50,6 +52,13 @@ export function TopBar({ title, resident }: TopBarProps) {
                 {title}
               </p>
             </>
+          ) : backHref ? (
+            <div className="flex min-w-0 items-center gap-3">
+              <Link href={backHref} className="shrink-0 text-headline font-semibold text-primary">
+                ← {backLabel}
+              </Link>
+              <p className="truncate text-headline text-ink">{title}</p>
+            </div>
           ) : (
             <p className="truncate text-headline text-ink">{title}</p>
           )}

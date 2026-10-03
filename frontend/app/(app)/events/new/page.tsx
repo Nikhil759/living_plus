@@ -4,7 +4,7 @@ import { eventsWriteBackend } from "@/lib/data";
 
 export default function NewEventPage() {
   return (
-    <AppPage title="Host an event">
+    <AppPage title="Host an event" backHref="/events" backLabel="Events">
       <HostEventForm backend={eventsWriteBackend()} />
     </AppPage>
   );
