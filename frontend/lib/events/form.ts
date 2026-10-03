@@ -104,7 +104,7 @@ export function eventFormDefaults(event?: HomeEvent): EventFormValues {
   };
 }
 
-export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?: boolean; publish?: boolean }) {
+export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?: boolean; publish?: boolean; amenityId?: string }) {
   return {
     title: values.title.trim(),
     locationLabel: values.locationLabel.trim(),

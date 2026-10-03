@@ -28,6 +28,7 @@ export interface EventWriteInput {
   stallFeeInr?: number;
   stallCategories?: StallCategory[];
   stallApplicationDeadline?: string | null;
+  amenityId?: string;
 }
 
 async function getBrowserAccessToken(): Promise<string> {
@@ -66,6 +67,7 @@ function writeBody(body: EventWriteInput): Record<string, unknown> {
     stallFeeInr: body.stallFeeInr,
     stallCategories: body.stallCategories,
     stallApplicationDeadline: body.stallApplicationDeadline,
+    amenityId: body.amenityId,
   };
 }
 

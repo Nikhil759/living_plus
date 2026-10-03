@@ -3,7 +3,12 @@ import { HostEventForm } from "@/components/events/host-event-form";
 import { eventsWriteBackend, loadAmenities, loadResident } from "@/lib/data";
 import { buildVenueOptions } from "@/lib/events/venues";
 
-export default async function NewEventPage() {
+interface NewEventPageProps {
+  searchParams: Promise<{ venue?: string }>;
+}
+
+export default async function NewEventPage({ searchParams }: NewEventPageProps) {
+  const { venue } = await searchParams;
   const [resident, amenities] = await Promise.all([
     loadResident(),
     loadAmenities().catch(() => []),
@@ -15,6 +20,7 @@ export default async function NewEventPage() {
         backend={eventsWriteBackend()}
         isCommittee={isCommittee}
         venueOptions={buildVenueOptions(amenities, resident)}
+        presetVenue={venue}
       />
     </AppPage>
   );

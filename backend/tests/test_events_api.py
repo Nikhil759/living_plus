@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models import (
+    Amenity,
     Event,
     EventStatus,
     EventTicket,
@@ -19,7 +20,7 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import EventTicketStatus
+from app.models.enums import AmenityType, EventTicketStatus
 from tests.test_me_api import _enable_local_dev_auth
 
 
@@ -1856,6 +1857,109 @@ async def test_events_stalls_not_for_free_events(
     )
     assert created.status_code == 422
     assert created.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def _add_hall(db_session, demo_member: User, *, other_society: bool = False) -> Amenity:
+    society_id = await db_session.scalar(
+        select(Membership.society_id).where(Membership.user_id == demo_member.id)
+    )
+    if other_society:
+        society = Society(id=uuid.uuid4(), name="Other", city="Pune", invite_code="HALL02")
+        db_session.add(society)
+        await db_session.flush()
+        society_id = society.id
+    hall = Amenity(
+        id=uuid.uuid4(),
+        society_id=society_id,
+        name="Community Hall",
+        amenity_type=AmenityType.hall,
+        capacity=80,
+    )
+    db_session.add(hall)
+    await db_session.flush()
+    return hall
+
+
+async def test_events_create_at_a_society_space(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hall = await _add_hall(db_session, demo_member)
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(
+        "/v1/events",
+        json={
+            "title": "Book Club",
+            "locationLabel": "Community Hall",
+            "startsAt": _future_start(),
+            "amenityId": str(hall.id),
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert (body["amenityId"], body["status"]) == (str(hall.id), "published")
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_at_a_space_still_follow_approval_rules(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hall = await _add_hall(db_session, demo_member)
+    _enable_local_dev_auth(monkeypatch)
+    resident = await client.post(
+        "/v1/events",
+        json={
+            "title": "Diwali Mela",
+            "locationLabel": "Community Hall",
+            "startsAt": _future_start(),
+            "eventType": "society",
+            "amenityId": str(hall.id),
+        },
+    )
+    assert resident.status_code == 403
+
+    membership = await db_session.scalar(
+        select(Membership).where(Membership.user_id == demo_member.id)
+    )
+    membership.role = MembershipRole.committee
+    await db_session.flush()
+    committee = await client.post(
+        "/v1/events",
+        json={
+            "title": "Diwali Mela",
+            "locationLabel": "Community Hall",
+            "startsAt": _future_start(),
+            "eventType": "society",
+            "amenityId": str(hall.id),
+        },
+    )
+    assert (committee.status_code, committee.json()["status"]) == (201, "pending_approval")
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_create_rejects_another_societys_space(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    foreign = await _add_hall(db_session, demo_member, other_society=True)
+    _enable_local_dev_auth(monkeypatch)
+    payload = {
+        "title": "Book Club",
+        "locationLabel": "Community Hall",
+        "startsAt": _future_start(),
+    }
+    wrong = await client.post("/v1/events", json={**payload, "amenityId": str(foreign.id)})
+    assert (wrong.status_code, wrong.json()["code"]) == (404, "not_found")
+    bad = await client.post("/v1/events", json={**payload, "amenityId": "not-an-id"})
+    assert bad.status_code == 422
 
     from app.core.config import get_settings
 

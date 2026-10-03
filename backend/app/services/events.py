@@ -30,6 +30,7 @@ from app.schemas.event import (
     StallCategoryIn,
 )
 from app.schemas.home import HomeEventOut
+from app.services import amenities as amenity_service
 from app.services import event_series, mappers
 
 _COMMITTEE_ROLES = {MembershipRole.committee.value, MembershipRole.admin.value}
@@ -462,6 +463,10 @@ async def create_event(
             403,
         )
 
+    if body.amenity_id is not None:
+        # 404s for anything outside the member's own society.
+        await amenity_service.load_amenity(db, member, body.amenity_id)
+
     starts, ends = _event_window(body.starts_at, body.ends_at)
     status = EventStatus.draft if body.save_as_draft else _submit_status(body.event_type)
     slug = await _unique_slug(db, member.society_id, _slugify(body.title))
@@ -483,6 +488,7 @@ async def create_event(
         description=body.description,
         cover_url=body.cover_url,
         host_id=member.user.id,
+        amenity_id=body.amenity_id,
         location_label=body.location_label.strip(),
         starts_at=starts,
         ends_at=ends,

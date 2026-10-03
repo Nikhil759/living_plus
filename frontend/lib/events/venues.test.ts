@@ -5,7 +5,9 @@ import {
   VENUE_OTHER,
   buildVenueOptions,
   myFlatLabel,
+  presetVenueSelection,
   resolveVenue,
+  venueAmenityId,
   venueLocation,
 } from "./venues";
 
@@ -44,5 +46,15 @@ describe("event venues", () => {
     assert.equal(venueLocation({ key: "Gym", other: "" }, options), "Gym");
     assert.equal(venueLocation({ key: VENUE_OTHER, other: "  Sector 50 Park " }, options), "Sector 50 Park");
     assert.equal(venueLocation({ key: "", other: "" }, options), "");
+  });
+
+  it("links a society space to its amenity and preselects it from a link", () => {
+    const options = buildVenueOptions([{ id: "hall-1", name: "Community Hall", emoji: "🏠" }], resident);
+    const preset = presetVenueSelection("Community Hall", options);
+    assert.equal(preset.key, "Community Hall");
+    assert.equal(venueAmenityId(preset, options), "hall-1");
+    assert.equal(venueAmenityId({ key: "Clubhouse", other: "" }, options), undefined);
+    assert.deepEqual(presetVenueSelection("Somewhere odd", options), { key: "", other: "" });
+    assert.deepEqual(presetVenueSelection(undefined, options), { key: "", other: "" });
   });
 });

@@ -9,6 +9,8 @@ export interface VenueOption {
   label: string;
   emoji: string;
   hint?: string;
+  /** Set for the society's own amenities, so the event is linked to the space. */
+  amenityId?: string;
   group: "flat" | "society" | "other";
 }
 
@@ -34,7 +36,7 @@ export function myFlatLabel(resident?: Pick<Resident, "tower" | "flat">): string
 }
 
 export function buildVenueOptions(
-  amenities: ReadonlyArray<Pick<Amenity, "name" | "emoji">> = [],
+  amenities: ReadonlyArray<Pick<Amenity, "name" | "emoji"> & { id?: string }> = [],
   resident?: Pick<Resident, "tower" | "flat">,
 ): VenueOption[] {
   const options: VenueOption[] = [];
@@ -50,13 +52,13 @@ export function buildVenueOptions(
   }
 
   const seen = new Set<string>();
-  const addSociety = (label: string, emoji: string) => {
+  const addSociety = (label: string, emoji: string, amenityId?: string) => {
     const key = label.trim().toLowerCase();
     if (!key || seen.has(key)) return;
     seen.add(key);
-    options.push({ value: label.trim(), label: label.trim(), emoji, group: "society" });
+    options.push({ value: label.trim(), label: label.trim(), emoji, amenityId, group: "society" });
   };
-  for (const amenity of amenities) addSociety(amenity.name, amenity.emoji || "📍");
+  for (const amenity of amenities) addSociety(amenity.name, amenity.emoji || "📍", amenity.id);
   for (const venue of COMMON_VENUES) addSociety(venue.label, venue.emoji);
 
   options.push({
@@ -96,4 +98,21 @@ export function venueLocation(
   const match = options.find((option) => option.value === selection.key);
   if (!match) return "";
   return match.group === "flat" ? (match.hint ?? "") : match.label;
+}
+
+/** The amenity linked to the current dropdown choice, if it is one of the society's spaces. */
+export function venueAmenityId(
+  selection: VenueSelection,
+  options: ReadonlyArray<VenueOption>,
+): string | undefined {
+  return options.find((option) => option.value === selection.key)?.amenityId;
+}
+
+/** A preselected venue from a link like /events/new?venue=Community%20Hall. */
+export function presetVenueSelection(
+  name: string | undefined,
+  options: ReadonlyArray<VenueOption>,
+): VenueSelection {
+  const match = name ? resolveVenue(name, options) : { key: "", other: "" };
+  return match.key === VENUE_OTHER ? { key: "", other: "" } : match;
 }

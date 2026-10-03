@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime
 from typing import Literal
 
@@ -131,6 +132,8 @@ class EventCreate(CamelModel):
     stall_fee_inr: int | None = Field(default=None, ge=0, le=10_000)
     stall_categories: list[StallCategoryIn] = Field(default_factory=list, max_length=20)
     stall_application_deadline: datetime | None = None
+    # Set when the event is hosted at a society space such as the Community Hall.
+    amenity_id: uuid.UUID | None = None
 
     @field_validator("tags")
     @classmethod

@@ -24,7 +24,9 @@ import {
 import {
   VENUE_OTHER,
   buildVenueOptions,
+  presetVenueSelection,
   resolveVenue,
+  venueAmenityId,
   venueLocation,
   type VenueOption,
 } from "@/lib/events/venues";
@@ -60,6 +62,8 @@ interface HostEventFormProps {
   event?: HomeEvent;
   isCommittee?: boolean;
   venueOptions?: VenueOption[];
+  /** Venue name from a "Host an event here" link. */
+  presetVenue?: string;
 }
 
 export function HostEventForm({
@@ -67,10 +71,13 @@ export function HostEventForm({
   event,
   isCommittee = false,
   venueOptions = DEFAULT_VENUE_OPTIONS,
+  presetVenue,
 }: HostEventFormProps) {
   const router = useRouter();
   const initial = eventFormDefaults(event);
-  const initialVenue = resolveVenue(initial.locationLabel, venueOptions);
+  const initialVenue = event
+    ? resolveVenue(initial.locationLabel, venueOptions)
+    : presetVenueSelection(presetVenue, venueOptions);
   const [venueKey, setVenueKey] = useState(initialVenue.key);
   const [venueOther, setVenueOther] = useState(initialVenue.other);
   const [locationInvalid, setLocationInvalid] = useState(false);
@@ -199,7 +206,12 @@ export function HostEventForm({
           eventFormPayload(values(), { publish: mode === "publish" && isDraft }),
         );
       } else {
-        saved = await createEventApi(eventFormPayload(values(), { saveAsDraft: mode === "draft" }));
+        saved = await createEventApi(
+          eventFormPayload(values(), {
+            saveAsDraft: mode === "draft",
+            amenityId: venueAmenityId({ key: venueKey, other: venueOther }, venueOptions),
+          }),
+        );
       }
       router.push(saved.href);
       router.refresh();
