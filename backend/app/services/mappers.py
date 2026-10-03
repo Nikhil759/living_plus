@@ -176,6 +176,7 @@ def event_to_list_item(
     going: list[PersonOut],
     viewer_going: bool,
     is_host: bool,
+    viewer_guest_count: int = 0,
 ) -> EventListItemOut:
     card = event_to_home_event(event, host_label=host_label, going_count=going_count, going=going)
     return EventListItemOut(
@@ -187,6 +188,7 @@ def event_to_list_item(
         capacity=event.capacity,
         spots_taken=going_count,
         viewer_going=viewer_going,
+        viewer_guest_count=viewer_guest_count,
         is_host=is_host,
         tags=list(event.tags or []),
         amenity_id=str(event.amenity_id) if event.amenity_id else None,
@@ -252,15 +254,19 @@ async def public_going_for(
     ]
 
 
-async def viewer_going_for(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-    ticket_id = await db.scalar(
-        select(EventTicket.id).where(
+async def viewer_rsvp_qty(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> int:
+    qty = await db.scalar(
+        select(EventTicket.qty).where(
             EventTicket.event_id == event_id,
             EventTicket.user_id == user_id,
             EventTicket.status == EventTicketStatus.confirmed,
         )
     )
-    return ticket_id is not None
+    return int(qty or 0)
+
+
+async def viewer_going_for(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    return await viewer_rsvp_qty(db, event_id, user_id) > 0
 
 
 async def hosted_count_for(db: AsyncSession, host_id: uuid.UUID, society_id: uuid.UUID) -> int:

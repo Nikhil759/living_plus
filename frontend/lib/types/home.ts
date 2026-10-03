@@ -100,6 +100,7 @@ export interface HomeEvent {
   tags?: string[];
   description?: string;
   viewerGoing?: boolean;
+  viewerGuestCount?: number;
   isHost?: boolean;
   isCommittee?: boolean;
   whatToBring?: string;

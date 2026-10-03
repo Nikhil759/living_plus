@@ -132,6 +132,26 @@ export function eventGoingLabel(guestCount?: number): string {
   return "You're going";
 }
 
+export function eventRsvpQty(guestCount: number): number {
+  return Math.max(0, guestCount) + 1;
+}
+
+export function eventMaxGuests(
+  event: Pick<HomeEvent, "guestLimit" | "capacity" | "goingCount" | "viewerGoing" | "viewerGuestCount">,
+): number {
+  const limit = event.guestLimit ?? 0;
+  if (limit <= 0) return 0;
+  if (event.capacity == null) return limit;
+  const ownQty = event.viewerGoing ? eventRsvpQty(event.viewerGuestCount ?? 0) : 0;
+  const remaining = event.capacity - event.goingCount + ownQty;
+  return Math.max(0, Math.min(limit, remaining - 1));
+}
+
+export function guestStepperLabel(count: number): string {
+  if (count <= 0) return "No guests";
+  return count === 1 ? "1 guest" : `${count} guests`;
+}
+
 export function isMutedEventAction(kind: EventMainActionKind): boolean {
   return kind === "ended" || kind === "cancelled" || kind === "pending" || kind === "draft" || kind === "rejected" || kind === "stall";
 }

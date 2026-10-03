@@ -440,6 +440,72 @@ async def test_events_rsvp_happy_path(
     get_settings.cache_clear()
 
 
+async def test_events_rsvp_guests_and_update(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Open House",
+            "locationLabel": "Lawn",
+            "startsAt": _future_start(),
+            "capacity": 4,
+            "guestLimit": 1,
+        },
+    )
+    slug = created.json()["id"]
+
+    too_many = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 3})
+    assert too_many.status_code == 422
+    assert too_many.json()["code"] == "validation_error"
+
+    with_guest = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 2})
+    assert with_guest.status_code == 200
+    assert with_guest.json()["goingCount"] == 2
+
+    detail = await client.get(f"/v1/events/{slug}")
+    assert detail.json()["viewerGoing"] is True
+    assert detail.json()["viewerGuestCount"] == 1
+
+    solo = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+    assert solo.status_code == 200
+    assert solo.json()["goingCount"] == 1
+    assert (await client.get(f"/v1/events/{slug}")).json()["viewerGuestCount"] == 0
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_rsvp_guests_count_toward_capacity(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Tiny Table",
+            "locationLabel": "Cafe",
+            "startsAt": _future_start(),
+            "capacity": 2,
+            "guestLimit": 2,
+        },
+    )
+    slug = created.json()["id"]
+    ok = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 2})
+    assert ok.status_code == 200
+    assert ok.json()["goingCount"] == 2
+
+    overflow = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 3})
+    assert overflow.status_code == 409
+    assert overflow.json()["code"] == "capacity_full"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
 async def test_events_leave_requires_auth(client: AsyncClient) -> None:
     response = await client.delete("/v1/events/board-games/rsvp")
     assert response.status_code == 401

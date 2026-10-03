@@ -116,14 +116,15 @@ async def _to_list_item(db: AsyncSession, event: Event, member: CurrentMember) -
     host = await mappers.host_label_for(db, event.host_id)
     going_count = await mappers.going_count_for(db, event.id)
     going = await mappers.public_going_for(db, event.id)
-    viewer_going = await mappers.viewer_going_for(db, event.id, member.user.id)
+    viewer_qty = await mappers.viewer_rsvp_qty(db, event.id, member.user.id)
     return mappers.event_to_list_item(
         event,
         host_label=host,
         going_count=going_count,
         going=going,
-        viewer_going=viewer_going,
+        viewer_going=viewer_qty > 0,
         is_host=event.host_id == member.user.id,
+        viewer_guest_count=max(viewer_qty - 1, 0),
     )
 
 
@@ -413,10 +414,17 @@ async def rsvp_event(
             EventTicket.user_id == member.user.id,
         )
     )
-    if existing is not None and existing.status == EventTicketStatus.confirmed:
-        return await _event_out(db, event)
+    guests = body.qty - 1
+    if guests > event.guest_limit:
+        raise AppError(
+            "validation_error",
+            "This event allows fewer guests than that.",
+            422,
+        )
 
-    if going + body.qty > event.capacity:
+    confirmed = existing is not None and existing.status == EventTicketStatus.confirmed
+    taken_by_self = existing.qty if confirmed else 0
+    if going - taken_by_self + body.qty > event.capacity:
         raise AppError("capacity_full", "This event is full.", 409)
 
     if existing is not None:

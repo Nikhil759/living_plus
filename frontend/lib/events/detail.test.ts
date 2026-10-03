@@ -12,7 +12,10 @@ import {
   eventGuestLabel,
   eventIcs,
   eventMainAction,
+  eventMaxGuests,
+  eventRsvpQty,
   eventSpotsLabel,
+  guestStepperLabel,
   eventVenueHref,
   hostedEventCount,
 } from "./detail";
@@ -180,6 +183,23 @@ describe("eventBanners and labels", () => {
     assert.equal(eventGoingLabel(), "You're going");
     assert.equal(eventGoingLabel(1), "You're going · 1 guest");
     assert.equal(eventGoingLabel(2), "You're going · 2 guests");
+    assert.equal(eventRsvpQty(1), 2);
+    assert.equal(guestStepperLabel(0), "No guests");
+    assert.equal(guestStepperLabel(2), "2 guests");
+    assert.equal(
+      eventMaxGuests({ guestLimit: 2, capacity: 4, goingCount: 3, viewerGoing: false }),
+      0,
+    );
+    assert.equal(
+      eventMaxGuests({
+        guestLimit: 2,
+        capacity: 4,
+        goingCount: 3,
+        viewerGoing: true,
+        viewerGuestCount: 1,
+      }),
+      2,
+    );
     assert.equal(eventVenueHref({ location: "Tennis Courts", amenityId: "am-tennis" }), "/amenities#am-tennis");
     assert.equal(eventVenueHref({ location: "Park gate" }), undefined);
   });

@@ -13,4 +13,4 @@ export const EVENT_DETAIL_ASIDE =
 
 export const EVENT_DETAIL_BODY = "mt-8 space-y-8 lg:col-start-1 lg:row-start-2";
 
-export const EVENT_DETAIL_PAGE_PADDING = "max-md:pb-[calc(10.5rem+env(safe-area-inset-bottom,0px))]";
+export const EVENT_DETAIL_PAGE_PADDING = "max-md:pb-[calc(12.5rem+env(safe-area-inset-bottom,0px))]";

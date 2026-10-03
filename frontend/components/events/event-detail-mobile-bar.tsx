@@ -21,7 +21,7 @@ export function EventDetailMobileBar({ event, backend }: EventDetailMobileBarPro
           event={event}
           backend={backend}
           alreadyGoing={Boolean(event.viewerGoing)}
-          className="ml-auto min-w-0 max-w-[16rem] flex-1"
+          className="ml-auto min-w-0 flex-1"
           fullWidth
           layout="bar"
         />

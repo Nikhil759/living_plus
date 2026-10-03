@@ -94,11 +94,11 @@ export async function updateEventApi(slug: string, body: EventWriteInput): Promi
   });
 }
 
-export async function rsvpEventApi(slug: string): Promise<HomeEvent> {
+export async function rsvpEventApi(slug: string, qty = 1): Promise<HomeEvent> {
   const token = await getBrowserAccessToken();
   return apiPost<HomeEvent>(
     `/v1/events/${encodeURIComponent(slug)}/rsvp`,
-    { qty: 1 },
+    { qty },
     { headers: { Authorization: `Bearer ${token}` } },
   );
 }
