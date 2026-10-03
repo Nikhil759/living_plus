@@ -398,6 +398,7 @@ async def get_amenity(
         closure_note=closure_note(status),
         advance_days=_advance_days(amenity) if bookable else 0,
         max_hours_per_day=max_hours_per_day(amenity) if bookable else 0,
+        can_manage=can_manage(member),
     )
 
 
@@ -473,10 +474,14 @@ async def get_crowd(
     )
 
 
+def can_manage(member: CurrentMember) -> bool:
+    return member.role in (MembershipRole.committee.value, MembershipRole.admin.value)
+
+
 async def set_closure(
     db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, body: AmenityClosureIn
 ) -> AmenityDetailOut:
-    if member.role not in (MembershipRole.committee.value, MembershipRole.admin.value):
+    if not can_manage(member):
         raise AppError("forbidden", "Only the committee can do this.", 403)
     amenity, status = await load_amenity(db, member, amenity_id)
     if status is None:

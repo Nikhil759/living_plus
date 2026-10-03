@@ -17,6 +17,7 @@ class AmenityDetailOut(AmenityOut):
     closure_note: str | None = None
     advance_days: int = 0
     max_hours_per_day: int = 0
+    can_manage: bool = False
 
 
 class SlotOut(CamelModel):

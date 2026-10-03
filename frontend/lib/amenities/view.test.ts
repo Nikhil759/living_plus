@@ -5,9 +5,14 @@ import {
   amenityActionHref,
   amenityStatusLabel,
   amenityTone,
+  addDays,
+  dayChip,
   filterAmenities,
   formatBookingDay,
   formatSlotRange,
+  hourLabel,
+  istToday,
+  nextDays,
 } from "./view";
 
 const make = (name: string, category: Amenity["category"]): Amenity => ({
@@ -54,5 +59,19 @@ describe("amenity view helpers", () => {
   it("formats a one-hour slot", () => {
     assert.equal(formatSlotRange("2030-01-01T01:30:00Z", "2030-01-01T02:30:00Z"), "7\u20138 AM");
     assert.equal(formatSlotRange("2030-01-01T05:30:00Z", "2030-01-01T06:30:00Z"), "11 AM\u201312 PM");
+  });
+
+  it("builds the next seven days across a month end", () => {
+    assert.equal(addDays("2030-01-31", 1), "2030-02-01");
+    assert.deepEqual(nextDays("2030-01-30", 3), ["2030-01-30", "2030-01-31", "2030-02-01"]);
+    assert.equal(istToday(new Date("2030-01-01T20:00:00Z")), "2030-01-02");
+  });
+
+  it("labels day chips and hours", () => {
+    assert.deepEqual(dayChip("2030-01-01", "2030-01-01"), { weekday: "Today", date: "1" });
+    assert.deepEqual(dayChip("2030-01-02", "2030-01-01"), { weekday: "Wed", date: "2" });
+    assert.equal(hourLabel(6), "6 AM");
+    assert.equal(hourLabel(12), "12 PM");
+    assert.equal(hourLabel(19), "7 PM");
   });
 });

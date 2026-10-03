@@ -204,6 +204,7 @@ async def test_amenity_detail(
     assert 2 <= len(body["rules"]) <= 4
     assert (body["advanceDays"], body["maxHoursPerDay"]) == (7, 2)
     assert body["closureNote"] is None
+    assert body["canManage"] is False
 
     gym = (await client.get(f"/v1/amenities/{world.gym.id}")).json()
     assert (gym["advanceDays"], gym["maxHoursPerDay"]) == (0, 0)
@@ -531,6 +532,7 @@ async def test_committee_closes_and_reopens_an_amenity(
     closed = await client.patch(path, json={"closed": True, "note": "  Closed for maintenance  "})
     assert closed.status_code == 200
     assert closed.json()["closureNote"] == "Closed for maintenance"
+    assert closed.json()["canManage"] is True
     card = next(
         a for a in (await client.get("/v1/amenities")).json() if a["id"] == str(world.gym.id)
     )

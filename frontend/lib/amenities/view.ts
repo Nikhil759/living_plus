@@ -89,3 +89,33 @@ export function formatSlotRange(startsAt: string, endsAt: string): string {
   if (from.period === to.period) return `${from.hour}${EN_DASH}${to.hour} ${to.period}`;
   return `${from.hour} ${from.period}${EN_DASH}${to.hour} ${to.period}`;
 }
+
+/** Today's date in IST as "YYYY-MM-DD". */
+export function istToday(now: Date = new Date()): string {
+  return dayKey(now);
+}
+
+/** Pure calendar arithmetic on "YYYY-MM-DD" strings. */
+export function addDays(day: string, days: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+export function nextDays(today: string, count: number): string[] {
+  return Array.from({ length: count }, (_, index) => addDays(today, index));
+}
+
+/** { weekday: "Tue", date: "1" } for the day-picker chips. */
+export function dayChip(day: string, today: string): { weekday: string; date: string } {
+  const [y, m, d] = day.split("-").map(Number);
+  const weekday = new Intl.DateTimeFormat("en-IN", { weekday: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(y, m - 1, d)),
+  );
+  return { weekday: day === today ? "Today" : weekday, date: String(d) };
+}
+
+/** 6 -> "6 AM", 13 -> "1 PM". */
+export function hourLabel(hour: number): string {
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h} ${hour < 12 ? "AM" : "PM"}`;
+}
