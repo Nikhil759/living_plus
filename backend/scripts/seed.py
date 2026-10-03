@@ -892,7 +892,7 @@ MARKETPLACE_SEED: list[tuple[Any, ...]] = [
     ("cycle", "resident.9", "Hero Sprint 26T hybrid cycle", Cat.sports, Cond.good, 5500, True,
      St.available, 6, Via.call, ["hybrid-cycle"],
      "21-speed, serviced last month. New tyres. Ideal for the society loop and commutes."),
-    ("books", "resident.5", "Kids' picture book set (8 books)", Cat.kids, Cond.good, 0, False,
+    ("books", "resident.5", "Kids' picture book set (8 books)", Cat.books, Cond.good, 0, False,
      St.available, 2, Via.whatsapp, ["kids-books"],
      "Hardcover animal picture books, ages 2 to 6. Free to a good home."),
     ("yoga", "resident.2", "Yoga mat, 6mm", Cat.sports, Cond.like_new, 400, False,

@@ -1,12 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Package } from "lucide-react";
-import { formatPriceInr } from "@/lib/format";
+import { ListingPhoto } from "@/components/marketplace/listing-photo";
+import { PriceTag } from "@/components/marketplace/price-tag";
 import { cn } from "@/lib/utils";
-import type { MarketplaceListing } from "@/lib/types/marketplace";
+import type { MarketplaceCard } from "@/lib/types/marketplace";
 
 export interface ListingFeedCardProps {
-  listing: MarketplaceListing;
+  listing: MarketplaceCard;
 }
 
 /** Compact card for the Home horizontal feed. */
@@ -20,24 +19,15 @@ export function ListingFeedCard({ listing }: ListingFeedCardProps) {
         "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
       )}
     >
-      <div className="relative aspect-[4/3] bg-quiet">
-        {listing.imageUrl ? (
-          <Image
-            src={listing.imageUrl}
-            alt={listing.imageAlt ?? listing.title}
-            fill
-            className="object-cover"
-            sizes="280px"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-ink-tertiary">
-            <Package className="h-8 w-8" strokeWidth={1.5} aria-hidden="true" />
-          </div>
-        )}
-      </div>
+      <ListingPhoto
+        title={listing.title}
+        category={listing.category}
+        src={listing.coverUrl}
+        className="aspect-[4/3] w-full"
+      />
       <div className="space-y-0.5 p-4">
         <p className="line-clamp-2 text-headline text-ink">{listing.title}</p>
-        <p className="text-callout font-semibold text-primary">{formatPriceInr(listing.priceInr)}</p>
+        <PriceTag priceInr={listing.priceInr} isFree={listing.isFree} className="!text-callout !text-primary" />
       </div>
     </Link>
   );

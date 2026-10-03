@@ -1,40 +1,26 @@
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
-import { ListingCard } from "@/components/marketplace/listing-card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { loadMarketplaceListings } from "@/lib/data";
+import { MarketplaceBrowse } from "@/components/marketplace/marketplace-browse";
+import { buttonVariants } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
+import { marketplaceIsLive } from "@/lib/data";
 
-export default async function MarketplacePage() {
-  const listings = (await loadMarketplaceListings()).filter((item) => item.status !== "sold");
-
+export default function MarketplacePage() {
   return (
     <AppPage title="Marketplace">
-      <div className="flex items-end justify-between gap-4">
-        <p className="text-body text-ink-secondary">
-          Second-hand from neighbours. Contact sellers directly — no in-app payments yet.
-        </p>
-        <Link href="/marketplace/new" className="text-callout font-semibold text-primary">
-          Sell
-        </Link>
-      </div>
-      {listings.length === 0 ? (
-        <EmptyState
-          icon={<ShoppingBag />}
-          title="No listings yet"
-          action={
-            <Link href="/marketplace/new" className="text-callout font-semibold text-primary">
-              List an item
-            </Link>
-          }
-        />
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-body text-ink-secondary">Buy and sell with neighbours</p>
+          <Link href="/marketplace/new" className={buttonVariants({ size: "sm" })}>
+            Sell an item
+          </Link>
         </div>
-      )}
+        {marketplaceIsLive() ? (
+          <MarketplaceBrowse />
+        ) : (
+          <ErrorState message="The Marketplace needs the live backend. Set NEXT_PUBLIC_DATA_SOURCE=api." />
+        )}
+      </div>
     </AppPage>
   );
 }

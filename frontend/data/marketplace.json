@@ -1,100 +1,301 @@
 [
   {
-    "id": "mp-study-desk",
-    "title": "IKEA Micke study desk (white)",
-    "category": "furniture",
-    "priceInr": 4500,
-    "condition": "good",
-    "description": "Used for 2 years, minor scratches on one leg. Includes drawer. Pick up from Tower C basement parking.",
-    "sellerLabel": "Priya · Tower C",
-    "postedAt": "2026-09-28T10:00:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919876543210" },
-    "status": "active"
-  },
-  {
-    "id": "mp-stroller",
-    "title": "Chicco LiteWay stroller",
-    "category": "kids",
-    "priceInr": 3200,
-    "condition": "like_new",
-    "description": "Barely used after we moved abroad. Rain cover and cup holder included.",
-    "sellerLabel": "Ankit · Tower A",
-    "postedAt": "2026-09-30T14:30:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919812345678" },
-    "status": "active"
-  },
-  {
-    "id": "mp-ps5-games",
+    "id": "78cb135e8122517ebbf6e2eda358afdc",
     "title": "PS5 games bundle (FIFA 24 + GT7)",
-    "category": "electronics",
     "priceInr": 2800,
+    "isFree": false,
+    "negotiable": false,
     "condition": "like_new",
-    "description": "Both discs with cases. No scratches. Can meet at club lounge.",
-    "imageUrl": "/mock/event-fifa.jpg",
-    "imageAlt": "Video game cases on a table",
-    "sellerLabel": "Rohan · Tower B",
-    "postedAt": "2026-10-01T08:00:00.000Z",
-    "contact": { "type": "phone", "value": "+919988776655" },
-    "status": "active"
-  },
-  {
-    "id": "mp-cycle",
-    "title": "Hero Sprint 26T hybrid cycle",
-    "category": "sports",
-    "priceInr": 5500,
-    "condition": "good",
-    "description": "Serviced last month. New tyres. Helmet free if picked up this week.",
-    "sellerLabel": "Meera · Tower D",
-    "postedAt": "2026-09-25T06:00:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919900112233" },
-    "status": "active"
-  },
-  {
-    "id": "mp-microwave",
-    "title": "Samsung 28L convection microwave",
-    "category": "appliances",
-    "priceInr": 6000,
-    "condition": "good",
-    "description": "Works perfectly. Relocating — must go by Sunday.",
-    "sellerLabel": "Vikram · Tower C",
-    "postedAt": "2026-09-29T11:00:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919811223344" },
-    "status": "reserved"
-  },
-  {
-    "id": "mp-bookshelf",
-    "title": "5-tier wooden bookshelf",
-    "category": "furniture",
-    "priceInr": 1800,
-    "condition": "fair",
-    "description": "Solid wood, needs a wipe. Buyer to arrange pickup from 4th floor (no lift stop).",
-    "sellerLabel": "Sana · Tower B",
-    "postedAt": "2026-09-27T16:00:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919877665544" },
-    "status": "active"
-  },
-  {
-    "id": "mp-crib",
-    "title": "Baby cot with mattress",
-    "category": "kids",
-    "priceInr": 4000,
-    "condition": "good",
-    "description": "Convertible side rail. Mattress cleaned and covered.",
-    "sellerLabel": "Neighbour · Tower A",
-    "postedAt": "2026-09-20T09:00:00.000Z",
-    "contact": { "type": "phone", "value": "+919955443322" },
-    "status": "sold"
-  },
-  {
-    "id": "mp-monitor",
-    "title": "Dell 24\" IPS monitor",
     "category": "electronics",
-    "priceInr": 6500,
+    "coverUrl": "/images/marketplace/ps5-games.jpg",
+    "status": "available",
+    "tower": "Tower D",
+    "listedAt": "2026-10-02T07:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Both discs with cases, no scratches. Happy to meet at the club lounge.",
+    "photos": [
+      "/images/marketplace/ps5-games.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Kunal",
+      "avatarUrl": null,
+      "tower": "Tower D"
+    },
+    "canManage": false
+  },
+  {
+    "id": "f257b7b2e42c5c6e85b891cf32faf521",
+    "title": "Kids' picture book set (8 books)",
+    "priceInr": 0,
+    "isFree": true,
+    "negotiable": false,
+    "condition": "good",
+    "category": "books",
+    "coverUrl": "/images/marketplace/kids-books.jpg",
+    "status": "available",
+    "tower": "Tower B",
+    "listedAt": "2026-10-01T05:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Hardcover animal picture books, ages 2 to 6. Free to a good home.",
+    "photos": [
+      "/images/marketplace/kids-books.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Sana",
+      "avatarUrl": null,
+      "tower": "Tower B"
+    },
+    "canManage": false
+  },
+  {
+    "id": "4b37793ee18c5623acdd3b7827bd6ea4",
+    "title": "Samsung 28L microwave oven",
+    "priceInr": 2000,
+    "isFree": false,
+    "negotiable": true,
+    "condition": "good",
+    "category": "home_kitchen",
+    "coverUrl": "/images/marketplace/microwave.jpg",
+    "status": "available",
+    "tower": "Tower C",
+    "listedAt": "2026-10-01T03:49:25Z",
+    "isMine": true,
+    "reported": false,
+    "description": "Works perfectly, selling because we upgraded. Turntable included.",
+    "photos": [
+      "/images/marketplace/microwave.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Nikhil",
+      "avatarUrl": null,
+      "tower": "Tower C"
+    },
+    "canManage": true
+  },
+  {
+    "id": "ddc29d8b5a1c5c8bb7477fa716248ae7",
+    "title": "IKEA Micke study desk (white)",
+    "priceInr": 4500,
+    "isFree": false,
+    "negotiable": true,
+    "condition": "good",
+    "category": "furniture",
+    "coverUrl": "/images/marketplace/study-desk.jpg",
+    "status": "available",
+    "tower": "Tower C",
+    "listedAt": "2026-09-30T09:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Used for 2 years, minor scratch on the edge. Includes the drawer. Easy to dismantle.",
+    "photos": [
+      "/images/marketplace/study-desk.jpg",
+      "/images/marketplace/study-desk-2.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Priya",
+      "avatarUrl": null,
+      "tower": "Tower C"
+    },
+    "canManage": false
+  },
+  {
+    "id": "dc32c3d4e9b45e0aaf90b33a020ed948",
+    "title": "Chicco LiteWay stroller",
+    "priceInr": 3200,
+    "isFree": false,
+    "negotiable": false,
     "condition": "like_new",
-    "description": "1080p, HDMI + DP cables included. WFH upgrade sale.",
-    "sellerLabel": "Kunal · Tower C",
-    "postedAt": "2026-10-01T12:00:00.000Z",
-    "contact": { "type": "whatsapp", "value": "919966778899" },
-    "status": "active"
+    "category": "kids",
+    "coverUrl": "/images/marketplace/stroller.jpg",
+    "status": "reserved",
+    "tower": "Tower B",
+    "listedAt": "2026-09-29T08:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Barely used. Folds compactly, rain cover and cup holder included.",
+    "photos": [
+      "/images/marketplace/stroller.jpg",
+      "/images/marketplace/stroller-2.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Ananya",
+      "avatarUrl": null,
+      "tower": "Tower B"
+    },
+    "canManage": false
+  },
+  {
+    "id": "870aa96aa5615796bf25d85c3f92375b",
+    "title": "Yoga mat, 6mm",
+    "priceInr": 400,
+    "isFree": false,
+    "negotiable": false,
+    "condition": "like_new",
+    "category": "sports",
+    "coverUrl": "/images/marketplace/yoga-mat.jpg",
+    "status": "available",
+    "tower": "Tower C",
+    "listedAt": "2026-09-28T04:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Non-slip, used a handful of times. Cleaned and rolled.",
+    "photos": [
+      "/images/marketplace/yoga-mat.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Meera",
+      "avatarUrl": null,
+      "tower": "Tower C"
+    },
+    "canManage": false
+  },
+  {
+    "id": "fb71e4cd55555ed18fe2cdecddd170ba",
+    "title": "Hero Sprint 26T hybrid cycle",
+    "priceInr": 5500,
+    "isFree": false,
+    "negotiable": true,
+    "condition": "good",
+    "category": "sports",
+    "coverUrl": "/images/marketplace/hybrid-cycle.jpg",
+    "status": "available",
+    "tower": "Tower B",
+    "listedAt": "2026-09-27T06:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "21-speed, serviced last month. New tyres. Ideal for the society loop and commutes.",
+    "photos": [
+      "/images/marketplace/hybrid-cycle.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "call",
+    "seller": {
+      "firstName": "Arjun",
+      "avatarUrl": null,
+      "tower": "Tower B"
+    },
+    "canManage": false
+  },
+  {
+    "id": "384bf01b565a5bbb92f6cbb181e4725f",
+    "title": "Oak finish 5-shelf bookcase",
+    "priceInr": 1800,
+    "isFree": false,
+    "negotiable": true,
+    "condition": "fair",
+    "category": "furniture",
+    "coverUrl": "/images/marketplace/bookcase.jpg",
+    "status": "reserved",
+    "tower": "Tower D",
+    "listedAt": "2026-09-26T01:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Sturdy, a few marks on the side panel. Needs two people to carry.",
+    "photos": [
+      "/images/marketplace/bookcase.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "call",
+    "seller": {
+      "firstName": "Vikram",
+      "avatarUrl": null,
+      "tower": "Tower D"
+    },
+    "canManage": false
+  },
+  {
+    "id": "9d191ba2da0553d897f802c8e9a7118a",
+    "title": "Bluetooth speaker (teal)",
+    "priceInr": 3500,
+    "isFree": false,
+    "negotiable": true,
+    "condition": "good",
+    "category": "electronics",
+    "coverUrl": "/images/marketplace/bluetooth-speaker.jpg",
+    "status": "available",
+    "tower": "Tower D",
+    "listedAt": "2026-09-24T23:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Great bass, battery lasts a full day. Charging cable included.",
+    "photos": [
+      "/images/marketplace/bluetooth-speaker.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Rahul",
+      "avatarUrl": null,
+      "tower": "Tower D"
+    },
+    "canManage": false
+  },
+  {
+    "id": "819cce7362fd50b08059545ba6fa2d2f",
+    "title": "Philips air fryer 4.1L",
+    "priceInr": 2500,
+    "isFree": false,
+    "negotiable": false,
+    "condition": "like_new",
+    "category": "home_kitchen",
+    "coverUrl": "/images/marketplace/air-fryer.jpg",
+    "status": "sold",
+    "tower": "Tower C",
+    "listedAt": "2026-09-24T02:49:25Z",
+    "isMine": true,
+    "reported": false,
+    "description": "Used only a few times. Sold to a neighbour.",
+    "photos": [
+      "/images/marketplace/air-fryer.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Nikhil",
+      "avatarUrl": null,
+      "tower": "Tower C"
+    },
+    "canManage": true
+  },
+  {
+    "id": "a1193145c5d05493b1d7252156e48c24",
+    "title": "Building bricks box with storage bin",
+    "priceInr": 900,
+    "isFree": false,
+    "negotiable": false,
+    "condition": "good",
+    "category": "kids",
+    "coverUrl": "/images/marketplace/lego-bricks.jpg",
+    "status": "sold",
+    "tower": "Tower A",
+    "listedAt": "2026-09-22T00:49:25Z",
+    "isMine": false,
+    "reported": false,
+    "description": "Around 5 kg of mixed bricks.",
+    "photos": [
+      "/images/marketplace/lego-bricks.jpg"
+    ],
+    "pickupNote": "Pickup in society",
+    "contactMethod": "whatsapp",
+    "seller": {
+      "firstName": "Divya",
+      "avatarUrl": null,
+      "tower": "Tower A"
+    },
+    "canManage": false
   }
 ]

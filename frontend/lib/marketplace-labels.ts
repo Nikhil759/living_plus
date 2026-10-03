@@ -1,20 +1,4 @@
-import type { ListingCategory, ListingCondition } from "@/lib/types/marketplace";
 import type { BusinessCategory } from "@/lib/types/local-business";
-
-export const LISTING_CATEGORY_LABEL: Record<ListingCategory, string> = {
-  furniture: "Furniture",
-  electronics: "Electronics",
-  kids: "Kids",
-  sports: "Sports",
-  appliances: "Appliances",
-  other: "Other",
-};
-
-export const LISTING_CONDITION_LABEL: Record<ListingCondition, string> = {
-  like_new: "Like new",
-  good: "Good",
-  fair: "Fair",
-};
 
 export const BUSINESS_CATEGORY_LABEL: Record<BusinessCategory, string> = {
   food: "Food & tiffin",

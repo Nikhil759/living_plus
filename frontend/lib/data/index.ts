@@ -42,7 +42,7 @@ import type { LocalBusiness } from "@/lib/types/local-business";
 import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
-import type { MarketplaceListing } from "@/lib/types/marketplace";
+import type { MarketplaceCard, MarketplaceListing } from "@/lib/types/marketplace";
 import type {
   DigestItem,
   FeedPost,
@@ -142,8 +142,14 @@ export async function loadCommunity(): Promise<CommunityCatalog> {
   return staticData.getStaticCommunity();
 }
 
-export async function loadMarketplaceListings(): Promise<MarketplaceListing[]> {
+/** Browse, create and edit need the FastAPI backend; the other sources only feed read-only previews. */
+export function marketplaceIsLive(): boolean {
+  return !useDemoStore() && getDataSource() === "api";
+}
+
+export async function loadMarketplaceListings(): Promise<MarketplaceCard[]> {
   if (useDemoStore()) return demoGetMarketplaceListings();
+  if (marketplaceIsLive()) return apiGetAsUser<MarketplaceCard[]>("/v1/marketplace/listings");
   return staticData.getStaticMarketplaceListings();
 }
 
@@ -151,7 +157,13 @@ export async function loadMarketplaceListingById(
   id: string,
 ): Promise<MarketplaceListing | undefined> {
   if (useDemoStore()) return demoGetMarketplaceListingById(id);
-  return staticData.getStaticMarketplaceListingById(id);
+  if (!marketplaceIsLive()) return staticData.getStaticMarketplaceListingById(id);
+  try {
+    return await apiGetAsUser<MarketplaceListing>(`/v1/marketplace/listings/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return undefined;
+    throw error;
+  }
 }
 
 export async function loadLocalBusinesses(): Promise<LocalBusiness[]> {

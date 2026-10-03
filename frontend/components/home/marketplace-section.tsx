@@ -3,32 +3,32 @@ import { ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListingFeedCard } from "@/components/home/listing-feed-card";
 import { SectionHeader } from "@/components/home/section-header";
-import type { MarketplaceListing } from "@/lib/types/marketplace";
+import type { MarketplaceCard } from "@/lib/types/marketplace";
 
 const HOME_FEED_LIMIT = 4;
 
 export interface MarketplaceSectionProps {
-  listings: MarketplaceListing[];
+  listings: MarketplaceCard[];
 }
 
 export function MarketplaceSection({ listings }: MarketplaceSectionProps) {
-  const active = listings.filter((item) => item.status === "active").slice(0, HOME_FEED_LIMIT);
+  const active = listings.filter((item) => item.status === "available").slice(0, HOME_FEED_LIMIT);
 
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Marketplace"
-        subtitle="Second-hand from neighbours"
+        subtitle="Buy and sell with neighbours"
         action={active.length > 0 ? { label: "See all", href: "/marketplace" } : undefined}
       />
 
       {active.length === 0 ? (
         <EmptyState
           icon={<ShoppingBag />}
-          title="No listings yet"
+          title="Nothing here yet. Be the first to list something."
           action={
             <Link href="/marketplace/new" className="text-callout font-semibold text-primary">
-              List an item
+              Sell an item
             </Link>
           }
         />
