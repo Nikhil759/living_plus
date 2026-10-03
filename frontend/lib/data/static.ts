@@ -1,4 +1,5 @@
-import amenitiesJson from "@/data/amenities.json";
+import { STATIC_AMENITY_DETAILS } from "@/lib/amenities/static-catalog";
+import type { AmenityDetail } from "@/lib/types/amenities";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
@@ -55,7 +56,11 @@ export function getStaticEventById(id: string): HomeEvent | undefined {
 }
 
 export function getStaticAmenities(): Amenity[] {
-  return amenitiesJson as Amenity[];
+  return STATIC_AMENITY_DETAILS;
+}
+
+export function getStaticAmenityById(id: string): AmenityDetail | undefined {
+  return STATIC_AMENITY_DETAILS.find((amenity) => amenity.id === id);
 }
 
 export function getStaticAnnouncements(): DigestItem[] {

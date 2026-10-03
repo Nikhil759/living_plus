@@ -357,14 +357,44 @@ async def list_amenities(
     return sorted(cards, key=lambda c: (_CATEGORY_ORDER[c.category], c.name))
 
 
+# Bundled frontend ids (static JSON) map to seeded amenity names.
+_LEGACY_AMENITY_IDS: dict[str, str] = {
+    "am-gym": "Gym",
+    "am-pool": "Pool",
+    "am-badminton": "Badminton 1",
+    "am-tennis": "Tennis Court",
+    "am-cafe": "Café Lounge",
+}
+
+
+async def resolve_amenity_id(
+    db: AsyncSession, society_id: uuid.UUID, raw: str
+) -> uuid.UUID:
+    try:
+        return uuid.UUID(raw)
+    except ValueError as err:
+        name = _LEGACY_AMENITY_IDS.get(raw)
+        if name is None:
+            raise AppError("not_found", "Amenity not found.", 404) from None
+        found = await db.scalar(
+            select(Amenity.id).where(
+                Amenity.society_id == society_id, Amenity.name == name
+            )
+        )
+        if found is None:
+            raise AppError("not_found", "Amenity not found.", 404) from err
+        return found
+
+
 async def load_amenity(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID
+    db: AsyncSession, member: CurrentMember, amenity_id: str
 ) -> tuple[Amenity, AmenityStatus | None]:
+    resolved = await resolve_amenity_id(db, member.society_id, amenity_id)
     row = (
         await db.execute(
             select(Amenity, AmenityStatus)
             .join(AmenityStatus, AmenityStatus.amenity_id == Amenity.id, isouter=True)
-            .where(Amenity.id == amenity_id, Amenity.society_id == member.society_id)
+            .where(Amenity.id == resolved, Amenity.society_id == member.society_id)
         )
     ).first()
     if row is None:
@@ -382,7 +412,7 @@ def resolve_day(amenity: Amenity, day: date | None, now: datetime) -> date:
 
 
 async def get_amenity(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID
+    db: AsyncSession, member: CurrentMember, amenity_id: str
 ) -> AmenityDetailOut:
     amenity, status = await load_amenity(db, member, amenity_id)
     now = current_time()
@@ -432,7 +462,7 @@ def build_slots(
 
 
 async def get_slots(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, day: date | None
+    db: AsyncSession, member: CurrentMember, amenity_id: str, day: date | None
 ) -> SlotsOut:
     amenity, status = await load_amenity(db, member, amenity_id)
     if kind_of(amenity) != "bookable":
@@ -457,7 +487,7 @@ def _crowd_summary(levels: list[CrowdHourOut], current: int | None) -> str:
 
 
 async def get_crowd(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, day: date | None
+    db: AsyncSession, member: CurrentMember, amenity_id: str, day: date | None
 ) -> CrowdOut:
     amenity, _ = await load_amenity(db, member, amenity_id)
     if kind_of(amenity) != "walk_in":
@@ -479,7 +509,7 @@ def can_manage(member: CurrentMember) -> bool:
 
 
 async def set_closure(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, body: AmenityClosureIn
+    db: AsyncSession, member: CurrentMember, amenity_id: str, body: AmenityClosureIn
 ) -> AmenityDetailOut:
     if not can_manage(member):
         raise AppError("forbidden", "Only the committee can do this.", 403)

@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 import { apiGetAsUser, getServerAccessToken } from "@/lib/api/server-auth";
-import { fetchAnnouncements, fetchAmenities, fetchMyBookings } from "@/lib/api/amenities";
+import { fetchAmenity, fetchAnnouncements, fetchAmenities, fetchMyBookings } from "@/lib/api/amenities";
 import { fetchHomeData } from "@/lib/api/home";
 import { useDemoStore } from "@/lib/demo-store/config";
 import {
@@ -20,7 +20,7 @@ import {
 import { demoListUserRsvpEventIds } from "@/lib/demo-store/events-write";
 import { demoHomeResidentForUser, mergeSessionIntoResident } from "@/lib/demo-store/resident-write";
 import { getDemoSessionUser } from "@/lib/demo-store/session-user";
-import type { AmenityBooking } from "@/lib/types/amenities";
+import type { AmenityBooking, AmenityDetail } from "@/lib/types/amenities";
 import { attachHostProfile } from "@/lib/events/detail";
 import {
   annotateEvent,
@@ -30,6 +30,7 @@ import {
   filterEvents,
   type EventListQuery,
 } from "@/lib/events/query";
+import { resolveAmenityImageSrc } from "@/lib/amenities/image-url";
 import { getDataSource } from "@/lib/data/source";
 import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
@@ -115,10 +116,32 @@ export async function loadEventById(id: string): Promise<HomeEvent | undefined> 
   return attachHostProfile(annotated, catalog, resident);
 }
 
+function withAmenityImages<T extends Amenity>(rows: T[]): T[] {
+  return rows.map((row) => ({
+    ...row,
+    imageUrl: resolveAmenityImageSrc(row),
+  }));
+}
+
 export async function loadAmenities(): Promise<Amenity[]> {
   if (useDemoStore()) return demoGetAmenities();
-  if (getDataSource() === "api") return fetchAmenities();
+  if (getDataSource() === "api") return withAmenityImages(await fetchAmenities());
   return staticData.getStaticAmenities();
+}
+
+export async function loadAmenityById(id: string): Promise<AmenityDetail | undefined> {
+  if (useDemoStore()) {
+    const row = demoGetAmenities().find((amenity) => amenity.id === id);
+    return row ? ({ ...row, capacity: 0, hoursLabel: "", rules: [], advanceDays: 0, maxHoursPerDay: 0, canManage: false } as AmenityDetail) : undefined;
+  }
+  if (getDataSource() === "api") {
+    const fromApi = await fetchAmenity(id);
+    if (fromApi) {
+      return { ...fromApi, imageUrl: resolveAmenityImageSrc(fromApi) };
+    }
+    return staticData.getStaticAmenityById(id);
+  }
+  return staticData.getStaticAmenityById(id);
 }
 
 /** Upcoming bookings exist only when the API is the data source. */

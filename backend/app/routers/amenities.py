@@ -39,14 +39,14 @@ async def cancel_booking(
 
 @router.get("/{amenity_id}", response_model=AmenityDetailOut)
 async def get_amenity(
-    amenity_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+    amenity_id: str, db: DbSession, member: CurrentMemberDep
 ) -> AmenityDetailOut:
     return await amenity_service.get_amenity(db, member, amenity_id)
 
 
 @router.get("/{amenity_id}/slots", response_model=SlotsOut)
 async def get_slots(
-    amenity_id: uuid.UUID,
+    amenity_id: str,
     db: DbSession,
     member: CurrentMemberDep,
     day: date | None = None,
@@ -56,7 +56,7 @@ async def get_slots(
 
 @router.get("/{amenity_id}/crowd", response_model=CrowdOut)
 async def get_crowd(
-    amenity_id: uuid.UUID,
+    amenity_id: str,
     db: DbSession,
     member: CurrentMemberDep,
     day: date | None = None,
@@ -66,13 +66,13 @@ async def get_crowd(
 
 @router.post("/{amenity_id}/bookings", response_model=BookingOut, status_code=201)
 async def book_slot(
-    amenity_id: uuid.UUID, body: BookingIn, db: DbSession, member: CurrentMemberDep
+    amenity_id: str, body: BookingIn, db: DbSession, member: CurrentMemberDep
 ) -> BookingOut:
     return await booking_service.book_slot(db, member, amenity_id, body)
 
 
 @router.patch("/{amenity_id}/status", response_model=AmenityDetailOut)
 async def set_closure(
-    amenity_id: uuid.UUID, body: AmenityClosureIn, db: DbSession, member: CurrentMemberDep
+    amenity_id: str, body: AmenityClosureIn, db: DbSession, member: CurrentMemberDep
 ) -> AmenityDetailOut:
     return await amenity_service.set_closure(db, member, amenity_id, body)

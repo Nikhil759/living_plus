@@ -210,6 +210,18 @@ async def test_amenity_detail(
     assert (gym["advanceDays"], gym["maxHoursPerDay"]) == (0, 0)
 
 
+async def test_amenity_detail_legacy_static_id(
+    client: AsyncClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.get("/v1/amenities/am-gym")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Gym"
+    assert body["id"] == str(world.gym.id)
+    assert body["imageUrl"] == "/images/amenities/gym.jpg"
+
+
 async def test_amenity_detail_wrong_society_and_missing(
     client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
 ) -> None:

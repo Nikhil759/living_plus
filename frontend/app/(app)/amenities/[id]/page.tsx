@@ -8,7 +8,7 @@ import { SlotPicker } from "@/components/amenities/slot-picker";
 import { AppPage } from "@/components/layout/app-page";
 import { buttonVariants } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
-import { fetchAmenity } from "@/lib/api/amenities";
+import { loadAmenityById } from "@/lib/data";
 import {
   amenityActionHref,
   amenityStatusLabel,
@@ -22,7 +22,7 @@ interface AmenityPageProps {
 
 export default async function AmenityPage({ params }: AmenityPageProps) {
   const { id } = await params;
-  const amenity = await fetchAmenity(id);
+  const amenity = await loadAmenityById(id);
   if (!amenity) notFound();
 
   const today = istToday();

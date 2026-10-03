@@ -89,7 +89,7 @@ async def _check_slot_rules(
 
 
 async def book_slot(
-    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, body: BookingIn
+    db: AsyncSession, member: CurrentMember, amenity_id: str, body: BookingIn
 ) -> BookingOut:
     amenity, status = await amenity_service.load_amenity(db, member, amenity_id)
     if amenity_service.kind_of(amenity) != "bookable":

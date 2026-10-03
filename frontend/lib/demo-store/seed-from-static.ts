@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import amenitiesJson from "@/data/amenities.json";
+import { STATIC_AMENITY_DETAILS } from "@/lib/amenities/static-catalog";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
@@ -41,7 +41,7 @@ export function seedDemoDatabaseFromStatic(db: Database.Database): void {
     upsertEntity(db, "events", event.id, event);
   }
 
-  for (const amenity of amenitiesJson) {
+  for (const amenity of STATIC_AMENITY_DETAILS) {
     upsertEntity(db, "amenities", amenity.id, amenity);
   }
 
