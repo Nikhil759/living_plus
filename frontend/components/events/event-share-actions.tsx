@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus, Link2 } from "lucide-react";
 import { eventIcs } from "@/lib/events/detail";
 import { cn } from "@/lib/utils";
 import type { HomeEvent } from "@/lib/types/home";
@@ -36,21 +35,19 @@ export function EventShareActions({ event, className }: EventShareActionsProps) 
   }
 
   return (
-    <div className={cn("flex flex-wrap gap-4", className)}>
+    <div className={cn("flex flex-wrap items-center gap-x-5 gap-y-2", className)}>
       <button
         type="button"
         onClick={addToCalendar}
-        className="inline-flex items-center gap-1.5 text-callout font-semibold text-primary"
+        className="text-caption font-semibold text-primary hover:opacity-80"
       >
-        <CalendarPlus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
         Add to calendar
       </button>
       <button
         type="button"
         onClick={() => void copyLink()}
-        className="inline-flex items-center gap-1.5 text-callout font-semibold text-primary"
+        className="text-caption font-semibold text-primary hover:opacity-80"
       >
-        <Link2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
         {copied ? "Link copied" : "Copy link"}
       </button>
     </div>

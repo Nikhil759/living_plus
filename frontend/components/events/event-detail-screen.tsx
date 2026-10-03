@@ -34,7 +34,7 @@ const BANNER_TONE: Record<"warn" | "danger" | "info", string> = {
 };
 
 function hostedLabel(count: number): string {
-  return count === 1 ? "1 event hosted" : `${count} events hosted`;
+  return count === 1 ? "1 event hosted" : count + " events hosted";
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {
@@ -82,8 +82,8 @@ function EventDetailsCard({
   const ratio = eventCapacityRatio(event);
 
   return (
-    <Card className="space-y-5">
-      <div className="space-y-4">
+    <Card className="space-y-4 p-5">
+      <div className="space-y-3">
         <DetailRow icon={Clock}>
           <p>{formatEventRange(event.startsAt, event.endsAt)}</p>
           {event.recurrenceLabel ? (
@@ -105,14 +105,17 @@ function EventDetailsCard({
             <p>{spots}</p>
             {ratio != null ? (
               <div
-                className="mt-2 h-1 overflow-hidden rounded-full bg-quiet"
+                className="mt-2 h-1 w-full overflow-hidden rounded-full bg-quiet"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={event.capacity}
                 aria-valuenow={event.goingCount}
                 aria-label={spots}
               >
-                <div className="h-full rounded-full bg-primary" style={{ width: `${ratio * 100}%` }} />
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: ((ratio * 100).toFixed(0) + "%") }}
+                />
               </div>
             ) : null}
           </DetailRow>
@@ -126,9 +129,10 @@ function EventDetailsCard({
           backend={backend}
           alreadyGoing={Boolean(event.viewerGoing)}
           fullWidth
+          layout="card"
         />
       </div>
-      <EventShareActions event={event} className="justify-between md:flex-col md:items-start md:gap-3" />
+      <EventShareActions event={event} />
       {canManage ? (
         <>
           <div className="border-t border-hairline" />
@@ -147,7 +151,7 @@ export function EventDetailScreen({
   backend: "demo" | "api";
 }) {
   const banners = eventBanners(event);
-  const pills = eventStatusPills(event);
+  const pills = eventStatusPills(event).filter((pill) => pill !== "You're going");
   const categoryLabel = EVENT_CATEGORY_LABEL[event.category ?? "other"];
   const canManage = Boolean(event.isHost || event.isCommittee);
   const going = event.going ?? [];
@@ -156,7 +160,7 @@ export function EventDetailScreen({
     <>
       <EventDetailTopBar title={event.title} />
       <PageContainer className="max-md:pb-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
-        <div className="mx-auto flex w-full max-w-content flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-content flex-col">
           <div className="-mx-4 sm:-mx-5 md:mx-0">
             <div className="relative overflow-hidden md:rounded-card">
               <EventCover
@@ -174,7 +178,7 @@ export function EventDetailScreen({
           </div>
 
           {banners.length > 0 ? (
-            <div className="space-y-2">
+            <div className="mt-8 space-y-2">
               {banners.map((banner) => (
                 <p
                   key={banner.text}
@@ -186,7 +190,7 @@ export function EventDetailScreen({
             </div>
           ) : null}
 
-          <div className="lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] lg:items-start lg:gap-x-10 lg:gap-y-8">
+          <div className="mt-8 grid w-full items-start lg:grid-cols-[minmax(0,40rem)_22.5rem] lg:justify-between">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-1.5">
                 <Badge>{categoryLabel}</Badge>
@@ -200,11 +204,11 @@ export function EventDetailScreen({
               <EventHostRow event={event} />
             </div>
 
-            <aside className="mt-6 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:sticky lg:top-[calc(3.75rem+env(safe-area-inset-top,0px))]">
+            <aside className="mt-6 w-full lg:mt-0 lg:row-span-2 lg:row-start-1 lg:w-[360px] lg:justify-self-end lg:sticky lg:top-[calc(3.75rem+env(safe-area-inset-top,0px))]">
               <EventDetailsCard event={event} backend={backend} canManage={canManage} />
             </aside>
 
-            <div className="mt-8 space-y-6 lg:mt-0">
+            <div className="mt-8 space-y-8 lg:mt-8">
               {event.description ? (
                 <section className="space-y-2">
                   <SectionHeading>About</SectionHeading>
@@ -236,13 +240,12 @@ export function EventDetailScreen({
                           ? "no guests"
                           : guestsForPerson === 1
                             ? "1 guest"
-                            : `${guestsForPerson} guests`;
+                            : guestsForPerson + " guests";
+                      const tower = person.tower ? " · " + person.tower : "";
+                      const check = person.checkedIn ? "Checked in" : "Not checked in";
                       return (
                         <li key={person.id}>
-                          {person.fullName ?? person.name}
-                          {person.tower ? ` · ${person.tower}` : ""}
-                          {` · ${guestText}`}
-                          {` · ${person.checkedIn ? "Checked in" : "Not checked in"}`}
+                          {(person.fullName ?? person.name) + tower + " · " + guestText + " · " + check}
                         </li>
                       );
                     })}

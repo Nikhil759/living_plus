@@ -125,6 +125,17 @@ export function eventCoverPill(event: Pick<HomeEvent, "eventType" | "priceInr">)
   return formatPriceInr(event.priceInr);
 }
 
+export function eventGoingLabel(guestCount?: number): string {
+  if (guestCount != null && guestCount > 0) {
+    return guestCount === 1 ? "You're going · 1 guest" : `You're going · ${guestCount} guests`;
+  }
+  return "You're going";
+}
+
+export function isMutedEventAction(kind: EventMainActionKind): boolean {
+  return kind === "ended" || kind === "cancelled" || kind === "pending" || kind === "draft" || kind === "rejected" || kind === "stall";
+}
+
 export function eventBanners(event: HomeEvent): EventBanner[] {
   const banners: EventBanner[] = [];
   const status = event.status ?? "published";
@@ -167,7 +178,7 @@ export function eventMainAction(event: HomeEvent, now: number = Date.now()): Eve
     return { kind: "pending", label: "Pending approval", enabled: false };
   }
   if (event.viewerGoing) {
-    return { kind: "leave", label: "Can't make it", enabled: true };
+    return { kind: "leave", label: "Can't make it?", enabled: true };
   }
   if (event.eventType === "society" && event.stallsEnabled) {
     return { kind: "stall", label: "Apply for a stall", enabled: false };

@@ -8,6 +8,7 @@ import {
   eventCapacityLabel,
   eventCapacityRatio,
   eventCoverPill,
+  eventGoingLabel,
   eventGuestLabel,
   eventIcs,
   eventMainAction,
@@ -116,7 +117,7 @@ describe("eventMainAction", () => {
     });
     assert.deepEqual(eventMainAction({ ...future, viewerGoing: true }), {
       kind: "leave",
-      label: "Can't make it",
+      label: "Can't make it?",
       enabled: true,
     });
     assert.deepEqual(eventMainAction({ ...future, eventType: "society", stallsEnabled: true }), {
@@ -176,6 +177,9 @@ describe("eventBanners and labels", () => {
     assert.equal(eventAudienceLabel({ audience: "group" }), "Group members");
     assert.equal(eventCoverPill({ eventType: "free", priceInr: 0 }), "Free");
     assert.equal(eventCoverPill({ eventType: "society", priceInr: 0 }), "Society");
+    assert.equal(eventGoingLabel(), "You're going");
+    assert.equal(eventGoingLabel(1), "You're going · 1 guest");
+    assert.equal(eventGoingLabel(2), "You're going · 2 guests");
     assert.equal(eventVenueHref({ location: "Tennis Courts", amenityId: "am-tennis" }), "/amenities#am-tennis");
     assert.equal(eventVenueHref({ location: "Park gate" }), undefined);
   });

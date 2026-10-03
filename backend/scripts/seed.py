@@ -611,6 +611,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "tags": ["FIFA", "gaming"],
             "category": EventCategory.sports,
             "cover_url": "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80",
+            "description": "Bring a controller and your best celebration. Rohan is running a knockout FIFA 24 tournament in the club lounge, then an open session for anyone who wants a kickabout. All ages, casual rules, and snacks on the sideboard.",
         },
         {
             "slug": "evt-salsa",
@@ -627,6 +628,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "category": EventCategory.music,
             "cover_url": "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=1200&q=80",
             "guest_limit": 1,
+            "description": "Ananya and Studio 7 host a beginner-friendly salsa and bachata social in the community hall. No partner needed — they rotate, teach a short combination, then open the floor. One guest per resident is welcome.",
         },
         {
             "slug": "evt-expressway-ride",
@@ -641,6 +643,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "tags": ["cycling"],
             "category": EventCategory.fitness,
             "cover_url": "https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&w=1200&q=80",
+            "description": "A steady 25 km out-and-back on the expressway service road, rolling out from the main gate at first light. The Resident Cyclists Club keeps a conversational pace and waits at the flyover. Lights and a helmet are a must.",
         },
         {
             "slug": "evt-terrace-yoga",
@@ -656,6 +659,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "category": EventCategory.fitness,
             "cover_url": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80",
             "what_to_bring": "A mat and water.",
+            "description": "A gentle 60-minute flow on the clubhouse terrace as the sun comes up. All levels welcome; Meera brings a speaker and a few spare mats.",
         },
         {
             "slug": "evt-diwali-mela",
@@ -671,6 +675,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "status": EventStatus.published,
             "category": EventCategory.social,
             "cover_url": "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=1200&q=80",
+            "description": "Prestige Meridian Park's annual Diwali Mela takes over the amphitheatre and central lawn with food stalls, handicrafts, and games for the kids. Come in festive wear, stay for the lamps, and apply early if you want a stall.",
         },
     ]
 
@@ -687,7 +692,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
                 public_slug=spec["slug"],
                 event_type=spec["type"],
                 title=spec["title"],
-                description=f"Demo event seeded for {spec['title']}.",
+                description=spec.get("description") or f"Demo event seeded for {spec['title']}.",
                 host_id=host.id,
                 amenity_id=spec["amenity"].id if spec.get("amenity") else None,
                 location_label=spec["location"],
@@ -712,6 +717,8 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             event.cover_url = spec.get("cover_url")
             event.guest_limit = spec.get("guest_limit", 0)
             event.what_to_bring = spec.get("what_to_bring")
+            if spec.get("description"):
+                event.description = spec["description"]
 
         for t_idx in range(3):
             attendee = users[f"resident.{t_idx}"]
