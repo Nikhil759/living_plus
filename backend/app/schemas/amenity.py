@@ -40,3 +40,15 @@ class CrowdOut(CamelModel):
     hours: list[CrowdHourOut]
     current_hour: int | None = None
     summary: str
+
+
+class BookingIn(CamelModel):
+    starts_at: datetime
+
+
+class BookingOut(CamelModel):
+    id: str
+    amenity_id: str
+    amenity_name: str
+    starts_at: datetime
+    ends_at: datetime

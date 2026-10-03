@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, String, Uuid, func
+from sqlalchemy import ForeignKey, Index, String, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdTimestampMixin
@@ -53,6 +53,16 @@ class AmenityStatus(Base):
 
 class AmenityBooking(Base, IdTimestampMixin):
     __tablename__ = "amenity_bookings"
+    __table_args__ = (
+        # Two residents can never hold the same slot; cancelled rows are ignored.
+        Index(
+            "uq_amenity_bookings_active_slot",
+            "amenity_id",
+            "starts_at",
+            unique=True,
+            sqlite_where=text("status = 'confirmed'"),
+        ),
+    )
 
     amenity_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("amenities.id", ondelete="CASCADE"), index=True

@@ -66,7 +66,7 @@ def _add_user(db_session, society: Society, flat: Flat, email: str, name: str) -
 
 @pytest.fixture
 async def world(db_session, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[World]:
-    monkeypatch.setattr("app.services.amenities._now", lambda: NOW)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: NOW)
     society = Society(id=uuid.uuid4(), name="Test Society", city="Gurgaon", invite_code="AMEN01")
     tower = Tower(id=uuid.uuid4(), society_id=society.id, name="Tower C")
     flat = Flat(id=uuid.uuid4(), society_id=society.id, tower_id=tower.id, flat_no="702")
@@ -186,7 +186,7 @@ async def test_amenity_list_closed_outside_hours_and_for_maintenance(
     assert cards["Gym"]["detail"] == "Closed for maintenance"
 
     night = datetime(2030, 1, 1, 23, 0, tzinfo=IST).astimezone(UTC)
-    monkeypatch.setattr("app.services.amenities._now", lambda: night)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: night)
     cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
     assert cards["Badminton 1"]["statusLabel"] == "Closed"
     assert cards["Badminton 1"]["detail"] == "Closed · opens tomorrow at 6 AM"
@@ -308,3 +308,197 @@ async def test_crowd_only_for_walk_in(
         response = await client.get(f"/v1/amenities/{amenity.id}/crowd")
         assert response.status_code == 422
         assert response.json()["code"] == "validation_error"
+
+
+def _iso(day, hour: int, minute: int = 0) -> str:
+    start = datetime.combine(day, time(hour, minute), tzinfo=IST)
+    return start.isoformat()
+
+
+async def _day_slots(client: AsyncClient, amenity: Amenity, day) -> list[dict]:
+    response = await client.get(
+        f"/v1/amenities/{amenity.id}/slots", params={"day": day.isoformat()}
+    )
+    return response.json()["slots"]
+
+
+async def _book_slot(client: AsyncClient, amenity: Amenity, day, hour: int):
+    return await client.post(
+        f"/v1/amenities/{amenity.id}/bookings", json={"startsAt": _iso(day, hour)}
+    )
+
+
+async def test_booking_endpoints_require_auth(client: AsyncClient) -> None:
+    amenity_id = uuid.uuid4()
+    body = {"startsAt": "2030-01-02T06:00:00+05:30"}
+    assert (await client.post(f"/v1/amenities/{amenity_id}/bookings", json=body)).status_code == 401
+    assert (await client.delete(f"/v1/amenities/bookings/{uuid.uuid4()}")).status_code == 401
+    assert (await client.get("/v1/amenities/bookings/mine")).status_code == 401
+
+
+async def test_book_then_cancel_a_slot(
+    client: AsyncClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    tomorrow = TODAY + timedelta(days=1)
+    booked = await _book_slot(client, world.court, tomorrow, 6)
+    assert booked.status_code == 201
+    booking = booked.json()
+    assert booking["amenityName"] == "Badminton 1"
+
+    first = (await _day_slots(client, world.court, tomorrow))[0]
+    assert (first["state"], first["bookingId"]) == ("yours", booking["id"])
+
+    mine = (await client.get("/v1/amenities/bookings/mine")).json()
+    assert [item["id"] for item in mine] == [booking["id"]]
+
+    cancelled = await client.delete(f"/v1/amenities/bookings/{booking['id']}")
+    assert cancelled.status_code == 200
+    assert (await client.get("/v1/amenities/bookings/mine")).json() == []
+    freed = (await _day_slots(client, world.court, tomorrow))[0]
+    assert freed["state"] == "free"
+    # The freed slot can be booked again.
+    assert (await _book_slot(client, world.court, tomorrow, 6)).status_code == 201
+
+
+async def test_booking_validation_rules(
+    client: AsyncClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    path = f"/v1/amenities/{world.court.id}/bookings"
+
+    past = await _book_slot(client, world.court, TODAY, 9)
+    assert (past.status_code, past.json()["code"]) == (422, "validation_error")
+
+    half_hour = await client.post(path, json={"startsAt": _iso(TODAY + timedelta(days=1), 6, 30)})
+    assert half_hour.status_code == 422
+
+    too_far = await _book_slot(client, world.court, TODAY + timedelta(days=7), 8)
+    assert too_far.status_code == 422
+
+    too_early = await _book_slot(client, world.court, TODAY + timedelta(days=1), 5)
+    assert too_early.status_code == 422
+
+    assert (await client.post(path, json={})).status_code == 422
+    assert (await client.post(path, json={"startsAt": "soon"})).status_code == 422
+
+    walk_in = await _book_slot(client, world.gym, TODAY + timedelta(days=1), 8)
+    assert walk_in.status_code == 422
+
+    blocked = await _book_slot(client, world.court, TODAY, 17)
+    assert (blocked.status_code, blocked.json()["code"]) == (409, "slot_blocked")
+    assert "Kids coaching" in blocked.json()["message"]
+
+
+async def test_third_hour_in_a_day_is_refused(
+    client: AsyncClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    day = TODAY + timedelta(days=2)
+    assert (await _book_slot(client, world.court, day, 7)).status_code == 201
+    assert (await _book_slot(client, world.court, day, 8)).status_code == 201
+    third = await _book_slot(client, world.court, day, 9)
+    assert (third.status_code, third.json()["code"]) == (422, "daily_limit")
+    assert "2 hours a day" in third.json()["message"]
+    # Another day is unaffected, and cancelling one frees the allowance.
+    assert (await _book_slot(client, world.court, TODAY + timedelta(days=3), 9)).status_code == 201
+    mine = (await client.get("/v1/amenities/bookings/mine")).json()
+    first = next(
+        item
+        for item in mine
+        if datetime.fromisoformat(item["startsAt"]).astimezone(IST).hour == 7
+    )
+    await client.delete(f"/v1/amenities/bookings/{first['id']}")
+    assert (await _book_slot(client, world.court, day, 9)).status_code == 201
+
+
+async def test_a_taken_slot_is_refused(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    day = TODAY + timedelta(days=1)
+    _book(db_session, world, world.other, 18, day)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await _book_slot(client, world.court, day, 18)
+    assert (response.status_code, response.json()["code"]) == (409, "slot_taken")
+    assert response.json()["message"] == "Just taken, pick another slot."
+
+
+async def test_database_blocks_a_double_booking_even_if_the_check_is_skipped(
+    client: AsyncClient,
+    world: World,
+    db_session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    day = TODAY + timedelta(days=1)
+    _book(db_session, world, world.other, 19, day)
+    await db_session.flush()
+
+    async def blind(*_args) -> bool:
+        return False
+
+    monkeypatch.setattr("app.services.amenity_bookings._slot_is_taken", blind)
+    _enable_local_dev_auth(monkeypatch)
+    response = await _book_slot(client, world.court, day, 19)
+    assert (response.status_code, response.json()["code"]) == (409, "slot_taken")
+
+
+async def test_cancel_rules(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    theirs = _book(db_session, world, world.other, 18, TODAY + timedelta(days=1))
+    started = _book(db_session, world, world.member, 10)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    assert (await client.delete(f"/v1/amenities/bookings/{theirs.id}")).status_code == 404
+    assert (await client.delete(f"/v1/amenities/bookings/{uuid.uuid4()}")).status_code == 404
+    already = await client.delete(f"/v1/amenities/bookings/{started.id}")
+    assert (already.status_code, already.json()["code"]) == (422, "validation_error")
+
+
+async def test_my_bookings_lists_only_mine_and_upcoming(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tomorrow = TODAY + timedelta(days=1)
+    mine_later = _book(db_session, world, world.member, 15, tomorrow)
+    mine_sooner = _book(db_session, world, world.member, 20)
+    _book(db_session, world, world.member, 8)  # already over
+    _book(db_session, world, world.other, 12, tomorrow)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    listed = (await client.get("/v1/amenities/bookings/mine")).json()
+    assert [item["id"] for item in listed] == [str(mine_sooner.id), str(mine_later.id)]
+
+
+async def test_booking_a_closed_amenity_is_refused(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    status = await db_session.get(AmenityStatus, world.court.id)
+    status.crowd_level, status.note = CrowdLevel.closed, "Court resurfacing"
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await _book_slot(client, world.court, TODAY + timedelta(days=1), 8)
+    assert (response.status_code, response.json()["code"]) == (409, "amenity_closed")
+    assert response.json()["message"] == "Court resurfacing"
+    slots = (await client.get(f"/v1/amenities/{world.court.id}/slots")).json()["slots"]
+    assert {s["state"] for s in slots} <= {"past", "blocked"}
+
+
+async def test_booking_wrong_society_amenity_is_not_found(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other_society = Society(id=uuid.uuid4(), name="Other", city="Pune", invite_code="AMEN03")
+    db_session.add(other_society)
+    await db_session.flush()
+    foreign = Amenity(
+        id=uuid.uuid4(),
+        society_id=other_society.id,
+        name="Foreign Court",
+        amenity_type=AmenityType.court,
+        capacity=4,
+    )
+    db_session.add(foreign)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await _book_slot(client, foreign, TODAY + timedelta(days=1), 8)
+    assert response.status_code == 404

@@ -38,6 +38,7 @@ Level = Literal["quiet", "moderate", "busy", "closed"]
 DEFAULT_OPEN_HOUR = 6
 DEFAULT_CLOSE_HOUR = 22
 DEFAULT_ADVANCE_DAYS = 7
+SLOT = timedelta(hours=1)
 DEFAULT_MAX_HOURS_PER_DAY = 2
 
 _EN = "\u2013"
@@ -93,7 +94,7 @@ _RULE_LINES: dict[AmenityType, list[str]] = {
 }
 
 
-def _now() -> datetime:
+def current_time() -> datetime:
     return datetime.now(UTC)
 
 
@@ -195,7 +196,7 @@ def hours_label(amenity: Amenity) -> str:
     return " · ".join(parts)
 
 
-def _closure_note(status: AmenityStatus | None) -> str | None:
+def closure_note(status: AmenityStatus | None) -> str | None:
     if status is not None and status.crowd_level == CrowdLevel.closed:
         return status.note or "Temporarily closed"
     return None
@@ -236,7 +237,12 @@ def _level_name(value: int) -> Level:
     return _LEVELS[min(max(value, 0), 2)]
 
 
-def _day_bounds(day: date) -> tuple[datetime, datetime]:
+def as_utc(value: datetime) -> datetime:
+    """Treat naive input as IST wall time."""
+    return value.astimezone(UTC) if value.tzinfo else value.replace(tzinfo=IST).astimezone(UTC)
+
+
+def day_bounds(day: date) -> tuple[datetime, datetime]:
     start = datetime.combine(day, time(0), tzinfo=IST).astimezone(UTC)
     return start, start + timedelta(days=1)
 
@@ -296,7 +302,7 @@ def _card(
     kind = kind_of(amenity)
     local = now.astimezone(IST)
     opens, closes = hours_for(amenity, local.date())
-    closure = _closure_note(status)
+    closure = closure_note(status)
     level: Level
     if closure is not None:
         level, line = "closed", closure
@@ -333,7 +339,7 @@ def _card(
 async def list_amenities(
     db: AsyncSession, society_id: uuid.UUID, *, now: datetime | None = None
 ) -> list[AmenityOut]:
-    now = now or _now()
+    now = now or current_time()
     rows = (
         await db.execute(
             select(Amenity, AmenityStatus)
@@ -341,7 +347,7 @@ async def list_amenities(
             .where(Amenity.society_id == society_id)
         )
     ).all()
-    start, end = _day_bounds(now.astimezone(IST).date())
+    start, end = day_bounds(now.astimezone(IST).date())
     bookable_ids = [a.id for a, _ in rows if kind_of(a) == "bookable"]
     bookings = await confirmed_bookings(db, society_id, bookable_ids, start, end)
     cards = [
@@ -378,8 +384,8 @@ async def get_amenity(
     db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID
 ) -> AmenityDetailOut:
     amenity, status = await load_amenity(db, member, amenity_id)
-    now = _now()
-    start, end = _day_bounds(now.astimezone(IST).date())
+    now = current_time()
+    start, end = day_bounds(now.astimezone(IST).date())
     bookings = await confirmed_bookings(db, member.society_id, [amenity.id], start, end)
     card = _card(amenity, status, bookings, now)
     bookable = kind_of(amenity) == "bookable"
@@ -388,7 +394,7 @@ async def get_amenity(
         capacity=amenity.capacity,
         hours_label=hours_label(amenity),
         rules=_RULE_LINES.get(amenity.amenity_type, _RULE_LINES[AmenityType.other]),
-        closure_note=_closure_note(status),
+        closure_note=closure_note(status),
         advance_days=_advance_days(amenity) if bookable else 0,
         max_hours_per_day=max_hours_per_day(amenity) if bookable else 0,
     )
@@ -407,7 +413,7 @@ def build_slots(
     slots: list[SlotOut] = []
     for hour in range(opens, closes):
         starts = datetime.combine(day, time(hour), tzinfo=IST).astimezone(UTC)
-        slot = SlotOut(starts_at=starts, ends_at=starts + timedelta(hours=1), state="free")
+        slot = SlotOut(starts_at=starts, ends_at=starts + SLOT, state="free")
         taken = occupied.get(hour)
         if starts <= now:
             slot.state = "past"
@@ -429,11 +435,11 @@ async def get_slots(
     amenity, status = await load_amenity(db, member, amenity_id)
     if kind_of(amenity) != "bookable":
         raise AppError("validation_error", "This amenity is not booked by slot.", 422)
-    now = _now()
+    now = current_time()
     chosen = resolve_day(amenity, day, now)
-    start, end = _day_bounds(chosen)
+    start, end = day_bounds(chosen)
     bookings = await confirmed_bookings(db, member.society_id, [amenity.id], start, end)
-    slots = build_slots(amenity, chosen, bookings, member.user.id, now, _closure_note(status))
+    slots = build_slots(amenity, chosen, bookings, member.user.id, now, closure_note(status))
     return SlotsOut(date=chosen, slots=slots)
 
 
@@ -454,7 +460,7 @@ async def get_crowd(
     amenity, _ = await load_amenity(db, member, amenity_id)
     if kind_of(amenity) != "walk_in":
         raise AppError("validation_error", "Crowd levels are only for walk-in amenities.", 422)
-    now = _now()
+    now = current_time()
     chosen = resolve_day(amenity, day, now)
     opens, closes = hours_for(amenity, chosen)
     levels = _crowd_levels(amenity, chosen)
