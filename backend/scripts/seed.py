@@ -19,8 +19,15 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_sessionmaker
+from business_seed_data import BUSINESSES, DEMO_FOLLOWS, DEMO_RECOMMENDS, SeedBusiness
 from app.models import (
     Amenity,
+    BusinessFollow,
+    BusinessRecommendation,
+    BusinessReviewStatus,
+    BusinessUpdate,
+    LocalBusiness,
+    Notification,
     MembershipInvite,
     AmenityBooking,
     AmenityBookingStatus,
@@ -938,6 +945,130 @@ async def seed_marketplace(session: AsyncSession, society: Society, users: dict[
         listing.removed_reason = listing.removed_by_id = None
 
 
+def _fake_phone(label: str) -> str:
+    return f"+9198765{sid(f'phone.{label}').int % 100000:05d}"
+
+
+async def _seed_business_owner(
+    session: AsyncSession, society: Society, flats: dict[str, Flat], item: SeedBusiness
+) -> User:
+    owner = await get_or_create(
+        session,
+        User,
+        sid(f"user.biz.{item.key}"),
+        supabase_uid=f"seed:biz.{item.key}@aangan.app",
+        email=f"biz.{item.key}@aangan.app",
+        name=item.owner_name,
+    )
+    owner.phone = _fake_phone(f"biz.{item.key}")
+    owner.created_at = datetime(item.resident_since, 6, 1, tzinfo=UTC)
+    await _ensure_membership(
+        session,
+        sid(f"membership.biz.{item.key}"),
+        owner.id,
+        society.id,
+        flats[item.flat_key].id,
+        MembershipRole.owner,
+    )
+    if await session.get(Profile, owner.id) is None:
+        session.add(Profile(user_id=owner.id, society_id=society.id, is_visible=True))
+    return owner
+
+
+def _recommenders(index: int, item: SeedBusiness, users: dict[str, User]) -> list[tuple[User, str | None]]:
+    """Visible-profile residents (even index) get the written notes; the rest just count."""
+    evens = [users[f"resident.{n}"] for n in range(0, 20, 2)]
+    odds = [users[f"resident.{n}"] for n in range(1, 20, 2)]
+    shift = (index * 3) % 10
+    evens, odds = evens[shift:] + evens[:shift], odds[shift:] + odds[:shift]
+    pairs: list[tuple[User, str | None]] = list(zip(evens, item.notes, strict=False))
+    plain = evens[len(item.notes) :] + odds
+    pairs += [(user, None) for user in plain[: item.recommendations - len(pairs)]]
+    return pairs
+
+
+async def seed_local_businesses(
+    session: AsyncSession, society: Society, users: dict[str, User], flats: dict[str, Flat]
+) -> None:
+    """Re-running resets the demo businesses, their updates, follows and recommendations."""
+    now = datetime.now(UTC)
+    demo = users["demo"]
+    ids = [sid(f"business.{item.key}") for item in BUSINESSES]
+    await session.execute(
+        delete(Notification).where(
+            Notification.user_id == demo.id, Notification.href.like("/local-businesses/%")
+        )
+    )
+    for model in (BusinessUpdate, BusinessFollow, BusinessRecommendation):
+        await session.execute(delete(model).where(model.business_id.in_(ids)))
+    for index, item in enumerate(BUSINESSES):
+        owner = await _seed_business_owner(session, society, flats, item)
+        business = await session.get(LocalBusiness, sid(f"business.{item.key}"))
+        if business is None:
+            business = LocalBusiness(id=sid(f"business.{item.key}"), society_id=society.id)
+            session.add(business)
+        base = f"/images/local-businesses/{item.key}"
+        business.owner_id = owner.id
+        business.name, business.category, business.tagline = item.name, item.category, item.tagline
+        business.about, business.cover_url = item.about, f"{base}-cover.jpg"
+        business.photos = [f"{base}-{n}.jpg" for n in range(1, item.photos + 1)]
+        business.offerings, business.timings, business.days = item.offerings, item.timings, item.days
+        business.serves, business.contact_method = item.serves, item.contact
+        business.availability, business.is_featured = item.availability, item.featured
+        business.review_status = (
+            BusinessReviewStatus.approved if item.approved else BusinessReviewStatus.pending
+        )
+        business.rejection_reason = business.removed_reason = None
+        business.created_at = now - timedelta(days=item.listed_days_ago)
+        await session.flush()
+        for number, (text, hours_ago) in enumerate(item.updates):
+            session.add(
+                BusinessUpdate(
+                    id=sid(f"business-update.{item.key}.{number}"),
+                    business_id=business.id,
+                    society_id=society.id,
+                    text=text,
+                    created_at=now - timedelta(hours=hours_ago),
+                )
+            )
+        recommenders = _recommenders(index, item, users)
+        if DEMO_RECOMMENDS[0] == item.key:
+            recommenders = recommenders[:-1] + [(demo, DEMO_RECOMMENDS[1])]
+        for number, (user, note) in enumerate(recommenders):
+            session.add(
+                BusinessRecommendation(
+                    id=sid(f"business-rec.{item.key}.{user.id}"),
+                    business_id=business.id,
+                    society_id=society.id,
+                    user_id=user.id,
+                    note=note,
+                    created_at=now - timedelta(days=2 + 3 * number),
+                )
+            )
+        if item.key in DEMO_FOLLOWS:
+            session.add(
+                BusinessFollow(
+                    id=sid(f"business-follow.{item.key}"),
+                    business_id=business.id,
+                    society_id=society.id,
+                    user_id=demo.id,
+                )
+            )
+            if item.updates:
+                session.add(
+                    Notification(
+                        id=sid(f"notification.business.{item.key}"),
+                        society_id=society.id,
+                        user_id=demo.id,
+                        kind="business_update",
+                        title=item.name,
+                        body=item.updates[0][0],
+                        href=f"/local-businesses/{business.id}",
+                        created_at=now - timedelta(hours=item.updates[0][1]),
+                    )
+                )
+
+
 async def run_seed() -> None:
     session_factory = get_sessionmaker()
     async with session_factory() as session:
@@ -950,6 +1081,7 @@ async def run_seed() -> None:
         await seed_community(session, society, users)
         await seed_events(session, society, users)
         await seed_marketplace(session, society, users)
+        await seed_local_businesses(session, society, users, flats)
         await session.commit()
         action = "Updated" if existing else "Created"
         print(f"{action} demo data for {society.name} (society code {INVITE_CODE}).")
