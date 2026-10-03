@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     LOCAL_DEV_AUTH_EMAIL: str | None = None
     # Reusable demo join code (any email, never consumed). Empty disables.
     MASTER_INVITE_CODE: str = "LIVING-OPEN-50"
+    # Local event cover files. Path is relative to the process working directory.
+    UPLOAD_DIR: str = "./.uploads"
 
     @field_validator("DATABASE_URL")
     @classmethod

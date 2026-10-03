@@ -1,4 +1,20 @@
+import { getApiBaseUrl } from "@/lib/api/config";
+
 const UNSPLASH_HOST = "images.unsplash.com";
+
+export function resolveEventCoverSrc(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/v1/")) return `${getApiBaseUrl()}${url}`;
+  return url;
+}
+
+export function isUnsplashCover(url: string): boolean {
+  try {
+    return new URL(url).hostname === UNSPLASH_HOST;
+  } catch {
+    return false;
+  }
+}
 
 /** Ask Unsplash for a source large enough for the on-screen crop (including 2x). */
 export function sizedEventCoverUrl(url: string | undefined, minWidth: number): string | undefined {

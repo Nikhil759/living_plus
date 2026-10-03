@@ -13,6 +13,7 @@ dependencies = [
     "python-json-logger>=4.2.0",
     "sqlalchemy[asyncio]>=2.1.1",
     "uvicorn[standard]>=0.54.0",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]

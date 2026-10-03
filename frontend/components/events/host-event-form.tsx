@@ -1,11 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { createEventApi, createEventDemo, updateEventApi } from "@/lib/api/events-client";
+import {
+  createEventApi,
+  createEventDemo,
+  updateEventApi,
+  uploadEventCoverApi,
+} from "@/lib/api/events-client";
 import { EventCover } from "@/components/events/event-cover";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABEL } from "@/lib/events/categories";
 import {
@@ -37,13 +42,60 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
   const [guestLimit, setGuestLimit] = useState(String(initial.guestLimit));
   const [whatToBring, setWhatToBring] = useState(initial.whatToBring);
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
   const [tagsText, setTagsText] = useState(initial.tags.join(", "));
   const [pending, setPending] = useState<"draft" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const isEdit = Boolean(event);
   const isDraft = (event?.status ?? "published") === "draft";
   const canDraft = backend === "api" && (!isEdit || isDraft);
+
+  function clearCover() {
+    if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(undefined);
+    setCoverUrl("");
+  }
+
+  async function onPickCover(file: File) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Cover must be a JPEG, PNG, or WebP image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Cover image must be 5 MB or smaller.");
+      return;
+    }
+    if (backend === "demo") {
+      setError("Photo upload is only available on the API.");
+      return;
+    }
+    const local = URL.createObjectURL(file);
+    if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(local);
+    setUploading(true);
+    setError(null);
+    try {
+      const url = await uploadEventCoverApi(file);
+      setCoverUrl(url);
+      setPreviewUrl(undefined);
+      URL.revokeObjectURL(local);
+    } catch (err) {
+      setCoverUrl("");
+      setPreviewUrl(undefined);
+      URL.revokeObjectURL(local);
+      setError(err instanceof ApiError ? err.message : "Could not upload cover.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function values() {
     return {
@@ -215,24 +267,50 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
             placeholder="A mat and water"
           />
         </label>
-        <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">Cover image URL</span>
-          <input
-            className={inputClassName}
-            type="url"
-            value={coverUrl}
-            onChange={(e) => setCoverUrl(e.target.value)}
-            placeholder="https://images.unsplash.com/…"
-          />
-        </label>
-        <div className="overflow-hidden rounded-card">
-          <EventCover
-            title={title || "Event cover"}
-            imageUrl={coverUrl || undefined}
-            category={category}
-            sizes="(max-width: 768px) 100vw, 720px"
-            frame="card"
-          />
+        <div className="space-y-2">
+          <span className="text-caption font-medium text-ink-secondary">Cover photo</span>
+          <div className="overflow-hidden rounded-card">
+            <EventCover
+              title={title || "Event cover"}
+              imageUrl={previewUrl || coverUrl || undefined}
+              category={category}
+              sizes="(max-width: 768px) 100vw, 720px"
+              frame="card"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label
+              className={buttonVariants({
+                variant: "secondary",
+                size: "sm",
+                className: uploading || pending ? "pointer-events-none opacity-40" : undefined,
+              })}
+            >
+              {uploading ? "Uploading…" : coverUrl ? "Replace photo" : "Upload photo"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={uploading || pending !== null}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onPickCover(file);
+                }}
+              />
+            </label>
+            {coverUrl ? (
+              <button
+                type="button"
+                className="text-callout font-semibold text-ink-secondary hover:text-ink"
+                disabled={uploading || pending !== null}
+                onClick={clearCover}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          <p className="text-caption text-ink-tertiary">JPEG, PNG or WebP · up to 5 MB</p>
         </div>
         <label className="block space-y-1.5">
           <span className="text-caption font-medium text-ink-secondary">Tags (optional)</span>
@@ -249,13 +327,13 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
             <Button
               type="button"
               variant="secondary"
-              disabled={pending !== null}
+              disabled={pending !== null || uploading}
               onClick={() => void submit("draft")}
             >
               {pending === "draft" ? "Saving…" : "Save draft"}
             </Button>
           ) : null}
-          <Button type="submit" variant="primary" disabled={pending !== null}>
+          <Button type="submit" variant="primary" disabled={pending !== null || uploading}>
             {pending === "publish"
               ? "Saving…"
               : isEdit && !isDraft

@@ -1,6 +1,7 @@
 "use client";
 
 import { apiDelete, apiPatch, apiPost, ApiError } from "@/lib/api/client";
+import { resolveApiUrl } from "@/lib/api/config";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { EventCategory, HomeEvent } from "@/lib/types/home";
 
@@ -57,6 +58,33 @@ export async function createEventApi(body: EventWriteInput): Promise<HomeEvent> 
   return apiPost<HomeEvent>("/v1/events", writeBody(body), {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function uploadEventCoverApi(file: File): Promise<string> {
+  const token = await getBrowserAccessToken();
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(resolveApiUrl("/v1/uploads/event-covers"), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const payload = (await response.json()) as { message?: string };
+      message = payload.message ?? message;
+    } catch {
+      /* non-JSON */
+    }
+    throw new ApiError(message, response.status);
+  }
+  const payload = (await response.json()) as { url: string };
+  return payload.url;
 }
 
 export async function updateEventApi(slug: string, body: EventWriteInput): Promise<HomeEvent> {

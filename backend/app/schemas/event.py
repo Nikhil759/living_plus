@@ -30,13 +30,21 @@ def _normalize_optional_text(value: str | None) -> str | None:
     return stripped or None
 
 
+_LOCAL_COVER_PREFIX = "/v1/uploads/event-covers/"
+
+
 def _normalize_cover_url(value: str | None) -> str | None:
     cleaned = _normalize_optional_text(value)
     if cleaned is None:
         return None
-    if not (cleaned.startswith("https://") or cleaned.startswith("http://")):
-        raise ValueError("Cover URL must start with http:// or https://.")
-    return cleaned
+    if cleaned.startswith(_LOCAL_COVER_PREFIX):
+        name = cleaned.removeprefix(_LOCAL_COVER_PREFIX)
+        if "/" in name or ".." in name:
+            raise ValueError("Cover URL is not valid.")
+        return cleaned
+    if cleaned.startswith("https://") or cleaned.startswith("http://"):
+        return cleaned
+    raise ValueError("Cover must be an uploaded file or an http(s) URL.")
 
 
 class EventCreate(CamelModel):

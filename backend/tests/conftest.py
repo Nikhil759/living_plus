@@ -32,6 +32,7 @@ os.environ.update(
     FRONTEND_ORIGIN="http://localhost:3000",
     REDIS_URL="redis://localhost:6379/0",
     LOCAL_DEV_AUTH_EMAIL="",
+    UPLOAD_DIR=str(BACKEND_DIR / ".demo" / "test_uploads"),
 )
 
 from app.core.db import build_engine, get_db  # noqa: E402

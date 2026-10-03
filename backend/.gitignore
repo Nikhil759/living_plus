@@ -4,6 +4,7 @@ __pycache__/
 .ruff_cache/
 .env
 .demo/
+.uploads/
 *.db
 *.db-wal
 *.db-shm

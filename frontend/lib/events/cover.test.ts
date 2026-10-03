@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sizedEventCoverUrl } from "./cover";
+import { resolveEventCoverSrc, sizedEventCoverUrl } from "./cover";
 
 describe("sizedEventCoverUrl", () => {
   it("raises Unsplash width so the hero is not upscaled", () => {
@@ -15,5 +15,13 @@ describe("sizedEventCoverUrl", () => {
 
   it("leaves non-Unsplash URLs unchanged", () => {
     assert.equal(sizedEventCoverUrl("/images/events/covers/sports.svg", 2400), "/images/events/covers/sports.svg");
+  });
+
+  it("points local uploads at the API host", () => {
+    assert.equal(
+      resolveEventCoverSrc("/v1/uploads/event-covers/11111111-1111-1111-1111-111111111111.jpg"),
+      "http://localhost:8000/v1/uploads/event-covers/11111111-1111-1111-1111-111111111111.jpg",
+    );
+    assert.equal(resolveEventCoverSrc("https://images.unsplash.com/photo-1"), "https://images.unsplash.com/photo-1");
   });
 });
