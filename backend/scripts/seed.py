@@ -10,11 +10,12 @@ matching accounts exist in Supabase Auth; see README for optional SEED_DEMO_PASS
 from __future__ import annotations
 
 import asyncio
+import random
 import uuid
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_sessionmaker
@@ -57,6 +58,7 @@ from app.models import (
 SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 INVITE_CODE = "AANGAN50"
 
+from app.services.amenities import blocked_hours
 from app.services.invites import OPEN_INVITE_EMAIL
 
 SOCIETY_DISPLAY_NAME = "Prestige Meridian Park"
@@ -87,24 +89,24 @@ BOUND_MEMBERSHIP_INVITES: list[tuple[str, str, str, MembershipRole]] = [
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-DEFAULT_OPEN_HOURS: dict[str, Any] = {
-    "mon": {"open": "06:00", "close": "22:00"},
-    "tue": {"open": "06:00", "close": "22:00"},
-    "wed": {"open": "06:00", "close": "22:00"},
-    "thu": {"open": "06:00", "close": "22:00"},
-    "fri": {"open": "06:00", "close": "22:00"},
-    "sat": {"open": "07:00", "close": "21:00"},
-    "sun": {"open": "07:00", "close": "21:00"},
-}
+_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
-DEFAULT_RULES: dict[str, Any] = {
-    "slot_minutes": 60,
-    "max_hours_per_week": 6,
-    "advance_days": 7,
-    "requires_approval": False,
-}
 
-HALL_RULES: dict[str, Any] = {**DEFAULT_RULES, "requires_approval": True, "slot_minutes": 120}
+def hours(open_at: str, close_at: str) -> dict[str, Any]:
+    return {day: {"open": open_at, "close": close_at} for day in _DAYS}
+
+
+def crowd_pattern(busy: list[tuple[int, int]], moderate: list[tuple[int, int]]) -> list[int]:
+    """24 hourly levels: 0 quiet, 1 moderate, 2 busy. Busy windows win over moderate."""
+    levels = [0] * 24
+    for start, end in moderate:
+        levels[start:end] = [1] * (end - start)
+    for start, end in busy:
+        levels[start:end] = [2] * (end - start)
+    return levels
+
+
+COURT_RULES: dict[str, Any] = {"advance_days": 7, "max_hours_per_day": 2, "slot_minutes": 60}
 
 RESIDENT_NAMES: list[tuple[str, str, list[str]]] = [
     ("Rohan Sharma", "rohan.sharma@example.com", ["FIFA", "gaming"]),
@@ -410,42 +412,150 @@ async def _ensure_membership(
         )
 
 
+def booking_odds(hour: int, weekend: bool) -> float:
+    """Chance a court slot is already taken: evenings fullest, midday emptiest."""
+    if 18 <= hour <= 20:
+        return 0.92 if weekend else 0.85
+    if hour == 21:
+        return 0.5
+    if 6 <= hour <= 8:
+        return 0.55 if weekend else 0.4
+    if 9 <= hour <= 10:
+        return 0.35 if weekend else 0.2
+    if 11 <= hour <= 16:
+        return 0.25 if weekend else 0.12
+    return 0.3
+
+
+async def seed_court_bookings(
+    session: AsyncSession, society: Society, users: dict[str, User], courts: list[tuple[str, Amenity]]
+) -> None:
+    """Rebuild the next 7 days of court bookings so the schedule is always current."""
+    await session.execute(delete(AmenityBooking).where(AmenityBooking.society_id == society.id))
+    now_ist = datetime.now(IST)
+    bookers = [user for key, user in users.items() if key.startswith("resident.")]
+    for key, amenity in courts:
+        for offset in range(7):
+            day = now_ist.date() + timedelta(days=offset)
+            blocked = blocked_hours(amenity, day)
+            per_user: dict[uuid.UUID, int] = {}
+            for hour in range(6, 22):
+                is_demo_slot = key == "am-badminton-2" and offset == 1 and hour == 7
+                if not is_demo_slot and (hour in blocked or (offset == 0 and hour <= now_ist.hour)):
+                    continue
+                rng = random.Random(f"{key}:{day}:{hour}")
+                if is_demo_slot:
+                    booker = users["demo"]
+                elif rng.random() < booking_odds(hour, day.weekday() >= 5):
+                    eligible = [u for u in bookers if per_user.get(u.id, 0) < 2]
+                    booker = rng.choice(eligible)
+                else:
+                    continue
+                per_user[booker.id] = per_user.get(booker.id, 0) + 1
+                starts = datetime.combine(day, time(hour), tzinfo=IST).astimezone(UTC)
+                session.add(
+                    AmenityBooking(
+                        id=sid(f"booking.{key}.{day}.{hour}"),
+                        amenity_id=amenity.id,
+                        society_id=society.id,
+                        user_id=booker.id,
+                        starts_at=starts,
+                        ends_at=starts + timedelta(hours=1),
+                        status=AmenityBookingStatus.confirmed,
+                    )
+                )
+
+
 async def seed_amenities(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
-    specs: list[tuple[str, str, AmenityType, int, CrowdLevel, str, dict[str, Any] | None]] = [
-        ("am-gym", "Gym", AmenityType.gym, 30, CrowdLevel.moderate, "Moderate · 6 active", None),
-        ("am-pool", "Pool", AmenityType.pool, 20, CrowdLevel.quiet, "Quiet · 2 swimmers", None),
+    badminton_1_blocks = [
+        {"label": "Kids coaching", "days": [1, 3], "start": "17:00", "end": "18:00"}
+    ]
+    tennis_blocks = [
+        {"label": "Court cleaning", "days": list(range(7)), "start": "14:00", "end": "15:00"}
+    ]
+    specs: list[tuple[str, str, AmenityType, int, dict[str, Any], dict[str, Any]]] = [
         (
             "am-badminton-1",
             "Badminton 1",
             AmenityType.court,
             4,
-            CrowdLevel.busy,
-            "Booked till 7:00 PM",
-            None,
+            hours("06:00", "22:00"),
+            {**COURT_RULES, "blocks": badminton_1_blocks},
         ),
-        ("am-badminton-2", "Badminton 2", AmenityType.court, 4, CrowdLevel.quiet, "Free now", None),
-        ("am-tennis", "Tennis Court", AmenityType.court, 4, CrowdLevel.quiet, "Free now", None),
+        (
+            "am-badminton-2",
+            "Badminton 2",
+            AmenityType.court,
+            4,
+            hours("06:00", "22:00"),
+            COURT_RULES,
+        ),
+        (
+            "am-tennis",
+            "Tennis Court",
+            AmenityType.court,
+            4,
+            hours("06:00", "22:00"),
+            {**COURT_RULES, "blocks": tennis_blocks},
+        ),
+        (
+            "am-gym",
+            "Gym",
+            AmenityType.gym,
+            30,
+            hours("06:00", "22:00"),
+            {
+                "crowd": {
+                    "weekday": crowd_pattern([(6, 8), (19, 21)], [(8, 10), (17, 19), (21, 22)]),
+                    "weekend": crowd_pattern([(7, 9), (18, 20)], [(9, 12), (17, 18), (20, 21)]),
+                }
+            },
+        ),
+        (
+            "am-pool",
+            "Pool",
+            AmenityType.pool,
+            20,
+            hours("06:00", "21:00"),
+            {
+                "crowd": {
+                    "weekday": crowd_pattern([], [(6, 8), (17, 19)]),
+                    "weekend": crowd_pattern([(7, 10), (17, 19)], [(10, 12), (16, 17), (19, 20)]),
+                }
+            },
+        ),
+        (
+            "am-cafe",
+            "Café Lounge",
+            AmenityType.other,
+            40,
+            hours("08:00", "22:00"),
+            {
+                "crowd": {
+                    "weekday": crowd_pattern([(17, 20)], [(8, 10), (16, 17), (20, 22)]),
+                    "weekend": crowd_pattern([(17, 20)], [(10, 12), (16, 17), (20, 22)]),
+                }
+            },
+        ),
         (
             "am-hall",
             "Community Hall",
             AmenityType.hall,
             120,
-            CrowdLevel.quiet,
-            "Available",
-            HALL_RULES,
+            hours("08:00", "22:00"),
+            {"requires_approval": True},
         ),
         (
             "am-amphitheatre",
             "Amphitheatre",
             AmenityType.amphitheatre,
             200,
-            CrowdLevel.closed,
-            "Closed today",
-            HALL_RULES,
+            hours("08:00", "22:00"),
+            {"requires_approval": True},
         ),
-        ("am-cafe", "Café Lounge", AmenityType.other, 40, CrowdLevel.moderate, "Open", None),
     ]
-    for key, name, atype, capacity, crowd, note, rules in specs:
+    courts: list[tuple[str, Amenity]] = []
+    for key, name, atype, capacity, open_hours, rules in specs:
         amenity = await get_or_create(
             session,
             Amenity,
@@ -454,36 +564,22 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
             name=name,
             amenity_type=atype,
             capacity=capacity,
-            open_hours=DEFAULT_OPEN_HOURS,
-            rules=rules or DEFAULT_RULES,
+            open_hours=open_hours,
+            rules=rules,
         )
+        # Re-seeding refreshes config and lifts any closure, so the demo always starts open.
+        amenity.name, amenity.amenity_type, amenity.capacity = name, atype, capacity
+        amenity.open_hours, amenity.rules = open_hours, rules
         status = await session.get(AmenityStatus, amenity.id)
         if status is None:
-            session.add(
-                AmenityStatus(
-                    amenity_id=amenity.id,
-                    society_id=society.id,
-                    crowd_level=crowd,
-                    note=note,
-                    updated_by=users["committee"].id,
-                )
+            status = AmenityStatus(
+                amenity_id=amenity.id, society_id=society.id, updated_by=users["committee"].id
             )
-
-    badminton = await session.get(Amenity, sid("amenity.am-badminton-1"))
-    if badminton and await session.get(AmenityBooking, sid("booking.badminton.sample")) is None:
-        start = datetime.now(UTC) + timedelta(hours=2)
-        end = start + timedelta(hours=1)
-        session.add(
-            AmenityBooking(
-                id=sid("booking.badminton.sample"),
-                amenity_id=badminton.id,
-                society_id=society.id,
-                user_id=users["resident.0"].id,
-                starts_at=start,
-                ends_at=end,
-                status=AmenityBookingStatus.confirmed,
-            )
-        )
+            session.add(status)
+        status.crowd_level, status.note = CrowdLevel.quiet, None
+        if atype == AmenityType.court:
+            courts.append((key, amenity))
+    await seed_court_bookings(session, society, users, courts)
 
 
 async def seed_community(session: AsyncSession, society: Society, users: dict[str, User]) -> None:

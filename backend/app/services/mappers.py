@@ -6,8 +6,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    Amenity,
-    AmenityStatus,
     Event,
     EventTicket,
     EventTicketStatus,
@@ -22,7 +20,7 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import CrowdLevel, EventRecurrence, EventStatus
+from app.models.enums import EventRecurrence, EventStatus
 from app.schemas.event import (
     EventAttendeeFullOut,
     EventDetailOut,
@@ -32,7 +30,6 @@ from app.schemas.event import (
     StallCategoryOut,
 )
 from app.schemas.home import (
-    AmenityOut,
     DigestItemOut,
     DigestOut,
     HomeEventOut,
@@ -50,40 +47,6 @@ _ANNOUNCEMENT_EMOJI = (
     ("agm", "📋"),
     ("maintenance", "🔧"),
 )
-
-_AMENITY_EMOJI: dict[str, str] = {
-    "gym": "💪",
-    "pool": "🏊",
-    "badminton": "🏸",
-    "tennis": "🎾",
-    "hall": "🏛️",
-    "amphitheatre": "🎭",
-    "café": "☕",
-    "cafe": "☕",
-}
-
-
-def _emoji_for_amenity(name: str) -> str:
-    lower = name.lower()
-    for key, emoji in _AMENITY_EMOJI.items():
-        if key in lower:
-            return emoji
-    return "📍"
-
-
-def _ui_status_from_crowd(level: CrowdLevel | None, note: str | None) -> tuple[str, str]:
-    if level is None:
-        return "open", note or "Open"
-    if level == CrowdLevel.closed:
-        return "booked", note or "Closed"
-    if level == CrowdLevel.busy:
-        return "booked", note or "Busy"
-    if level == CrowdLevel.moderate:
-        return "moderate", note or "Moderate"
-    if level == CrowdLevel.quiet:
-        return "quiet", note or "Quiet"
-    return "free", note or "Free now"
-
 
 def _event_glyph(tags: list[str], title: str) -> str:
     blob = " ".join([*tags, title]).lower()
@@ -487,31 +450,6 @@ async def map_events(db: AsyncSession, society_id: uuid.UUID) -> list[HomeEventO
         people = await public_going_for(db, event.id)
         out.append(event_to_home_event(event, host_label=host, going_count=going, going=people))
     return out
-
-
-async def map_amenities(db: AsyncSession, society_id: uuid.UUID) -> list[AmenityOut]:
-    rows = await db.execute(
-        select(Amenity, AmenityStatus)
-        .join(AmenityStatus, AmenityStatus.amenity_id == Amenity.id, isouter=True)
-        .where(Amenity.society_id == society_id)
-        .order_by(Amenity.name)
-    )
-    items: list[AmenityOut] = []
-    for amenity, status in rows.all():
-        ui_status, detail = _ui_status_from_crowd(
-            status.crowd_level if status else None,
-            status.note if status else None,
-        )
-        items.append(
-            AmenityOut(
-                id=str(amenity.id),
-                name=amenity.name,
-                emoji=_emoji_for_amenity(amenity.name),
-                status=ui_status,  # type: ignore[arg-type]
-                detail=detail,
-            )
-        )
-    return items
 
 
 async def map_digest(

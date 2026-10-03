@@ -48,8 +48,14 @@ class AmenityOut(CamelModel):
     id: str
     name: str
     emoji: str
-    status: Literal["free", "open", "quiet", "moderate", "booked"]
+    status: Literal["free", "open", "quiet", "moderate", "booked", "closed"]
     detail: str
+    kind: Literal["bookable", "walk_in", "space"] = "walk_in"
+    category: Literal["sports", "fitness", "spaces", "other"] = "other"
+    image_url: str | None = None
+    status_label: str = "Quiet"
+    action: Literal["book", "view", "host"] = "view"
+    action_label: str = "View"
 
 
 class DigestItemOut(CamelModel):

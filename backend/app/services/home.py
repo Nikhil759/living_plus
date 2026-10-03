@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from app.auth.deps import CurrentMember
 from app.models import Flat, Membership, Society
 from app.schemas.home import AanganPromptOut, HomeDataOut
+from app.services import amenities as amenity_service
 from app.services import mappers
 from app.services import profile as profile_service
 
@@ -51,7 +52,7 @@ async def get_home_data(db: AsyncSession, member: CurrentMember) -> HomeDataOut:
         resident=resident,
         digest=await mappers.map_digest(db, member.society_id, tower_name=tower_name),
         events=await mappers.map_events(db, member.society_id),
-        amenities=await mappers.map_amenities(db, member.society_id),
+        amenities=await amenity_service.list_amenities(db, member.society_id),
         match=await mappers.map_neighbour_match(
             db,
             society_id=member.society_id,
