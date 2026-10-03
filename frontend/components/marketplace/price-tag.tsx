@@ -1,5 +1,10 @@
-import { formatPriceInr } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const RUPEES = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
 
 /** Bold price, or a "Free" tag for items given away. */
 export function PriceTag({
@@ -23,5 +28,5 @@ export function PriceTag({
       </span>
     );
   }
-  return <span className={cn("text-headline font-bold text-ink", className)}>{formatPriceInr(priceInr)}</span>;
+  return <span className={cn("text-headline font-bold text-ink", className)}>{RUPEES.format(priceInr)}</span>;
 }

@@ -96,6 +96,31 @@ export async function apiPatch<T>(
   return (await response.json()) as T;
 }
 
+export async function apiPut<T>(
+  path: string,
+  body: unknown,
+  init?: RequestInit,
+): Promise<T> {
+  const url = resolveApiUrl(path);
+  const response = await fetch(url, {
+    ...init,
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function apiDelete<T>(path: string, init?: RequestInit): Promise<T> {
   const url = resolveApiUrl(path);
   const response = await fetch(url, {

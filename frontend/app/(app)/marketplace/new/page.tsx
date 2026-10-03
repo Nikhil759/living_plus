@@ -1,23 +1,17 @@
-import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ListingForm } from "@/components/marketplace/listing-form";
+import { ErrorState } from "@/components/ui/error-state";
+import { fetchSellerProfile } from "@/lib/api/marketplace";
+import { marketplaceIsLive } from "@/lib/data";
 
-export default function NewMarketplaceListingPage() {
+export default async function SellItemPage() {
   return (
-    <AppPage title="Sell an item">
-      <Card>
-        <EmptyState
-          icon={<ShoppingBag />}
-          title="Listing creation connects to the API next."
-          action={
-            <Link href="/marketplace" className="text-callout font-semibold text-primary">
-              Browse listings
-            </Link>
-          }
-        />
-      </Card>
+    <AppPage title="Sell an item" backHref="/marketplace" backLabel="Marketplace">
+      {marketplaceIsLive() ? (
+        <ListingForm profile={await fetchSellerProfile()} />
+      ) : (
+        <ErrorState message="Selling needs the live backend. Set NEXT_PUBLIC_DATA_SOURCE=api." />
+      )}
     </AppPage>
   );
 }

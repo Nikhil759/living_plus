@@ -48,3 +48,11 @@ export interface MarketplaceListing extends MarketplaceCard {
   seller: MarketplaceSeller;
   canManage: boolean;
 }
+
+/** The viewer as a seller: used to preview their listing and to know if a phone is needed. */
+export interface SellerProfile {
+  firstName: string;
+  avatarUrl: string | null;
+  tower: string | null;
+  hasPhone: boolean;
+}

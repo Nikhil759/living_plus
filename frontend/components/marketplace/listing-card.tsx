@@ -6,16 +6,18 @@ import { cardMeta, LISTING_CONDITION_LABEL } from "@/lib/marketplace/view";
 import { cn } from "@/lib/utils";
 import type { MarketplaceCard } from "@/lib/types/marketplace";
 
-export function ListingCard({ listing }: { listing: MarketplaceCard }) {
-  return (
-    <Link
-      href={`/marketplace/${listing.id}`}
-      className={cn(
-        "group flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card",
-        "transition-[transform,box-shadow] duration-premium ease-premium",
-        "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
-      )}
-    >
+const CARD = "group flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card";
+
+/** `preview` renders the same card without a link, for the Sell form. */
+export function ListingCard({
+  listing,
+  preview = false,
+}: {
+  listing: MarketplaceCard;
+  preview?: boolean;
+}) {
+  const body = (
+    <>
       <div className="relative">
         <ListingPhoto
           title={listing.title}
@@ -40,6 +42,21 @@ export function ListingCard({ listing }: { listing: MarketplaceCard }) {
         <Badge className="self-start">{LISTING_CONDITION_LABEL[listing.condition]}</Badge>
         <p className="mt-auto pt-0.5 text-caption text-ink-tertiary">{cardMeta(listing)}</p>
       </div>
+    </>
+  );
+
+  return preview ? (
+    <div className={CARD}>{body}</div>
+  ) : (
+    <Link
+      href={`/marketplace/${listing.id}`}
+      className={cn(
+        CARD,
+        "transition-[transform,box-shadow] duration-premium ease-premium",
+        "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
+      )}
+    >
+      {body}
     </Link>
   );
 }
