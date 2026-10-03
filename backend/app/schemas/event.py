@@ -114,6 +114,18 @@ class EventRsvpIn(CamelModel):
     qty: int = Field(default=1, ge=1, le=10)
 
 
+class EventCancelIn(CamelModel):
+    reason: str = Field(min_length=3, max_length=200)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 3:
+            raise ValueError("Give a short reason for cancelling.")
+        return cleaned
+
+
 class EventHostOut(CamelModel):
     id: str
     name: str

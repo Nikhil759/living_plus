@@ -633,3 +633,342 @@ async def test_events_rsvp_capacity_full(
     from app.core.config import get_settings
 
     get_settings.cache_clear()
+
+
+async def test_events_cancel_requires_auth(client: AsyncClient) -> None:
+    response = await client.post("/v1/events/morning-walk/cancel", json={"reason": "Rain"})
+    assert response.status_code == 401
+
+
+async def test_events_cancel_happy_path(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={"title": "Lawn Games", "locationLabel": "Lawn", "startsAt": _future_start()},
+    )
+    slug = created.json()["id"]
+    await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+
+    cancelled = await client.post(f"/v1/events/{slug}/cancel", json={"reason": "Storm warning"})
+    assert cancelled.status_code == 200
+    body = cancelled.json()
+    assert body["status"] == "cancelled"
+    assert body["cancelReason"] == "Storm warning"
+    assert body["goingCount"] == 0
+
+    rsvp = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+    assert rsvp.status_code == 404
+
+    event = await db_session.scalar(select(Event).where(Event.public_slug == slug))
+    assert event is not None
+    ticket = await db_session.scalar(select(EventTicket).where(EventTicket.event_id == event.id))
+    assert ticket is not None
+    assert ticket.status == EventTicketStatus.cancelled
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_requires_reason(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={"title": "No Reason", "locationLabel": "Hall", "startsAt": _future_start()},
+    )
+    slug = created.json()["id"]
+    response = await client.post(f"/v1/events/{slug}/cancel", json={"reason": "no"})
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_not_found(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/missing-event/cancel", json={"reason": "Gone"})
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_forbidden_non_host(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    membership = await db_session.scalar(
+        select(Membership).where(Membership.user_id == demo_member.id)
+    )
+    assert membership is not None
+    other = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:cancel-host@aangan.app",
+        email="cancel-host@aangan.app",
+        name="Host",
+    )
+    db_session.add(other)
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=4)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=membership.society_id,
+            public_slug="not-yours-cancel",
+            event_type=EventType.free,
+            title="Neighbour Walk",
+            host_id=other.id,
+            location_label="Park",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=1),
+            capacity=10,
+            status=EventStatus.published,
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/not-yours-cancel/cancel", json={"reason": "Mine now"})
+    assert response.status_code == 403
+    assert response.json()["code"] == "forbidden"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_wrong_society(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other_society = Society(
+        id=uuid.uuid4(),
+        name="Other",
+        city="Gurgaon",
+        invite_code="OTHER04",
+    )
+    other_host = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:other-cancel@aangan.app",
+        email="other-cancel@aangan.app",
+        name="Other Host",
+    )
+    db_session.add_all([other_society, other_host])
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=5)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=other_society.id,
+            public_slug="other-cancel",
+            event_type=EventType.free,
+            title="Other Meetup",
+            host_id=other_host.id,
+            location_label="Elsewhere",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=2),
+            capacity=10,
+            status=EventStatus.published,
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/other-cancel/cancel", json={"reason": "Nope"})
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_cancel_locked_when_already_cancelled(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    membership = await db_session.scalar(
+        select(Membership).where(Membership.user_id == demo_member.id)
+    )
+    assert membership is not None
+    starts = datetime.now(UTC) + timedelta(days=3)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=membership.society_id,
+            public_slug="already-off",
+            event_type=EventType.free,
+            title="Already Off",
+            host_id=demo_member.id,
+            location_label="Lawn",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=2),
+            capacity=20,
+            status=EventStatus.cancelled,
+            cancel_reason="Rain",
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/already-off/cancel", json={"reason": "Still rain"})
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_duplicate_requires_auth(client: AsyncClient) -> None:
+    response = await client.post("/v1/events/morning-walk/duplicate")
+    assert response.status_code == 401
+
+
+async def test_events_duplicate_happy_path(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Sunday Ride",
+            "locationLabel": "Gate 2",
+            "startsAt": _future_start(),
+            "description": "Easy loop",
+            "category": "sports",
+            "capacity": 12,
+            "guestLimit": 1,
+            "whatToBring": "Helmet",
+            "tags": ["cycling"],
+        },
+    )
+    slug = created.json()["id"]
+    await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 2})
+
+    copied = await client.post(f"/v1/events/{slug}/duplicate")
+    assert copied.status_code == 201
+    body = copied.json()
+    assert body["id"] != slug
+    assert body["title"] == "Sunday Ride"
+    assert body["status"] == "draft"
+    assert body["description"] == "Easy loop"
+    assert body["category"] == "sports"
+    assert body["capacity"] == 12
+    assert body["guestLimit"] == 1
+    assert body["whatToBring"] == "Helmet"
+    assert body["goingCount"] == 0
+    assert body["isHost"] is True
+
+    original = await client.get(f"/v1/events/{slug}")
+    assert original.status_code == 200
+    assert original.json()["status"] == "published"
+    assert original.json()["goingCount"] == 2
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_duplicate_not_found(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/missing-event/duplicate")
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_duplicate_forbidden_non_host(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    membership = await db_session.scalar(
+        select(Membership).where(Membership.user_id == demo_member.id)
+    )
+    assert membership is not None
+    other = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:dup-host@aangan.app",
+        email="dup-host@aangan.app",
+        name="Host",
+    )
+    db_session.add(other)
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=4)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=membership.society_id,
+            public_slug="not-yours-dup",
+            event_type=EventType.free,
+            title="Neighbour Walk",
+            host_id=other.id,
+            location_label="Park",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=1),
+            capacity=10,
+            status=EventStatus.published,
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/not-yours-dup/duplicate")
+    assert response.status_code == 403
+    assert response.json()["code"] == "forbidden"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_duplicate_wrong_society(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other_society = Society(
+        id=uuid.uuid4(),
+        name="Other",
+        city="Gurgaon",
+        invite_code="OTHER05",
+    )
+    other_host = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:other-dup@aangan.app",
+        email="other-dup@aangan.app",
+        name="Other Host",
+    )
+    db_session.add_all([other_society, other_host])
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=5)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=other_society.id,
+            public_slug="other-dup",
+            event_type=EventType.free,
+            title="Other Meetup",
+            host_id=other_host.id,
+            location_label="Elsewhere",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=2),
+            capacity=10,
+            status=EventStatus.published,
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/other-dup/duplicate")
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()

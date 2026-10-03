@@ -4,6 +4,7 @@ from app.auth import CurrentMemberDep
 from app.core.db import DbSession
 from app.models.enums import EventCategory, EventListTab, EventType
 from app.schemas.event import (
+    EventCancelIn,
     EventCreate,
     EventDetailOut,
     EventListItemOut,
@@ -52,6 +53,25 @@ async def update_event(
     member: CurrentMemberDep,
 ) -> EventDetailOut:
     return await event_service.update_event(db, member, slug, body)
+
+
+@router.post("/{slug}/cancel", response_model=EventDetailOut)
+async def cancel_event(
+    slug: str,
+    body: EventCancelIn,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.cancel_event(db, member, slug, body)
+
+
+@router.post("/{slug}/duplicate", response_model=EventDetailOut, status_code=201)
+async def duplicate_event(
+    slug: str,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.duplicate_event(db, member, slug)
 
 
 @router.post("/{slug}/rsvp", response_model=HomeEventOut)

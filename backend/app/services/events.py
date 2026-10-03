@@ -19,6 +19,7 @@ from app.models.enums import (
     MembershipRole,
 )
 from app.schemas.event import (
+    EventCancelIn,
     EventCreate,
     EventDetailOut,
     EventListItemOut,
@@ -267,6 +268,13 @@ async def _event_for_society(db: AsyncSession, member: CurrentMember, slug: str)
     return event
 
 
+async def _require_host(db: AsyncSession, member: CurrentMember, slug: str) -> Event:
+    event = await _event_for_society(db, member, slug)
+    if event.host_id != member.user.id:
+        raise AppError("forbidden", "Only the host can manage this event.", 403)
+    return event
+
+
 async def create_event(
     db: AsyncSession,
     member: CurrentMember,
@@ -386,6 +394,68 @@ async def update_event(
 
     await db.commit()
     return await get_event_detail(db, member, slug)
+
+
+async def cancel_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventCancelIn,
+) -> EventDetailOut:
+    event = await _require_host(db, member, slug)
+    if event.status in _LOCKED_STATUSES:
+        raise AppError("validation_error", "This event is already closed.", 422)
+
+    event.status = EventStatus.cancelled
+    event.cancel_reason = body.reason
+    tickets = (
+        await db.scalars(
+            select(EventTicket).where(
+                EventTicket.event_id == event.id,
+                EventTicket.status == EventTicketStatus.confirmed,
+            )
+        )
+    ).all()
+    for ticket in tickets:
+        ticket.status = EventTicketStatus.cancelled
+    await db.commit()
+    return await get_event_detail(db, member, slug)
+
+
+async def duplicate_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+) -> EventDetailOut:
+    event = await _require_host(db, member, slug)
+    copy_slug = await _unique_slug(db, member.society_id, _slugify(event.title))
+    copy = Event(
+        society_id=member.society_id,
+        public_slug=copy_slug,
+        event_type=event.event_type,
+        title=event.title,
+        description=event.description,
+        cover_url=event.cover_url,
+        host_id=member.user.id,
+        amenity_id=event.amenity_id,
+        location_label=event.location_label,
+        starts_at=event.starts_at,
+        ends_at=event.ends_at,
+        capacity=event.capacity,
+        price_paise=0 if event.event_type == EventType.free else event.price_paise,
+        status=EventStatus.draft,
+        tags=list(event.tags or []),
+        category=event.category,
+        guest_limit=event.guest_limit,
+        what_to_bring=event.what_to_bring,
+        audience_type=event.audience_type,
+        audience_group_id=event.audience_group_id,
+        audience_tower_ids=list(event.audience_tower_ids or []),
+    )
+    db.add(copy)
+    await db.commit()
+    await db.refresh(copy)
+    return await get_event_detail(db, member, copy_slug)
 
 
 async def rsvp_event(

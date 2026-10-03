@@ -110,6 +110,22 @@ export async function leaveEventApi(slug: string): Promise<HomeEvent> {
   });
 }
 
+export async function cancelEventApi(slug: string, reason: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(
+    `/v1/events/${encodeURIComponent(slug)}/cancel`,
+    { reason },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function duplicateEventApi(slug: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/duplicate`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function createEventDemo(body: {
   title: string;
   location: string;
