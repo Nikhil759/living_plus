@@ -12,6 +12,7 @@ import {
 import { EventCover } from "@/components/events/event-cover";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 import { approvalExplain, hostSubmitLabel } from "@/lib/events/approval";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABEL, EVENT_TYPE_LABEL } from "@/lib/events/categories";
 import {
@@ -20,7 +21,34 @@ import {
   eventFormPayload,
   parseTagList,
 } from "@/lib/events/form";
+import {
+  VENUE_OTHER,
+  buildVenueOptions,
+  resolveVenue,
+  venueLocation,
+  type VenueOption,
+} from "@/lib/events/venues";
 import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
+
+const VENUE_GROUPS = { flat: "At home", society: "Around the society" };
+const DEFAULT_VENUE_OPTIONS = buildVenueOptions();
+
+const RECURRENCE_OPTIONS = [
+  { value: "none", label: "Does not repeat" },
+  { value: "weekly", label: "Every week" },
+  { value: "biweekly", label: "Every two weeks" },
+  { value: "monthly", label: "Every month" },
+];
+
+const REPEAT_COUNT_OPTIONS = Array.from({ length: 11 }, (_, index) => {
+  const count = String(index + 2);
+  return { value: count, label: `${count} occurrences` };
+});
+
+const CATEGORY_OPTIONS = EVENT_CATEGORIES.map((id) => ({
+  value: id,
+  label: EVENT_CATEGORY_LABEL[id],
+}));
 
 const inputClassName =
   "w-full rounded-tile border border-outline-variant/40 bg-surface-container-lowest px-3 py-2.5 text-body text-ink outline-none ring-primary/30 focus:ring-2";
@@ -31,11 +59,21 @@ interface HostEventFormProps {
   backend: "demo" | "api";
   event?: HomeEvent;
   isCommittee?: boolean;
+  venueOptions?: VenueOption[];
 }
 
-export function HostEventForm({ backend, event, isCommittee = false }: HostEventFormProps) {
+export function HostEventForm({
+  backend,
+  event,
+  isCommittee = false,
+  venueOptions = DEFAULT_VENUE_OPTIONS,
+}: HostEventFormProps) {
   const router = useRouter();
   const initial = eventFormDefaults(event);
+  const initialVenue = resolveVenue(initial.locationLabel, venueOptions);
+  const [venueKey, setVenueKey] = useState(initialVenue.key);
+  const [venueOther, setVenueOther] = useState(initialVenue.other);
+  const [locationInvalid, setLocationInvalid] = useState(false);
   const [eventType, setEventType] = useState<EventType>(initial.eventType);
   const [priceInr, setPriceInr] = useState(String(initial.priceInr));
   const [recurrence, setRecurrence] = useState<EventRecurrence>(initial.recurrence);
@@ -46,7 +84,6 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
   const [stallCategoriesText, setStallCategoriesText] = useState(initial.stallCategoriesText);
   const [stallDeadline, setStallDeadline] = useState(initial.stallDeadline);
   const [title, setTitle] = useState(initial.title);
-  const [location, setLocation] = useState(initial.locationLabel);
   const [startsAtLocal, setStartsAtLocal] = useState(initial.startsAt);
   const [endsAtLocal, setEndsAtLocal] = useState(initial.endsAt);
   const [description, setDescription] = useState(initial.description);
@@ -110,6 +147,8 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
     }
   }
 
+  const location = venueLocation({ key: venueKey, other: venueOther }, venueOptions);
+
   function values() {
     return {
       title,
@@ -136,6 +175,13 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
   }
 
   async function submit(mode: "draft" | "publish") {
+    if (!location) {
+      setLocationInvalid(true);
+      setError(
+        venueKey === VENUE_OTHER ? "Type where the event will be." : "Pick where the event will be.",
+      );
+      return;
+    }
     setPending(mode);
     setError(null);
     try {
@@ -303,17 +349,36 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
             placeholder="Sunday morning walk"
           />
         </label>
-        <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">Location</span>
-          <input
-            className={inputClassName}
-            required
-            maxLength={200}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Central park gate"
+        <div className="space-y-1.5">
+          <span className="block text-caption font-medium text-ink-secondary">Location</span>
+          <Select
+            aria-label="Location"
+            value={venueKey}
+            invalid={locationInvalid && !location}
+            placeholder="Choose a place"
+            options={venueOptions}
+            groupLabels={VENUE_GROUPS}
+            onChange={(next) => {
+              setVenueKey(next);
+              setLocationInvalid(false);
+              setError(null);
+            }}
           />
-        </label>
+          {venueKey === VENUE_OTHER ? (
+            <input
+              className={inputClassName}
+              autoFocus
+              maxLength={200}
+              value={venueOther}
+              aria-label="Other location"
+              onChange={(e) => {
+                setVenueOther(e.target.value);
+                setLocationInvalid(false);
+              }}
+              placeholder="e.g. Sector 50 park, Tower B lobby"
+            />
+          ) : null}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
             <span className="text-caption font-medium text-ink-secondary">Starts</span>
@@ -350,51 +415,37 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
           ) : null
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block space-y-1.5">
-              <span className="text-caption font-medium text-ink-secondary">Repeat</span>
-              <select
-                className={inputClassName}
+            <div className="space-y-1.5">
+              <span className="block text-caption font-medium text-ink-secondary">Repeat</span>
+              <Select
+                aria-label="Repeat"
                 value={recurrence}
-                onChange={(e) => setRecurrence(e.target.value as EventRecurrence)}
-              >
-                <option value="none">Does not repeat</option>
-                <option value="weekly">Every week</option>
-                <option value="biweekly">Every two weeks</option>
-                <option value="monthly">Every month</option>
-              </select>
-            </label>
+                options={RECURRENCE_OPTIONS}
+                onChange={(next) => setRecurrence(next as EventRecurrence)}
+              />
+            </div>
             {recurrence !== "none" ? (
-              <label className="block space-y-1.5">
-                <span className="text-caption font-medium text-ink-secondary">Ends after</span>
-                <select
-                  className={inputClassName}
+              <div className="space-y-1.5">
+                <span className="block text-caption font-medium text-ink-secondary">Ends after</span>
+                <Select
+                  aria-label="Ends after"
                   value={recurrenceCount}
-                  onChange={(e) => setRecurrenceCount(e.target.value)}
-                >
-                  {Array.from({ length: 11 }, (_, index) => index + 2).map((count) => (
-                    <option key={count} value={count}>
-                      {count} occurrences
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={REPEAT_COUNT_OPTIONS}
+                  onChange={setRecurrenceCount}
+                />
+              </div>
             ) : null}
           </div>
         )}
-        <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">Category</span>
-          <select
-            className={inputClassName}
+        <div className="space-y-1.5">
+          <span className="block text-caption font-medium text-ink-secondary">Category</span>
+          <Select
+            aria-label="Category"
             value={category}
-            onChange={(e) => setCategory(e.target.value as EventCategory)}
-          >
-            {EVENT_CATEGORIES.map((id) => (
-              <option key={id} value={id}>
-                {EVENT_CATEGORY_LABEL[id]}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={CATEGORY_OPTIONS}
+            onChange={(next) => setCategory(next as EventCategory)}
+          />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
             <span className="text-caption font-medium text-ink-secondary">Capacity</span>

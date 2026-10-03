@@ -39,6 +39,28 @@
     box-shadow: inset 0 0 0 1px var(--hairline);
   }
 
+  /* Dropdown popover entrance. */
+  .select-pop {
+    animation: select-pop-in 160ms var(--ease-premium);
+  }
+
+  @keyframes select-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .select-pop {
+      animation: none;
+    }
+  }
+
   /* Short bottom feather (~10% of height) — image + scrim share the same mask. */
   .banner-edge-mask {
     -webkit-mask-image: linear-gradient(
