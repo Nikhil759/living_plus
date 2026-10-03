@@ -4,6 +4,7 @@ from app.routers import (
     amenities,
     announcements,
     events,
+    flat_openings,
     health,
     home,
     invites,
@@ -23,6 +24,7 @@ api_router.include_router(me.router)
 api_router.include_router(home.router)
 api_router.include_router(events.router)
 api_router.include_router(amenities.router)
+api_router.include_router(flat_openings.router)
 api_router.include_router(local_businesses.router)
 api_router.include_router(marketplace.router)
 api_router.include_router(notifications.router)

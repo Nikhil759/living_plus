@@ -219,3 +219,50 @@ class Weekday(StrEnum):
     fri = "fri"
     sat = "sat"
     sun = "sun"
+
+
+class OpeningKind(StrEnum):
+    room_available = "room_available"
+    flatmate_needed = "flatmate_needed"
+    full_flat = "full_flat"
+
+
+class OpeningFurnishing(StrEnum):
+    furnished = "furnished"
+    semi_furnished = "semi_furnished"
+    unfurnished = "unfurnished"
+
+
+class OpeningPreference(StrEnum):
+    anyone = "anyone"
+    women_only = "women_only"
+    men_only = "men_only"
+    family = "family"
+    working_professionals = "working_professionals"
+
+
+class OpeningIncluded(StrEnum):
+    wifi = "wifi"
+    ac = "ac"
+    parking = "parking"
+    power_backup = "power_backup"
+    maid = "maid"
+    cook = "cook"
+    washing_machine = "washing_machine"
+
+
+class OpeningStatus(StrEnum):
+    active = "active"
+    filled = "filled"
+    removed = "removed"
+
+
+class OpeningBudget(StrEnum):
+    under_20k = "under_20k"
+    from_20k_to_40k = "from_20k_to_40k"
+    over_40k = "over_40k"
+
+
+class OpeningSort(StrEnum):
+    newest = "newest"
+    rent_asc = "rent_asc"

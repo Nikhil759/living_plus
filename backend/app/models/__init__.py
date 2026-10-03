@@ -38,6 +38,13 @@ from app.models.enums import (
     MembershipRole,
     MembershipStatus,
     OfferingUnit,
+    OpeningBudget,
+    OpeningFurnishing,
+    OpeningIncluded,
+    OpeningKind,
+    OpeningPreference,
+    OpeningSort,
+    OpeningStatus,
     ReactionType,
     SocietyPlan,
     StallApplicationStatus,
@@ -45,6 +52,7 @@ from app.models.enums import (
 )
 from app.models.event import Event, EventTicket, EventWaitlist, StallApplication
 from app.models.flat import Flat
+from app.models.flat_opening import FlatOpening
 from app.models.local_business import (
     BusinessFollow,
     BusinessRecommendation,
@@ -88,6 +96,7 @@ __all__ = [
     "EventType",
     "EventWaitlist",
     "Flat",
+    "FlatOpening",
     "Group",
     "GroupMember",
     "GroupMemberRole",
@@ -111,6 +120,13 @@ __all__ = [
     "MembershipStatus",
     "Notification",
     "OfferingUnit",
+    "OpeningBudget",
+    "OpeningFurnishing",
+    "OpeningIncluded",
+    "OpeningKind",
+    "OpeningPreference",
+    "OpeningSort",
+    "OpeningStatus",
     "Post",
     "Profile",
     "Reaction",
