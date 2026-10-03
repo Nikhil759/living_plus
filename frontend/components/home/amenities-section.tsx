@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Waves } from "lucide-react";
+import { AmenityFaIcon } from "@/components/amenities/amenity-fa-icon";
 import { SectionHeader } from "@/components/home/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -33,7 +34,10 @@ export function AmenitiesSection({
                 href={amenityHref(amenity.id)}
                 className="block h-full rounded-tile bg-card p-4 shadow-card"
               >
-                <p className="text-headline text-ink">{amenity.name}</p>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-tile bg-primary-tint text-primary">
+                  <AmenityFaIcon name={amenity.name} />
+                </span>
+                <p className="mt-3 text-headline text-ink">{amenity.name}</p>
                 <p className="mt-2 flex items-center gap-1.5 text-caption text-ink-secondary">
                   <StatusDot tone={amenityTone(amenity.status)} />
                   {amenityStatusLabel(amenity)}

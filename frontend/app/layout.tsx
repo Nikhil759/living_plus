@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { config } from "@fortawesome/fontawesome-svg-core";
 import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import "@fortawesome/fontawesome-svg-core/styles.css";
 import "./globals.css";
+
+config.autoAddCss = false;
 
 const inter = Inter({
   subsets: ["latin"],
