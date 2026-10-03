@@ -95,9 +95,13 @@ export async function updateListingApi(
 
 /** Returns the stored photo's URL. */
 export async function uploadListingPhotoApi(file: File): Promise<string> {
+  return uploadImage("/v1/uploads/listing-photos", file);
+}
+
+export async function uploadImage(endpoint: string, file: File): Promise<string> {
   const body = new FormData();
   body.append("file", file);
-  const response = await fetch(resolveApiUrl("/v1/uploads/listing-photos"), {
+  const response = await fetch(resolveApiUrl(endpoint), {
     method: "POST",
     headers: { Accept: "application/json", ...(await authHeaders()) },
     body,

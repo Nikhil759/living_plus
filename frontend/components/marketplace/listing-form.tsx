@@ -36,11 +36,11 @@ import type {
 } from "@/lib/types/marketplace";
 
 const CATEGORY_OPTIONS = LISTING_CATEGORIES.map((id) => ({ value: id, label: LISTING_CATEGORY_LABEL[id] }));
-const INPUT =
+export const INPUT =
   "h-11 w-full rounded-tile bg-quiet px-4 text-body text-ink placeholder:text-ink-tertiary outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-const CHIP = "rounded-full px-3.5 py-1.5 text-callout transition-colors duration-premium ease-premium";
+export const CHIP = "rounded-full px-3.5 py-1.5 text-callout transition-colors duration-premium ease-premium";
 
-function Field({
+export function Field({
   label,
   htmlFor,
   error,

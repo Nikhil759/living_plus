@@ -4,6 +4,7 @@ import {
   faChalkboardUser,
   faDog,
   faSpa,
+  faStore,
   faUtensils,
   faChildReaching,
   type IconDefinition,
@@ -19,3 +20,8 @@ export const BUSINESS_CATEGORY_ICON: Record<BusinessCategory, IconDefinition> = 
   wellness: faSpa,
   home_services: faBroom,
 };
+
+/** The tile icon for a form that may not have a category yet. */
+export function businessIconFor(category: BusinessCategory | ""): IconDefinition {
+  return category ? BUSINESS_CATEGORY_ICON[category] : faStore;
+}

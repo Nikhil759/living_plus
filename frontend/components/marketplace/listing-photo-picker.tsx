@@ -7,31 +7,48 @@ import { ApiError } from "@/lib/api/client";
 import { uploadListingPhotoApi } from "@/lib/api/marketplace-client";
 import { MAX_PHOTO_BYTES, MAX_PHOTOS, moveItem } from "@/lib/marketplace/form";
 import { cn } from "@/lib/utils";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { ListingCategory } from "@/lib/types/marketplace";
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
 interface ListingPhotoPickerProps {
   photos: string[];
-  category: ListingCategory;
+  /** Tile icon: from a marketplace category, or passed directly. */
+  category?: ListingCategory;
+  icon?: IconDefinition;
   onChange: (photos: string[]) => void;
   error?: string;
+  /** Defaults to the Marketplace limit and uploader. */
+  max?: number;
+  upload?: (file: File) => Promise<string>;
+  /** Marks the first photo as the cover and says so in the helper text. */
+  coverBadge?: boolean;
 }
 
-/** Up to five photos. Drag to reorder (or use the arrows); the first photo is the cover. */
-export function ListingPhotoPicker({ photos, category, onChange, error }: ListingPhotoPickerProps) {
+/** Drag to reorder (or use the arrows). By default the first photo is the cover. */
+export function ListingPhotoPicker({
+  photos,
+  category,
+  icon,
+  onChange,
+  error,
+  max = MAX_PHOTOS,
+  upload = uploadListingPhotoApi,
+  coverBadge = true,
+}: ListingPhotoPickerProps) {
   const input = useRef<HTMLInputElement>(null);
   const latest = useRef(photos);
   latest.current = photos;
   const [uploading, setUploading] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const slotsLeft = MAX_PHOTOS - photos.length - uploading;
+  const slotsLeft = max - photos.length - uploading;
 
   async function addFiles(files: File[]) {
     setUploadError(null);
     const chosen = files.slice(0, Math.max(0, slotsLeft));
-    if (files.length > chosen.length) setUploadError(`You can add up to ${MAX_PHOTOS} photos.`);
+    if (files.length > chosen.length) setUploadError(`You can add up to ${max} ${max === 1 ? "photo" : "photos"}.`);
     for (const file of chosen) {
       if (!ACCEPTED.includes(file.type)) {
         setUploadError("Photos must be JPEG, PNG or WebP.");
@@ -43,7 +60,7 @@ export function ListingPhotoPicker({ photos, category, onChange, error }: Listin
       }
       setUploading((count) => count + 1);
       try {
-        const url = await uploadListingPhotoApi(file);
+        const url = await upload(file);
         onChange([...latest.current, url]);
       } catch (err) {
         setUploadError(err instanceof ApiError ? err.message : "A photo failed to upload. Please try again.");
@@ -69,8 +86,8 @@ export function ListingPhotoPicker({ photos, category, onChange, error }: Listin
             onDragEnd={() => setDragFrom(null)}
             className={cn("group relative cursor-grab active:cursor-grabbing", dragFrom === index && "opacity-40")}
           >
-            <ListingPhoto title={`Photo ${index + 1}`} category={category} src={url} className="aspect-square rounded-tile" />
-            {index === 0 ? (
+            <ListingPhoto title={`Photo ${index + 1}`} category={category} icon={icon} src={url} className="aspect-square rounded-tile" />
+            {coverBadge && index === 0 ? (
               <span className="absolute left-1.5 top-1.5 rounded-full bg-ink/80 px-2 py-0.5 text-caption font-semibold text-white">
                 Cover
               </span>
@@ -133,7 +150,9 @@ export function ListingPhotoPicker({ photos, category, onChange, error }: Listin
         }}
       />
       <p className="text-caption text-ink-tertiary">
-        {photos.length} of {MAX_PHOTOS} · The first photo is the cover. Drag to reorder. JPEG, PNG or WebP, up to 5 MB.
+        {photos.length} of {max}
+        {coverBadge ? " · The first photo is the cover." : ""}
+        {max > 1 ? " Drag to reorder." : ""} JPEG, PNG or WebP, up to 5 MB.
       </p>
       {uploadError ?? error ? (
         <p role="alert" className="text-caption text-status-red">

@@ -1,7 +1,9 @@
 "use client";
 
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api/client";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api/client";
+import { uploadImage } from "@/lib/api/marketplace-client";
 import { getBrowserAccessToken } from "@/lib/api/browser-auth";
+import type { businessPayload } from "@/lib/local-businesses/form";
 import { browseQueryString, type BrowseFilters } from "@/lib/local-businesses/view";
 import type {
   BusinessAvailability,
@@ -31,6 +33,8 @@ export async function fetchMyBusinessesApi(signal?: AbortSignal): Promise<Busine
     signal,
   });
 }
+
+type BusinessPayload = ReturnType<typeof businessPayload>;
 
 function path(id: string, suffix = ""): string {
   return `/v1/local-businesses/${encodeURIComponent(id)}${suffix}`;
@@ -119,4 +123,16 @@ export async function fetchPendingBusinessesApi(signal?: AbortSignal): Promise<B
     headers: await authHeaders(),
     signal,
   });
+}
+
+export async function uploadBusinessPhotoApi(file: File): Promise<string> {
+  return uploadImage("/v1/uploads/business-photos", file);
+}
+
+export async function createBusinessApi(body: BusinessPayload): Promise<BusinessDetail> {
+  return apiPost<BusinessDetail>("/v1/local-businesses", body, { headers: await authHeaders() });
+}
+
+export async function updateBusinessApi(id: string, body: BusinessPayload): Promise<BusinessDetail> {
+  return apiPut<BusinessDetail>(path(id), body, { headers: await authHeaders() });
 }
