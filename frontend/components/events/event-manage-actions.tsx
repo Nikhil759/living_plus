@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { cancelEventApi, duplicateEventApi } from "@/lib/api/events-client";
+import {
+  approveEventApi,
+  cancelEventApi,
+  duplicateEventApi,
+  rejectEventApi,
+} from "@/lib/api/events-client";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { HomeEvent } from "@/lib/types/home";
@@ -30,13 +35,17 @@ export function EventManageActions({
   const router = useRouter();
   const stack = layout === "stack";
   const isHost = Boolean(event.isHost);
+  const isCommittee = Boolean(event.isCommittee);
   const closed = isClosed(event.status);
-  const canEdit = isHost && !closed;
-  const canCancel = isHost && !closed && backend === "api";
-  const canDuplicate = isHost && backend === "api";
+  const canEdit = (isHost || isCommittee) && !closed;
+  const canCancel = (isHost || isCommittee) && !closed && backend === "api";
+  const canDuplicate = (isHost || isCommittee) && backend === "api";
+  const canReview = isCommittee && event.status === "pending_approval" && backend === "api";
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [pending, setPending] = useState<"cancel" | "duplicate" | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [pending, setPending] = useState<"cancel" | "duplicate" | "approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const buttonClass = buttonVariants({
@@ -64,6 +73,38 @@ export function EventManageActions({
     }
   }
 
+  async function approve() {
+    setPending("approve");
+    setError(null);
+    try {
+      await approveEventApi(event.id);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not approve this event.");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function reject() {
+    const cleaned = rejectReason.trim();
+    if (cleaned.length < 3) {
+      setError("Give a short reason for rejecting.");
+      return;
+    }
+    setPending("reject");
+    setError(null);
+    try {
+      await rejectEventApi(event.id, cleaned);
+      setRejectOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reject this event.");
+    } finally {
+      setPending(null);
+    }
+  }
+
   async function duplicate() {
     setPending("duplicate");
     setError(null);
@@ -80,6 +121,57 @@ export function EventManageActions({
   return (
     <div className="space-y-2">
       <p className="text-caption font-medium text-ink-secondary">Manage event</p>
+      {canReview ? (
+        <div className="space-y-2 rounded-tile bg-primary-tint p-3">
+          <p className="text-caption font-medium text-primary">This event is waiting for approval.</p>
+          <div className={cn("flex gap-2", stack ? "flex-col" : "flex-wrap")}>
+            <button
+              type="button"
+              className={buttonVariants({ variant: "primary", size: "sm", className: stack ? "w-full" : undefined })}
+              disabled={pending !== null}
+              onClick={() => void approve()}
+            >
+              {pending === "approve" ? "Approving…" : "Approve"}
+            </button>
+            <button
+              type="button"
+              className={buttonClass}
+              disabled={pending !== null}
+              onClick={() => {
+                setRejectOpen((open) => !open);
+                setError(null);
+              }}
+            >
+              Reject
+            </button>
+          </div>
+          {rejectOpen ? (
+            <label className="block space-y-1.5">
+              <span className="text-caption font-medium text-ink-secondary">Why are you rejecting?</span>
+              <textarea
+                className={inputClassName}
+                rows={3}
+                maxLength={200}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="The host will see this reason"
+              />
+              <button
+                type="button"
+                className={buttonVariants({
+                  variant: "secondary",
+                  size: "sm",
+                  className: cn(stack ? "w-full" : undefined, "text-error"),
+                })}
+                disabled={pending !== null}
+                onClick={() => void reject()}
+              >
+                {pending === "reject" ? "Rejecting…" : "Reject event"}
+              </button>
+            </label>
+          ) : null}
+        </div>
+      ) : null}
       <div className={cn("flex gap-2", stack ? "flex-col" : "flex-wrap")}>
         {canEdit ? (
           <Link href={`/events/${event.id}/edit`} className={buttonClass}>

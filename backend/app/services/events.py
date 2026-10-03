@@ -23,6 +23,7 @@ from app.schemas.event import (
     EventCreate,
     EventDetailOut,
     EventListItemOut,
+    EventRejectIn,
     EventRsvpIn,
     EventUpdate,
 )
@@ -37,6 +38,9 @@ _HOST_ONLY_STATUSES = {
 }
 _PAST_STATUSES = {EventStatus.published, EventStatus.cancelled, EventStatus.completed}
 _LOCKED_STATUSES = {EventStatus.cancelled, EventStatus.completed}
+_APPROVAL_TYPES = {EventType.paid, EventType.society}
+# Demo unlocks paid hosting for every member. Flip off to enforce Plus.
+_PLUS_UNLOCKED = True
 
 
 def _slugify(title: str) -> str:
@@ -63,6 +67,33 @@ async def _unique_slug(db: AsyncSession, society_id: uuid.UUID, base: str) -> st
 
 def _is_committee(member: CurrentMember) -> bool:
     return member.role in _COMMITTEE_ROLES
+
+
+def _needs_approval(event_type: EventType) -> bool:
+    return event_type in _APPROVAL_TYPES
+
+
+def _can_host_paid(member: CurrentMember) -> bool:
+    return _PLUS_UNLOCKED or _is_committee(member)
+
+
+def _submit_status(event_type: EventType) -> EventStatus:
+    if _needs_approval(event_type):
+        return EventStatus.pending_approval
+    return EventStatus.published
+
+
+def _price_paise(event_type: EventType, price_inr: int | None) -> int:
+    if event_type != EventType.paid:
+        return 0
+    if price_inr is None:
+        raise AppError("validation_error", "Paid events need a ticket price.", 422)
+    return price_inr * 100
+
+
+def _require_committee(member: CurrentMember) -> None:
+    if not _is_committee(member):
+        raise AppError("forbidden", "Only the committee can do this.", 403)
 
 
 async def _member_tower_id(db: AsyncSession, member: CurrentMember) -> uuid.UUID | None:
@@ -238,7 +269,7 @@ async def get_event_detail(
         host_profile=host_profile,
         attendees=attendees,
         is_committee=is_committee,
-        show_rejection=is_host,
+        show_rejection=is_host or is_committee,
     )
 
 
@@ -268,10 +299,12 @@ async def _event_for_society(db: AsyncSession, member: CurrentMember, slug: str)
     return event
 
 
-async def _require_host(db: AsyncSession, member: CurrentMember, slug: str) -> Event:
+async def _require_host_or_committee(
+    db: AsyncSession, member: CurrentMember, slug: str
+) -> Event:
     event = await _event_for_society(db, member, slug)
-    if event.host_id != member.user.id:
-        raise AppError("forbidden", "Only the host can manage this event.", 403)
+    if event.host_id != member.user.id and not _is_committee(member):
+        raise AppError("forbidden", "Only the host or committee can manage this event.", 403)
     return event
 
 
@@ -280,15 +313,17 @@ async def create_event(
     member: CurrentMember,
     body: EventCreate,
 ) -> EventDetailOut:
-    if body.event_type != EventType.free:
+    if body.event_type == EventType.society and not _is_committee(member):
+        raise AppError("forbidden", "Only the committee can host society events.", 403)
+    if body.event_type == EventType.paid and not _can_host_paid(member):
         raise AppError(
-            "validation_error",
-            "Only free events can be created right now.",
-            422,
+            "forbidden",
+            "Hosting paid events is a Plus feature.",
+            403,
         )
 
     starts, ends = _event_window(body.starts_at, body.ends_at)
-    status = EventStatus.draft if body.save_as_draft else EventStatus.published
+    status = EventStatus.draft if body.save_as_draft else _submit_status(body.event_type)
     slug = await _unique_slug(db, member.society_id, _slugify(body.title))
 
     event = Event(
@@ -303,7 +338,7 @@ async def create_event(
         starts_at=starts,
         ends_at=ends,
         capacity=body.capacity,
-        price_paise=0,
+        price_paise=_price_paise(body.event_type, body.price_inr),
         status=status,
         tags=body.tags,
         category=body.category,
@@ -322,9 +357,7 @@ async def update_event(
     slug: str,
     body: EventUpdate,
 ) -> EventDetailOut:
-    event = await _event_for_society(db, member, slug)
-    if event.host_id != member.user.id:
-        raise AppError("forbidden", "Only the host can edit this event.", 403)
+    event = await _require_host_or_committee(db, member, slug)
     if event.status in _LOCKED_STATUSES:
         raise AppError("validation_error", "This event can no longer be edited.", 422)
 
@@ -360,6 +393,15 @@ async def update_event(
                 422,
             )
         event.capacity = body.capacity
+    if "price_inr" in provided:
+        going = await mappers.going_count_for(db, event.id)
+        if going > 0:
+            raise AppError(
+                "validation_error",
+                "Price cannot change after someone has booked.",
+                422,
+            )
+        event.price_paise = _price_paise(event.event_type, body.price_inr)
 
     next_starts = event.starts_at
     next_ends = event.ends_at
@@ -375,13 +417,9 @@ async def update_event(
         event.ends_at = ends
 
     if body.publish:
-        if event.event_type != EventType.free:
-            raise AppError(
-                "validation_error",
-                "Only free events can be published right now.",
-                422,
-            )
-        event.status = EventStatus.published
+        event.status = _submit_status(event.event_type)
+        if event.status == EventStatus.pending_approval:
+            event.rejection_reason = None
 
     if was_published and (time_changed or venue_changed):
         if time_changed and venue_changed:
@@ -402,7 +440,7 @@ async def cancel_event(
     slug: str,
     body: EventCancelIn,
 ) -> EventDetailOut:
-    event = await _require_host(db, member, slug)
+    event = await _require_host_or_committee(db, member, slug)
     if event.status in _LOCKED_STATUSES:
         raise AppError("validation_error", "This event is already closed.", 422)
 
@@ -422,12 +460,43 @@ async def cancel_event(
     return await get_event_detail(db, member, slug)
 
 
+async def approve_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+) -> EventDetailOut:
+    _require_committee(member)
+    event = await _event_for_society(db, member, slug)
+    if event.status != EventStatus.pending_approval:
+        raise AppError("validation_error", "Only pending events can be approved.", 422)
+    event.status = EventStatus.published
+    event.rejection_reason = None
+    await db.commit()
+    return await get_event_detail(db, member, slug)
+
+
+async def reject_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventRejectIn,
+) -> EventDetailOut:
+    _require_committee(member)
+    event = await _event_for_society(db, member, slug)
+    if event.status != EventStatus.pending_approval:
+        raise AppError("validation_error", "Only pending events can be rejected.", 422)
+    event.status = EventStatus.rejected
+    event.rejection_reason = body.reason
+    await db.commit()
+    return await get_event_detail(db, member, slug)
+
+
 async def duplicate_event(
     db: AsyncSession,
     member: CurrentMember,
     slug: str,
 ) -> EventDetailOut:
-    event = await _require_host(db, member, slug)
+    event = await _require_host_or_committee(db, member, slug)
     copy_slug = await _unique_slug(db, member.society_id, _slugify(event.title))
     copy = Event(
         society_id=member.society_id,

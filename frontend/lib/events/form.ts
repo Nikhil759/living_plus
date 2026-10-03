@@ -1,4 +1,4 @@
-import type { EventCategory, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
 import { EVENT_CATEGORIES } from "@/lib/events/categories";
 
 export interface EventFormValues {
@@ -13,6 +13,8 @@ export interface EventFormValues {
   whatToBring: string;
   coverUrl: string;
   tags: string[];
+  eventType: EventType;
+  priceInr: number;
 }
 
 function pad(n: number): string {
@@ -56,6 +58,8 @@ export function eventFormDefaults(event?: HomeEvent): EventFormValues {
     whatToBring: event?.whatToBring ?? "",
     coverUrl: event?.imageUrl ?? "",
     tags: event?.tags ?? [],
+    eventType: event?.eventType ?? "free",
+    priceInr: event?.priceInr && event.priceInr > 0 ? event.priceInr : 250,
   };
 }
 
@@ -72,7 +76,8 @@ export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?:
     whatToBring: values.whatToBring.trim() || null,
     coverUrl: values.coverUrl.trim() || null,
     tags: values.tags,
-    eventType: "free" as const,
+    eventType: values.eventType,
+    priceInr: values.eventType === "paid" ? values.priceInr : undefined,
     ...extra,
   };
 }

@@ -71,7 +71,13 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           <EventsEmpty tab={tab} />
         ) : tab === "upcoming" ? (
           <div className="space-y-8">
-            {groupUpcoming(events).map((group) => (
+            {events.some((event) => event.status === "pending_approval") ? (
+              <section className="space-y-4">
+                <SectionHeader title="Needs approval" />
+                <EventGrid events={events.filter((event) => event.status === "pending_approval")} />
+              </section>
+            ) : null}
+            {groupUpcoming(events.filter((event) => event.status !== "pending_approval")).map((group) => (
               <section key={group.id} className="space-y-4">
                 <SectionHeader title={group.label} />
                 <EventGrid events={group.events} />

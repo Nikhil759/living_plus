@@ -11,11 +11,15 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
   const { id } = await params;
   const event = await loadEventById(id);
   if (!event) notFound();
-  if (!event.isHost) redirect(`/events/${event.id}`);
+  if (!event.isHost && !event.isCommittee) redirect(`/events/${event.id}`);
 
   return (
     <AppPage title="Edit event" backHref={`/events/${event.id}`} backLabel="Event">
-      <HostEventForm backend={eventsWriteBackend()} event={event} />
+      <HostEventForm
+        backend={eventsWriteBackend()}
+        event={event}
+        isCommittee={Boolean(event.isCommittee)}
+      />
     </AppPage>
   );
 }

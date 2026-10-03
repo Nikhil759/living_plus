@@ -8,6 +8,7 @@ from app.schemas.event import (
     EventCreate,
     EventDetailOut,
     EventListItemOut,
+    EventRejectIn,
     EventRsvpIn,
     EventUpdate,
 )
@@ -72,6 +73,25 @@ async def duplicate_event(
     member: CurrentMemberDep,
 ) -> EventDetailOut:
     return await event_service.duplicate_event(db, member, slug)
+
+
+@router.post("/{slug}/approve", response_model=EventDetailOut)
+async def approve_event(
+    slug: str,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.approve_event(db, member, slug)
+
+
+@router.post("/{slug}/reject", response_model=EventDetailOut)
+async def reject_event(
+    slug: str,
+    body: EventRejectIn,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.reject_event(db, member, slug, body)
 
 
 @router.post("/{slug}/rsvp", response_model=HomeEventOut)

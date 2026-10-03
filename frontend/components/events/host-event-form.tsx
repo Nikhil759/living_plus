@@ -12,26 +12,32 @@ import {
 import { EventCover } from "@/components/events/event-cover";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EVENT_CATEGORIES, EVENT_CATEGORY_LABEL } from "@/lib/events/categories";
+import { approvalExplain, hostSubmitLabel } from "@/lib/events/approval";
+import { EVENT_CATEGORIES, EVENT_CATEGORY_LABEL, EVENT_TYPE_LABEL } from "@/lib/events/categories";
 import {
   addHoursToLocalInput,
   eventFormDefaults,
   eventFormPayload,
   parseTagList,
 } from "@/lib/events/form";
-import type { EventCategory, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
 
 const inputClassName =
   "w-full rounded-tile border border-outline-variant/40 bg-surface-container-lowest px-3 py-2.5 text-body text-ink outline-none ring-primary/30 focus:ring-2";
 
+const EVENT_TYPES: EventType[] = ["free", "paid", "society"];
+
 interface HostEventFormProps {
   backend: "demo" | "api";
   event?: HomeEvent;
+  isCommittee?: boolean;
 }
 
-export function HostEventForm({ backend, event }: HostEventFormProps) {
+export function HostEventForm({ backend, event, isCommittee = false }: HostEventFormProps) {
   const router = useRouter();
   const initial = eventFormDefaults(event);
+  const [eventType, setEventType] = useState<EventType>(initial.eventType);
+  const [priceInr, setPriceInr] = useState(String(initial.priceInr));
   const [title, setTitle] = useState(initial.title);
   const [location, setLocation] = useState(initial.locationLabel);
   const [startsAtLocal, setStartsAtLocal] = useState(initial.startsAt);
@@ -110,6 +116,8 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
       whatToBring,
       coverUrl,
       tags: parseTagList(tagsText),
+      eventType,
+      priceInr: Math.min(10_000, Math.max(50, Number(priceInr) || 250)),
     };
   }
 
@@ -145,9 +153,9 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
   return (
     <Card className="mx-auto w-full max-w-content space-y-4 p-4 md:p-6">
       <div>
-        <h2 className="text-title text-ink">{isEdit ? "Edit event" : "Free community event"}</h2>
+        <h2 className="text-title text-ink">{isEdit ? "Edit event" : "Host an event"}</h2>
         <p className="mt-1 text-caption text-ink-tertiary">
-          Paid and society-wide events still need committee approval — coming soon.
+          {approvalExplain(eventType) ?? "Free events go live as soon as you publish."}
         </p>
       </div>
       <form
@@ -157,6 +165,55 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
           void submit("publish");
         }}
       >
+        <fieldset className="space-y-2">
+          <legend className="text-caption font-medium text-ink-secondary">Type</legend>
+          <div className="flex flex-wrap gap-2">
+            {EVENT_TYPES.map((type) => {
+              const locked = Boolean(event);
+              const disabled = locked || (type === "society" && !isCommittee);
+              const title =
+                type === "society" && !isCommittee
+                  ? "Only the committee can host society events"
+                  : type === "paid"
+                    ? "Plus feature · unlocked in demo"
+                    : undefined;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={disabled}
+                  title={title}
+                  onClick={() => setEventType(type)}
+                  className={`${buttonVariants({
+                    variant: eventType === type ? "primary" : "secondary",
+                    size: "sm",
+                  })} disabled:opacity-40`}
+                >
+                  {EVENT_TYPE_LABEL[type]}
+                  {type === "paid" ? " · Plus" : null}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+        {eventType === "paid" ? (
+          <label className="block space-y-1.5">
+            <span className="text-caption font-medium text-ink-secondary">Ticket price (₹)</span>
+            <input
+              className={inputClassName}
+              type="number"
+              min={50}
+              max={10000}
+              step={50}
+              required
+              value={priceInr}
+              onChange={(e) => setPriceInr(e.target.value)}
+            />
+            <p className="text-caption text-ink-tertiary">
+              Refunds only if you or the committee cancel the event.
+            </p>
+          </label>
+        ) : null}
         <label className="block space-y-1.5">
           <span className="text-caption font-medium text-ink-secondary">Title</span>
           <input
@@ -334,11 +391,7 @@ export function HostEventForm({ backend, event }: HostEventFormProps) {
             </Button>
           ) : null}
           <Button type="submit" variant="primary" disabled={pending !== null || uploading}>
-            {pending === "publish"
-              ? "Saving…"
-              : isEdit && !isDraft
-                ? "Save changes"
-                : "Publish event"}
+            {pending === "publish" ? "Saving…" : hostSubmitLabel(event, eventType)}
           </Button>
         </div>
       </form>

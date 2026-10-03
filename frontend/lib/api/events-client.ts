@@ -3,7 +3,7 @@
 import { apiDelete, apiPatch, apiPost, ApiError } from "@/lib/api/client";
 import { resolveApiUrl } from "@/lib/api/config";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import type { EventCategory, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventType, HomeEvent } from "@/lib/types/home";
 
 export interface EventWriteInput {
   title: string;
@@ -17,7 +17,8 @@ export interface EventWriteInput {
   whatToBring?: string | null;
   coverUrl?: string | null;
   tags?: string[];
-  eventType?: "free";
+  eventType?: EventType;
+  priceInr?: number;
   saveAsDraft?: boolean;
   publish?: boolean;
 }
@@ -48,6 +49,7 @@ function writeBody(body: EventWriteInput): Record<string, unknown> {
     coverUrl: body.coverUrl,
     tags: body.tags ?? [],
     eventType: body.eventType ?? "free",
+    priceInr: body.priceInr,
     saveAsDraft: body.saveAsDraft,
     publish: body.publish,
   };
@@ -124,6 +126,22 @@ export async function duplicateEventApi(slug: string): Promise<HomeEvent> {
   return apiPost<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/duplicate`, {}, {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function approveEventApi(slug: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/approve`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function rejectEventApi(slug: string, reason: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(
+    `/v1/events/${encodeURIComponent(slug)}/reject`,
+    { reason },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
 }
 
 export async function createEventDemo(body: {

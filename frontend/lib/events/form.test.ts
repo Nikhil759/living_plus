@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { approvalExplain, eventNeedsApproval, hostSubmitLabel } from "./approval";
 import { addHoursToLocalInput, eventFormDefaults, eventFormPayload, parseTagList } from "./form";
 
 describe("event form helpers", () => {
@@ -37,5 +38,14 @@ describe("event form helpers", () => {
     assert.equal(payload.title, "Morning Walk");
     assert.equal(payload.publish, true);
     assert.equal(payload.coverUrl, "https://images.unsplash.com/photo-1");
+    assert.equal(payload.eventType, "free");
+  });
+
+  it("labels paid and society submits as needing approval", () => {
+    assert.equal(eventNeedsApproval("paid"), true);
+    assert.equal(eventNeedsApproval("free"), false);
+    assert.match(approvalExplain("paid") ?? "", /committee approval/);
+    assert.equal(hostSubmitLabel(undefined, "paid"), "Submit for approval");
+    assert.equal(hostSubmitLabel(undefined, "free"), "Publish event");
   });
 });

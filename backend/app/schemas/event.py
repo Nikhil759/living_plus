@@ -60,6 +60,7 @@ class EventCreate(CamelModel):
     capacity: int = Field(default=50, ge=1, le=2000)
     guest_limit: int = Field(default=0, ge=0, le=10)
     what_to_bring: str | None = Field(default=None, max_length=500)
+    price_inr: int | None = Field(default=None, ge=50, le=10_000)
     save_as_draft: bool = False
 
     @field_validator("tags")
@@ -90,6 +91,7 @@ class EventUpdate(CamelModel):
     capacity: int | None = Field(default=None, ge=1, le=2000)
     guest_limit: int | None = Field(default=None, ge=0, le=10)
     what_to_bring: str | None = Field(default=None, max_length=500)
+    price_inr: int | None = Field(default=None, ge=50, le=10_000)
     publish: bool = False
 
     @field_validator("tags")
@@ -123,6 +125,18 @@ class EventCancelIn(CamelModel):
         cleaned = value.strip()
         if len(cleaned) < 3:
             raise ValueError("Give a short reason for cancelling.")
+        return cleaned
+
+
+class EventRejectIn(CamelModel):
+    reason: str = Field(min_length=3, max_length=200)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 3:
+            raise ValueError("Give a short reason for rejecting.")
         return cleaned
 
 

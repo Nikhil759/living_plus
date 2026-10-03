@@ -49,7 +49,7 @@ export function eventViewerFromResident(
     firstName: firstName(resident.name),
     tower: resident.tower,
     flat: resident.flat,
-    isCommittee: roles.includes("committee"),
+    isCommittee: /committee|admin/i.test(roles),
     rsvpIds,
   };
 }
@@ -249,6 +249,7 @@ export function eventStatusPills(event: Pick<HomeEvent, "status" | "capacity" | 
   const left = capacity == null ? null : capacity - taken;
 
   if (status === "cancelled") pills.push("Cancelled");
+  if (status === "rejected" && (event.isHost || event.isCommittee)) pills.push("Rejected");
   if (status === "pending_approval" && (event.isHost || event.isCommittee)) {
     pills.push("Pending approval");
   }

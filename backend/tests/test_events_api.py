@@ -67,6 +67,40 @@ def _future_start(days: int = 7) -> str:
     return (datetime.now(UTC) + timedelta(days=days)).replace(microsecond=0).isoformat()
 
 
+async def _add_same_society_member(
+    db_session,
+    demo_member: User,
+    *,
+    email: str,
+    name: str,
+    role: MembershipRole,
+) -> User:
+    membership = await db_session.scalar(
+        select(Membership).where(Membership.user_id == demo_member.id)
+    )
+    assert membership is not None
+    user = User(
+        id=uuid.uuid4(),
+        supabase_uid=f"seed:{email}",
+        email=email,
+        name=name,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        Membership(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            society_id=membership.society_id,
+            flat_id=membership.flat_id,
+            role=role,
+            status=MembershipStatus.approved,
+        )
+    )
+    await db_session.flush()
+    return user
+
+
 async def test_events_create_requires_auth(client: AsyncClient) -> None:
     response = await client.post(
         "/v1/events",
@@ -379,11 +413,11 @@ async def test_events_update_locked_when_cancelled(
     get_settings.cache_clear()
 
 
-async def test_events_create_rejects_paid_type(
+async def test_events_create_paid_needs_price_and_stays_pending(
     client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _enable_local_dev_auth(monkeypatch)
-    response = await client.post(
+    missing = await client.post(
         "/v1/events",
         json={
             "title": "Paid Workshop",
@@ -392,8 +426,26 @@ async def test_events_create_rejects_paid_type(
             "eventType": "paid",
         },
     )
-    assert response.status_code == 422
-    assert response.json()["code"] == "validation_error"
+    assert missing.status_code == 422
+    assert missing.json()["code"] == "validation_error"
+
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Paid Pottery",
+            "locationLabel": "Community hall",
+            "startsAt": _future_start(),
+            "eventType": "paid",
+            "priceInr": 400,
+            "capacity": 12,
+        },
+    )
+    assert created.status_code == 201
+    body = created.json()
+    assert body["status"] == "pending_approval"
+    assert body["eventType"] == "paid"
+    assert body["priceInr"] == 400
+    assert body["id"] == "paid-pottery"
 
     from app.core.config import get_settings
 
@@ -971,4 +1023,253 @@ async def test_events_duplicate_wrong_society(
 
     from app.core.config import get_settings
 
+    get_settings.cache_clear()
+
+
+async def test_events_create_society_forbidden_for_resident(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(
+        "/v1/events",
+        json={
+            "title": "Diwali Mela",
+            "locationLabel": "Lawn",
+            "startsAt": _future_start(),
+            "eventType": "society",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "forbidden"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_create_society_pending_for_committee(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    monkeypatch.setenv("ENV", "local")
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    response = await client.post(
+        "/v1/events",
+        json={
+            "title": "Diwali Mela",
+            "locationLabel": "Central lawn",
+            "startsAt": _future_start(),
+            "eventType": "society",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending_approval"
+    assert response.json()["eventType"] == "society"
+    get_settings.cache_clear()
+
+
+async def test_events_approve_and_reject_committee_only(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Paid Pottery",
+            "locationLabel": "Hall",
+            "startsAt": _future_start(),
+            "eventType": "paid",
+            "priceInr": 500,
+        },
+    )
+    slug = created.json()["id"]
+
+    host_approve = await client.post(f"/v1/events/{slug}/approve")
+    assert host_approve.status_code == 403
+    assert host_approve.json()["code"] == "forbidden"
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    approved = await client.post(f"/v1/events/{slug}/approve")
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "published"
+    assert approved.json()["priceInr"] == 500
+
+    again = await client.post(f"/v1/events/{slug}/approve")
+    assert again.status_code == 422
+    get_settings.cache_clear()
+
+
+async def test_events_reject_then_host_resubmits(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Paid Yoga",
+            "locationLabel": "Studio",
+            "startsAt": _future_start(),
+            "eventType": "paid",
+            "priceInr": 250,
+        },
+    )
+    slug = created.json()["id"]
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    short = await client.post(f"/v1/events/{slug}/reject", json={"reason": "no"})
+    assert short.status_code == 422
+
+    rejected = await client.post(
+        f"/v1/events/{slug}/reject", json={"reason": "Hall is already booked."}
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "rejected"
+    assert rejected.json()["rejectionReason"] == "Hall is already booked."
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "demo@aangan.app")
+    get_settings.cache_clear()
+    resubmit = await client.patch(f"/v1/events/{slug}", json={"publish": True})
+    assert resubmit.status_code == 200
+    assert resubmit.json()["status"] == "pending_approval"
+    assert resubmit.json()["rejectionReason"] is None
+    get_settings.cache_clear()
+
+
+async def test_events_approve_requires_auth(client: AsyncClient) -> None:
+    response = await client.post("/v1/events/paid-pottery/approve")
+    assert response.status_code == 401
+
+
+async def test_events_reject_requires_auth(client: AsyncClient) -> None:
+    response = await client.post("/v1/events/paid-pottery/reject", json={"reason": "No hall"})
+    assert response.status_code == 401
+
+
+async def test_events_approve_not_found(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    monkeypatch.setenv("ENV", "local")
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    response = await client.post("/v1/events/missing-event/approve")
+    assert response.status_code == 404
+    get_settings.cache_clear()
+
+
+async def test_events_approve_wrong_society(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    other_society = Society(
+        id=uuid.uuid4(),
+        name="Other",
+        city="Gurgaon",
+        invite_code="OTHER06",
+    )
+    other_host = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:other-paid@aangan.app",
+        email="other-paid@aangan.app",
+        name="Other Host",
+    )
+    db_session.add_all([other_society, other_host])
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=5)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=other_society.id,
+            public_slug="other-paid",
+            event_type=EventType.paid,
+            title="Other Workshop",
+            host_id=other_host.id,
+            location_label="Elsewhere",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=2),
+            capacity=10,
+            price_paise=40000,
+            status=EventStatus.pending_approval,
+        )
+    )
+    await db_session.flush()
+
+    monkeypatch.setenv("ENV", "local")
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    response = await client.post("/v1/events/other-paid/approve")
+    assert response.status_code == 404
+    get_settings.cache_clear()
+
+
+async def test_events_committee_can_cancel(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={"title": "Lawn Games", "locationLabel": "Lawn", "startsAt": _future_start()},
+    )
+    slug = created.json()["id"]
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    cancelled = await client.post(f"/v1/events/{slug}/cancel", json={"reason": "Noise complaint"})
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    assert cancelled.json()["cancelReason"] == "Noise complaint"
     get_settings.cache_clear()
