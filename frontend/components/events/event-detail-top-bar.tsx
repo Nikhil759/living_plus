@@ -30,7 +30,8 @@ export function EventDetailTopBar({ title }: EventDetailTopBarProps) {
     const heading = document.getElementById("event-detail-title");
     if (!heading || !title) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setShowTitle(!entry.isIntersecting),
+      // Only once the heading has scrolled up past the bar, not while it is below the fold.
+      ([entry]) => setShowTitle(!entry.isIntersecting && entry.boundingClientRect.top < 72),
       { rootMargin: "-72px 0px 0px 0px", threshold: 0 },
     );
     observer.observe(heading);

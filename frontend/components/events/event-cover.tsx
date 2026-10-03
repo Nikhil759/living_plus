@@ -19,7 +19,7 @@ interface EventCoverProps {
 
 const FRAME: Record<NonNullable<EventCoverProps["frame"]>, string> = {
   card: "aspect-[16/10]",
-  hero: "aspect-[16/10] lg:aspect-auto lg:h-[360px]",
+  hero: "aspect-[16/10] md:aspect-auto md:h-[360px]",
 };
 
 export function EventCover({

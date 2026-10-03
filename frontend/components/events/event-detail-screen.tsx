@@ -3,6 +3,13 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Clock, Home, MapPin, Ticket, Users } from "lucide-react";
 import { EventCover } from "@/components/events/event-cover";
+import {
+  EVENT_DETAIL_ASIDE,
+  EVENT_DETAIL_BODY,
+  EVENT_DETAIL_GRID,
+  EVENT_DETAIL_HEADER,
+  EVENT_DETAIL_PAGE_PADDING,
+} from "@/components/events/event-detail-layout";
 import { EventDetailMobileBar } from "@/components/events/event-detail-mobile-bar";
 import { EventDetailTopBar } from "@/components/events/event-detail-top-bar";
 import { EventManageActions } from "@/components/events/event-manage-actions";
@@ -159,7 +166,7 @@ export function EventDetailScreen({
   return (
     <>
       <EventDetailTopBar title={event.title} />
-      <PageContainer className="max-md:pb-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
+      <PageContainer className={EVENT_DETAIL_PAGE_PADDING}>
         <div className="mx-auto flex w-full max-w-content flex-col">
           <div className="-mx-4 sm:-mx-5 md:mx-0">
             <div className="relative overflow-hidden md:rounded-card">
@@ -190,8 +197,8 @@ export function EventDetailScreen({
             </div>
           ) : null}
 
-          <div className="mt-8 grid w-full items-start lg:grid-cols-[minmax(0,40rem)_22.5rem] lg:justify-between">
-            <div className="space-y-4">
+          <div className={cn("mt-8", EVENT_DETAIL_GRID)}>
+            <div className={EVENT_DETAIL_HEADER}>
               <div className="flex flex-wrap gap-1.5">
                 <Badge>{categoryLabel}</Badge>
                 {pills.map((pill) => (
@@ -204,11 +211,11 @@ export function EventDetailScreen({
               <EventHostRow event={event} />
             </div>
 
-            <aside className="mt-6 w-full lg:mt-0 lg:row-span-2 lg:row-start-1 lg:w-[360px] lg:justify-self-end lg:sticky lg:top-[calc(3.75rem+env(safe-area-inset-top,0px))]">
+            <aside className={EVENT_DETAIL_ASIDE}>
               <EventDetailsCard event={event} backend={backend} canManage={canManage} />
             </aside>
 
-            <div className="mt-8 space-y-8 lg:mt-8">
+            <div className={EVENT_DETAIL_BODY}>
               {event.description ? (
                 <section className="space-y-2">
                   <SectionHeading>About</SectionHeading>
