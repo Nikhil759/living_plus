@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import type { AmenitySlot } from "@/lib/types/amenities";
 import type { Amenity } from "@/lib/types/home";
 import {
   amenityActionHref,
   amenityStatusLabel,
   amenityTone,
   addDays,
+  amenityCardActionLabel,
   dayChip,
   filterAmenities,
+  formatDateLabel,
+  formatSummaryDay,
+  groupSlots,
+  hasFreeSlot,
   formatBookingDay,
   formatSlotRange,
   hourLabel,
@@ -73,5 +79,35 @@ describe("amenity view helpers", () => {
     assert.equal(hourLabel(6), "6 AM");
     assert.equal(hourLabel(12), "12 PM");
     assert.equal(hourLabel(19), "7 PM");
+  });
+
+  it("uses short pill labels on cards", () => {
+    assert.equal(amenityCardActionLabel({ action: "book" }), "Book");
+    assert.equal(amenityCardActionLabel({ action: "view" }), "View");
+    assert.equal(amenityCardActionLabel({ action: "host" }), "Host an event");
+  });
+
+  it("groups slots by part of day, hiding past slots and empty groups", () => {
+    const at = (hourIst: number, state: AmenitySlot["state"]): AmenitySlot => {
+      const start = new Date(Date.UTC(2030, 0, 1, hourIst - 5, -30));
+      return {
+        startsAt: start.toISOString(),
+        endsAt: new Date(start.getTime() + 3_600_000).toISOString(),
+        state,
+      };
+    };
+    const slots = [at(6, "past"), at(11, "past"), at(12, "past"), at(17, "free"), at(21, "booked")];
+    const groups = groupSlots(slots);
+    assert.deepEqual(groups.map((g) => g.id), ["evening"]);
+    assert.equal(groups[0].slots.length, 2);
+    const full = groupSlots([at(6, "free"), at(12, "free"), at(16, "free"), at(17, "free")]);
+    assert.deepEqual(full.map((g) => g.slots.length), [1, 2, 1]);
+    assert.equal(hasFreeSlot(slots), true);
+    assert.equal(hasFreeSlot([at(8, "booked"), at(9, "yours")]), false);
+  });
+
+  it("formats the booking summary day", () => {
+    assert.equal(formatSummaryDay("2026-10-03T12:30:00Z"), "Sat 3 Oct");
+    assert.equal(formatDateLabel("2030-01-06"), "Sun 6 Jan");
   });
 });

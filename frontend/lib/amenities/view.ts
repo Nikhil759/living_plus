@@ -1,4 +1,5 @@
 import type { StatusTone } from "@/components/ui/status-dot";
+import type { AmenitySlot } from "@/lib/types/amenities";
 import type { Amenity, AmenityStatus } from "@/lib/types/home";
 
 const TIME_ZONE = "Asia/Kolkata";
@@ -36,6 +37,13 @@ const FALLBACK_LABEL: Record<AmenityStatus, string> = {
 
 export function amenityStatusLabel(amenity: Pick<Amenity, "status" | "statusLabel">): string {
   return amenity.statusLabel ?? FALLBACK_LABEL[amenity.status];
+}
+
+/** Short card label: bookable "Book", walk-in "View", spaces "Host an event". */
+export function amenityCardActionLabel(amenity: Pick<Amenity, "action" | "actionLabel">): string {
+  if (amenity.action === "book") return "Book";
+  if (amenity.action === "host") return "Host an event";
+  return amenity.action === "view" ? "View" : (amenity.actionLabel ?? "View");
 }
 
 export function amenityHref(id: string): string {
@@ -118,4 +126,67 @@ export function dayChip(day: string, today: string): { weekday: string; date: st
 export function hourLabel(hour: number): string {
   const h = hour % 12 === 0 ? 12 : hour % 12;
   return `${h} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+const SLOT_GROUPS = [
+  { id: "morning", label: "Morning", range: "6\u201312", from: 0, to: 12 },
+  { id: "afternoon", label: "Afternoon", range: "12\u20135", from: 12, to: 17 },
+  { id: "evening", label: "Evening", range: "5\u201310", from: 17, to: 24 },
+] as const;
+
+export interface SlotGroup {
+  id: string;
+  label: string;
+  range: string;
+  slots: AmenitySlot[];
+}
+
+/** Hour of day in IST for an ISO timestamp. */
+export function istHour(iso: string): number {
+  const hour = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    timeZone: TIME_ZONE,
+  }).format(new Date(iso));
+  return Number(hour);
+}
+
+/** Morning / Afternoon / Evening groups. Past slots are hidden and empty groups skipped. */
+export function groupSlots(slots: AmenitySlot[]): SlotGroup[] {
+  const upcoming = slots.filter((slot) => slot.state !== "past");
+  return SLOT_GROUPS.map(({ id, label, range, from, to }) => ({
+    id,
+    label,
+    range,
+    slots: upcoming.filter((slot) => {
+      const hour = istHour(slot.startsAt);
+      return hour >= from && hour < to;
+    }),
+  })).filter((group) => group.slots.length > 0);
+}
+
+export function hasFreeSlot(slots: AmenitySlot[]): boolean {
+  return slots.some((slot) => slot.state === "free");
+}
+
+function shortDate(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone,
+  }).formatToParts(date);
+  const find = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${find("weekday")} ${find("day")} ${find("month")}`;
+}
+
+/** "Sat 3 Oct" for a slot start. */
+export function formatSummaryDay(startsAt: string): string {
+  return shortDate(new Date(startsAt), TIME_ZONE);
+}
+
+/** "Tue 6 Oct" for a "YYYY-MM-DD" day. */
+export function formatDateLabel(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return shortDate(new Date(Date.UTC(y, m - 1, d)), "UTC");
 }

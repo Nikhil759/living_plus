@@ -4,44 +4,43 @@ import { buttonVariants } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import {
   amenityActionHref,
+  amenityCardActionLabel,
   amenityHref,
   amenityStatusLabel,
   amenityTone,
 } from "@/lib/amenities/view";
-import { cn } from "@/lib/utils";
 import type { Amenity } from "@/lib/types/home";
 
 export function AmenityCard({ amenity }: { amenity: Amenity }) {
-  const primary = amenity.action !== "view";
   return (
     <div
-      className={cn(
-        "group flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card",
-        "transition-[transform,box-shadow] duration-premium ease-premium",
-        "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
-      )}
+      className={
+        "group flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card " +
+        "transition-transform duration-premium ease-premium motion-safe:hover:-translate-y-1"
+      }
     >
       <Link href={amenityHref(amenity.id)} className="block flex-1">
-        <AmenityImage name={amenity.name} src={amenity.imageUrl} className="aspect-[16/10]" />
-        <div className="space-y-1.5 px-5 pt-4">
-          <h3 className="text-headline text-ink">{amenity.name}</h3>
-          <p className="flex items-center gap-1.5 text-callout text-ink-secondary">
+        <AmenityImage name={amenity.name} src={amenity.imageUrl} className="aspect-video" />
+        <div className="space-y-0.5 px-4 pt-3">
+          <h3 className="truncate text-headline text-ink">{amenity.name}</h3>
+          <p className="flex min-w-0 items-center gap-1.5 text-caption text-ink-secondary">
             <StatusDot tone={amenityTone(amenity.status)} />
-            {amenityStatusLabel(amenity)}
+            <span className="shrink-0 font-medium text-ink">{amenityStatusLabel(amenity)}</span>
+            <span aria-hidden="true">·</span>
+            <span className="truncate">{amenity.detail}</span>
           </p>
-          <p className="text-caption text-ink-tertiary">{amenity.detail}</p>
         </div>
       </Link>
-      <div className="p-5 pt-4">
+      <div className="px-4 pb-3.5 pt-2.5">
         <Link
           href={amenityActionHref(amenity)}
           className={buttonVariants({
-            variant: primary ? "primary" : "secondary",
+            variant: amenity.action === "book" ? "primary" : "secondary",
             size: "sm",
-            className: "w-full",
+            className: "h-8 px-4",
           })}
         >
-          {amenity.actionLabel ?? "View"}
+          {amenityCardActionLabel(amenity)}
         </Link>
       </div>
     </div>

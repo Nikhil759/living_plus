@@ -13,7 +13,7 @@ export default async function AmenitiesPage() {
       {amenities.length === 0 ? (
         <EmptyState icon={<Waves />} title="No amenities yet" />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <MyBookings bookings={bookings} />
           <AmenitiesBrowser amenities={amenities} />
         </div>

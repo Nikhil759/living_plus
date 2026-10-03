@@ -33,7 +33,7 @@ export function AmenitiesBrowser({ amenities }: { amenities: Amenity[] }) {
       {visible.length === 0 ? (
         <EmptyState icon={<Waves />} title="Nothing here yet" />
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((amenity) => (
             <li key={amenity.id} className="min-w-0">
               <AmenityCard amenity={amenity} />
