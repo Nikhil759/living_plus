@@ -6,6 +6,7 @@ import { FeedPostItem } from "@/components/home/feed-post-item";
 import { FlatOpeningsSection } from "@/components/home/flat-openings-section";
 import { HelpDeskSection } from "@/components/home/help-desk-section";
 import { HomePhotoBanner } from "@/components/home/home-photo-banner";
+import type { FlatOpeningCard } from "@/lib/types/flat-opening";
 import type { BusinessCard } from "@/lib/types/local-business";
 import { LocalBusinessesSection } from "@/components/home/local-businesses-section";
 import { MarketplaceSection } from "@/components/home/marketplace-section";
@@ -24,7 +25,6 @@ import {
   loadRentDashboard,
 } from "@/lib/data";
 import {
-  getStaticFlatOpenings,
   getStaticHelpDeskTickets,
   getStaticHelpDeskVendors,
   getStaticHomeData,
@@ -44,7 +44,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   let data;
   let listings;
   let businesses: BusinessCard[];
-  let openings;
+  let openings: FlatOpeningCard[];
   let tickets;
   let vendors;
   let rent;
@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     data = getStaticHomeData({ empty });
     listings = getStaticMarketplaceListings();
     businesses = [];
-    openings = getStaticFlatOpenings();
+    openings = [];
     tickets = getStaticHelpDeskTickets();
     vendors = getStaticHelpDeskVendors();
     rent = getStaticRentDashboard();

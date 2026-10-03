@@ -3,16 +3,16 @@ import { Home } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OpeningFeedCard } from "@/components/home/opening-feed-card";
 import { SectionHeader } from "@/components/home/section-header";
-import type { FlatOpening } from "@/lib/types/flat-opening";
+import type { FlatOpeningCard } from "@/lib/types/flat-opening";
 
 const HOME_FEED_LIMIT = 4;
 
 export interface FlatOpeningsSectionProps {
-  openings: FlatOpening[];
+  openings: FlatOpeningCard[];
 }
 
 export function FlatOpeningsSection({ openings }: FlatOpeningsSectionProps) {
-  const active = openings.filter((o) => o.status === "active").slice(0, HOME_FEED_LIMIT);
+  const active = openings.slice(0, HOME_FEED_LIMIT);
 
   return (
     <section className="space-y-5">

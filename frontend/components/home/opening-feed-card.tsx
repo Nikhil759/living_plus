@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { IconTile } from "@/components/ui/icon-tile";
-import { FLAT_OPENING_KIND_LABEL, formatRentInr } from "@/lib/flat-opening-labels";
+import { formatRent, KIND_LABEL } from "@/lib/openings/view";
 import { cn } from "@/lib/utils";
-import type { FlatOpening } from "@/lib/types/flat-opening";
+import type { FlatOpeningCard } from "@/lib/types/flat-opening";
 
 export interface OpeningFeedCardProps {
-  opening: FlatOpening;
+  opening: FlatOpeningCard;
 }
 
 export function OpeningFeedCard({ opening }: OpeningFeedCardProps) {
@@ -20,17 +18,9 @@ export function OpeningFeedCard({ opening }: OpeningFeedCardProps) {
         "motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-hover",
       )}
     >
-      <div className="flex items-center gap-2">
-        <IconTile>
-          <Home />
-        </IconTile>
-        <Badge>{FLAT_OPENING_KIND_LABEL[opening.kind]}</Badge>
-      </div>
+      <Badge className="self-start">{KIND_LABEL[opening.kind]}</Badge>
       <p className="line-clamp-2 text-headline text-ink">{opening.title}</p>
-      <p className="text-callout font-semibold text-primary">{formatRentInr(opening.rentInr)}</p>
-      <p className="mt-auto text-caption text-ink-tertiary">
-        {opening.tower} · {opening.bhk}
-      </p>
+      <p className="mt-auto text-callout font-semibold text-primary">{formatRent(opening.rentInr)}</p>
     </Link>
   );
 }

@@ -4,6 +4,7 @@ import { MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/components/local-businesses/use-action";
 import { contactBusinessApi } from "@/lib/api/local-businesses-client";
+import { openContactLink } from "@/lib/contact-link";
 import type { BusinessContactMethod } from "@/lib/types/local-business";
 
 interface ContactOwnerButtonProps {
@@ -24,18 +25,7 @@ export function ContactOwnerButton({
   const { busy, error, run } = useAction();
   const Icon = method === "whatsapp" ? MessageCircle : Phone;
 
-  async function contact() {
-    // Open the tab now: popup blockers only allow it directly inside the click.
-    const tab = method === "whatsapp" ? window.open("", "_blank") : null;
-    const link = await run(() => contactBusinessApi(businessId));
-    if (!link) {
-      tab?.close();
-      return;
-    }
-    if (link.method === "call") window.location.href = link.url;
-    else if (tab) tab.location.href = link.url;
-    else window.location.assign(link.url);
-  }
+  const contact = () => run(() => openContactLink(method, () => contactBusinessApi(businessId)));
 
   return (
     <div className={className}>

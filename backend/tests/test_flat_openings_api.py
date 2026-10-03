@@ -45,6 +45,7 @@ async def test_list_shows_only_live_openings_of_own_society(
     assert card["title"] == "Room in 1 BHK · Tower A"
     assert (card["tower"], card["floor"], card["postedBy"]) == ("Tower A", 5, "Lakshmi")
     assert (card["state"], card["isMine"], card["availableFrom"]) == ("active", False, None)
+    assert card["contactMethod"] == "whatsapp"
     text = str(card).lower()
     assert "flat_no" not in text and "flatno" not in text and "phone" not in text
 

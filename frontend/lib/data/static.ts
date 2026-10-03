@@ -2,7 +2,6 @@ import amenitiesJson from "@/data/amenities.json";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
-import flatOpeningsJson from "@/data/flat-openings.json";
 import helpDeskTicketsJson from "@/data/help-desk-tickets.json";
 import helpDeskVendorsJson from "@/data/help-desk-vendors.json";
 import feedPostsJson from "@/data/feed-posts.json";
@@ -13,7 +12,6 @@ import residentJson from "@/data/resident.json";
 import { materializeEvents, type RawEvent } from "@/lib/events/normalize";
 import { isPublishedUpcoming } from "@/lib/events/query";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceListing } from "@/lib/types/marketplace";
@@ -100,14 +98,6 @@ export function getStaticMarketplaceListings(): MarketplaceListing[] {
 
 export function getStaticMarketplaceListingById(id: string): MarketplaceListing | undefined {
   return getStaticMarketplaceListings().find((item) => item.id === id);
-}
-
-export function getStaticFlatOpenings(): FlatOpening[] {
-  return flatOpeningsJson as FlatOpening[];
-}
-
-export function getStaticFlatOpeningById(id: string): FlatOpening | undefined {
-  return getStaticFlatOpenings().find((opening) => opening.id === id);
 }
 
 export function getStaticHelpDeskVendors(): HelpDeskVendor[] {

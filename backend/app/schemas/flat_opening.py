@@ -114,6 +114,7 @@ class OpeningCardOut(CamelModel):
     available_from: date | None
     preference: OpeningPreference
     description: str
+    contact_method: ListingContactMethod
     posted_by: str
     posted_at: datetime
     is_mine: bool
@@ -131,7 +132,6 @@ class OpeningDetailOut(OpeningCardOut):
     maintenance_included: bool
     maintenance_inr: int | None
     included: list[OpeningIncluded]
-    contact_method: ListingContactMethod
     poster: OpeningPosterOut
     # Committee members can remove any listing; only the poster edits it.
     can_remove: bool

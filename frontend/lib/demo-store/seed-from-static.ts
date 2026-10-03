@@ -3,7 +3,6 @@ import amenitiesJson from "@/data/amenities.json";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
-import flatOpeningsJson from "@/data/flat-openings.json";
 import helpDeskTicketsJson from "@/data/help-desk-tickets.json";
 import helpDeskVendorsJson from "@/data/help-desk-vendors.json";
 import feedPostsJson from "@/data/feed-posts.json";
@@ -56,10 +55,6 @@ export function seedDemoDatabaseFromStatic(db: Database.Database): void {
 
   for (const listing of marketplaceJson) {
     upsertEntity(db, "marketplace", listing.id, listing);
-  }
-
-  for (const opening of flatOpeningsJson) {
-    upsertEntity(db, "flat_openings", opening.id, opening);
   }
 
   for (const vendor of helpDeskVendorsJson) {

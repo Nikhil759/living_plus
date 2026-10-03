@@ -121,6 +121,7 @@ def _card_fields(
         "available_from": opening.available_from if upcoming else None,
         "preference": opening.preference,
         "description": opening.description,
+        "contact_method": opening.contact_method,
         "posted_by": first_name(poster),
         "posted_at": opening.listed_at,
         "is_mine": opening.poster_id == member.user.id,
@@ -214,7 +215,6 @@ async def _detail(
         maintenance_included=opening.maintenance_included,
         maintenance_inr=opening.maintenance_inr,
         included=opening.included,
-        contact_method=opening.contact_method,
         poster=OpeningPosterOut(
             first_name=first_name(poster),
             tower=poster_towers.get(poster.id, towers[opening.tower_id]),

@@ -10,8 +10,6 @@ import {
   demoGetEventById,
   demoGetEvents,
   demoGetFeedPosts,
-  demoGetFlatOpeningById,
-  demoGetFlatOpenings,
   demoGetHelpDeskTickets,
   demoGetHelpDeskVendors,
   demoGetHomeData,
@@ -37,7 +35,7 @@ import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog } from "@/lib/types/community";
 import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
-import type { FlatOpening } from "@/lib/types/flat-opening";
+import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceCard, MarketplaceListing } from "@/lib/types/marketplace";
@@ -185,14 +183,20 @@ export async function loadFeedPosts(): Promise<FeedPost[]> {
   return staticData.getStaticFeedPosts();
 }
 
-export async function loadFlatOpenings(): Promise<FlatOpening[]> {
-  if (useDemoStore()) return demoGetFlatOpenings();
-  return staticData.getStaticFlatOpenings();
+/** Flat openings only exist in the live backend; elsewhere Home just shows its empty state. */
+export async function loadFlatOpenings(): Promise<FlatOpeningCard[]> {
+  if (!marketplaceIsLive()) return [];
+  return apiGetAsUser<FlatOpeningCard[]>("/v1/flat-openings");
 }
 
-export async function loadFlatOpeningById(id: string): Promise<FlatOpening | undefined> {
-  if (useDemoStore()) return demoGetFlatOpeningById(id);
-  return staticData.getStaticFlatOpeningById(id);
+export async function loadFlatOpeningById(id: string): Promise<FlatOpeningDetail | undefined> {
+  if (!marketplaceIsLive()) return undefined;
+  try {
+    return await apiGetAsUser<FlatOpeningDetail>(`/v1/flat-openings/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return undefined;
+    throw error;
+  }
 }
 
 export async function loadHelpDeskVendors(): Promise<HelpDeskVendor[]> {
