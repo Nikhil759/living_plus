@@ -1,7 +1,11 @@
-/** Backend base URL (no trailing slash). */
+/** Backend base URL (no trailing slash or `/v1` suffix). */
 export function getApiBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-  return url.replace(/\/$/, "");
+  const raw = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  let url = raw.trim().replace(/\/+$/, "");
+  if (url.endsWith("/v1")) {
+    url = url.slice(0, -3);
+  }
+  return url;
 }
 
 /**

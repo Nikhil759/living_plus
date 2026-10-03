@@ -125,7 +125,13 @@ function withAmenityImages<T extends Amenity>(rows: T[]): T[] {
 
 export async function loadAmenities(): Promise<Amenity[]> {
   if (useDemoStore()) return demoGetAmenities();
-  if (getDataSource() === "api") return withAmenityImages(await fetchAmenities());
+  if (getDataSource() === "api") {
+    try {
+      return withAmenityImages(await fetchAmenities());
+    } catch {
+      return staticData.getStaticAmenities();
+    }
+  }
   return staticData.getStaticAmenities();
 }
 
@@ -135,9 +141,13 @@ export async function loadAmenityById(id: string): Promise<AmenityDetail | undef
     return row ? ({ ...row, capacity: 0, hoursLabel: "", rules: [], advanceDays: 0, maxHoursPerDay: 0, canManage: false } as AmenityDetail) : undefined;
   }
   if (getDataSource() === "api") {
-    const fromApi = await fetchAmenity(id);
-    if (fromApi) {
-      return { ...fromApi, imageUrl: resolveAmenityImageSrc(fromApi) };
+    try {
+      const fromApi = await fetchAmenity(id);
+      if (fromApi) {
+        return { ...fromApi, imageUrl: resolveAmenityImageSrc(fromApi) };
+      }
+    } catch {
+      /* fall through to bundled catalog */
     }
     return staticData.getStaticAmenityById(id);
   }

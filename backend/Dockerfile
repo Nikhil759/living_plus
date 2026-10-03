@@ -10,8 +10,9 @@ RUN uv sync --frozen --no-dev
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
+COPY scripts ./scripts
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Railway sets PORT; run migrations before serving.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Railway sets PORT; migrate, seed demo society (idempotent), then serve.
+CMD ["sh", "-c", "alembic upgrade head && PYTHONPATH=. python scripts/seed.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

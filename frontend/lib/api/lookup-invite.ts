@@ -23,11 +23,18 @@ export async function lookupInviteCode(code: string): Promise<SocietyMatch | nul
   }
 
   if (response.status === 404) {
-    throw new InviteFlowError(
-      "invalid",
-      "Invalid invite code",
-      "That code isn't valid or has already been used. Try another guest code or ask your committee.",
-    );
+    let detail =
+      "That code isn't valid or has already been used. Try another guest code or ask your committee.";
+    try {
+      const body = (await response.clone().json()) as { code?: string };
+      if (body.code === "invalid_invite") {
+        detail =
+          "The API is up but this code isn't in the database yet. Redeploy Railway (runs seed on start) or run scripts/seed.py once.";
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new InviteFlowError("invalid", "Invalid invite code", detail);
   }
 
   if (response.status === 503) {

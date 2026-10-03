@@ -26,15 +26,20 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   const url = resolveApiUrl(path);
-  const response = await fetch(url, {
-    ...init,
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...(init?.headers ?? {}),
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(`Network error calling ${url}`, 0, "network_error");
+  }
 
   if (!response.ok) {
     throw await parseErrorResponse(response);

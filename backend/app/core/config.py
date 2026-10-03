@@ -37,6 +37,12 @@ class Settings(BaseSettings):
         # Browsers send Origin without a trailing slash; CORS matching is exact.
         return value.rstrip("/")
 
+    @property
+    def cors_origins(self) -> list[str]:
+        """Comma-separated origins (e.g. production + preview Vercel URLs)."""
+        parts = [p.strip().rstrip("/") for p in self.FRONTEND_ORIGIN.split(",")]
+        return [p for p in parts if p]
+
 
 @lru_cache
 def get_settings() -> Settings:

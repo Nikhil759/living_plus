@@ -11,4 +11,16 @@ describe("resolveApiUrl", () => {
   it("sends FastAPI paths to the backend base URL", () => {
     assert.equal(resolveApiUrl("/v1/events/evt-yoga/rsvp"), `${getApiBaseUrl()}/v1/events/evt-yoga/rsvp`);
   });
+
+  it("strips a trailing /v1 from NEXT_PUBLIC_API_URL", () => {
+    const prev = process.env.NEXT_PUBLIC_API_URL;
+    process.env.NEXT_PUBLIC_API_URL = "https://api.example.com/v1/";
+    try {
+      assert.equal(getApiBaseUrl(), "https://api.example.com");
+      assert.equal(resolveApiUrl("/v1/health"), "https://api.example.com/v1/health");
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_API_URL;
+      else process.env.NEXT_PUBLIC_API_URL = prev;
+    }
+  });
 });

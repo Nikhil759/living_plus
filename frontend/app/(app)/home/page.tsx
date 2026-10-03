@@ -14,8 +14,8 @@ import { NeighbourMatchCard } from "@/components/home/neighbour-match-card";
 import { RentSummaryCard } from "@/components/home/rent-summary-card";
 import { SectionHeader } from "@/components/home/section-header";
 import { ErrorState } from "@/components/ui/error-state";
+import { formatApiLoadError } from "@/lib/api/load-error";
 import {
-  getDataSource,
   loadFlatOpenings,
   loadHelpDeskTickets,
   loadHelpDeskVendors,
@@ -41,36 +41,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const empty = state === "empty";
 
   let loadError: string | null = null;
-  let data;
-  let listings;
-  let businesses: BusinessCard[];
-  let openings: FlatOpeningCard[];
-  let tickets;
-  let vendors;
-  let rent;
+  let data = getStaticHomeData({ empty });
   try {
-    [data, listings, businesses, openings, tickets, vendors, rent] = await Promise.all([
-      loadHomeData({ empty }),
-      loadMarketplaceListings(),
-      loadLocalBusinesses(),
-      loadFlatOpenings(),
-      loadHelpDeskTickets(),
-      loadHelpDeskVendors(),
-      loadRentDashboard(),
-    ]);
-  } catch {
-    loadError =
-      getDataSource() === "api"
-        ? "Could not reach the API. Check that the backend is running."
-        : "Could not load home data.";
-    data = getStaticHomeData({ empty });
-    listings = getStaticMarketplaceListings();
-    businesses = [];
-    openings = [];
-    tickets = getStaticHelpDeskTickets();
-    vendors = getStaticHelpDeskVendors();
-    rent = getStaticRentDashboard();
+    data = await loadHomeData({ empty });
+  } catch (error) {
+    loadError = formatApiLoadError(error);
   }
+
+  const [listings, businesses, openings, tickets, vendors, rent] = await Promise.all([
+    loadMarketplaceListings().catch(() => getStaticMarketplaceListings()),
+    loadLocalBusinesses().catch((): BusinessCard[] => []),
+    loadFlatOpenings().catch((): FlatOpeningCard[] => []),
+    loadHelpDeskTickets(),
+    loadHelpDeskVendors(),
+    loadRentDashboard(),
+  ]);
 
   const { resident, digest, events, amenities, match } = data;
   const posts = digest?.posts ?? [];

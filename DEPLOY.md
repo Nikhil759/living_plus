@@ -23,16 +23,13 @@ npx vercel --cwd frontend --prod
 2. Railway picks up `backend/railway.toml` and the `Dockerfile` (migrations run on start).
 3. Required variables:
    - `ENV=production`
-   - `DATABASE_URL` — `postgresql+asyncpg://…` (Supabase **pooler**, port 6543, for IPv4).
-   - `SUPABASE_URL` — `https://<ref>.supabase.co`
-   - `FRONTEND_ORIGIN` — exact Vercel URL, e.g. `https://living-plus.vercel.app` (no trailing slash)
-   - `REDIS_URL` — Upstash `rediss://…` or a placeholder if unused yet
-4. Do **not** set `LOCAL_DEV_AUTH_EMAIL` in production.
-5. After first deploy, run seed once (Railway shell or local against prod DB):
-
-   ```bash
-   cd backend && PYTHONPATH=. uv run python scripts/seed.py
-   ```
+   - `DATABASE_URL` — **SQLite only** today, e.g. `sqlite+aiosqlite:////data/aangan.db`. Mount a Railway **volume** at `/data` so the file survives redeploys (ephemeral disk otherwise resets on every deploy).
+   - `SUPABASE_URL` — `https://<ref>.supabase.co` (must match the frontend Supabase project)
+   - `FRONTEND_ORIGIN` — exact Vercel origin(s), comma-separated if needed, e.g. `https://living-plus-two.vercel.app` (no trailing slash). Used for browser CORS on amenity booking widgets.
+   - `REDIS_URL` — e.g. `redis://localhost:6379/0` (required by config; rate limiting not wired yet)
+4. Vercel `NEXT_PUBLIC_API_URL` must be the Railway **root** host only, e.g. `https://your-service.up.railway.app` — not `/v1` and not `localhost`.
+5. Do **not** set `LOCAL_DEV_AUTH_EMAIL` in production.
+6. **Seed data:** each container start runs `scripts/seed.py` after migrations (idempotent). You only need a manual seed if you skip the Docker entrypoint or use a custom command.
 
 CLI (after `railway login` and `railway link` from `backend/`):
 
