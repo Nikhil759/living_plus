@@ -176,6 +176,13 @@ export interface DigestItem {
   body: string;
 }
 
+export type FeedPostType =
+  | "general"
+  | "question"
+  | "alert"
+  | "lost_found"
+  | "recommendation";
+
 /** Resident or group post shown in the society feed. */
 export interface FeedPost {
   id: string;
@@ -185,6 +192,8 @@ export interface FeedPost {
   authorMeta: string;
   /** When set, post is surfaced in a group context. */
   groupName?: string;
+  postType?: FeedPostType;
+  pinned?: boolean;
   body: string;
   /** ISO-8601 */
   postedAt: string;

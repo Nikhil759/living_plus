@@ -5,33 +5,154 @@
       "name": "Resident Cyclists Club",
       "emoji": "🚴",
       "memberCount": 24,
-      "description": "Weekend rides and expressway training loops."
+      "description": "Weekend rides and expressway training loops.",
+      "visibility": "public",
+      "joined": true
     },
     {
       "id": "g-fifa",
       "name": "FIFA & Game Night",
       "emoji": "🎮",
       "memberCount": 18,
-      "description": "Club lounge tournaments and casual sessions."
+      "description": "Club lounge tournaments and casual sessions.",
+      "visibility": "public",
+      "joined": true
     },
     {
       "id": "g-yoga",
       "name": "Yoga Circle",
       "emoji": "🧘",
       "memberCount": 12,
-      "description": "Sunrise terrace sessions and weekend workshops."
+      "description": "Sunrise terrace sessions and weekend workshops.",
+      "visibility": "public",
+      "joined": false,
+      "suggested": true
+    },
+    {
+      "id": "g-parents",
+      "name": "Parents & toddlers",
+      "emoji": "👶",
+      "memberCount": 31,
+      "description": "Playdates, nanny referrals, and society crèche updates.",
+      "visibility": "private",
+      "joined": false,
+      "suggested": true
+    },
+    {
+      "id": "g-books",
+      "name": "Book club",
+      "emoji": "📚",
+      "memberCount": 14,
+      "description": "Monthly picks and terrace reading hours.",
+      "visibility": "public",
+      "joined": false
+    },
+    {
+      "id": "g-run",
+      "name": "Morning runners",
+      "emoji": "🏃",
+      "memberCount": 22,
+      "description": "5k loops before work.",
+      "visibility": "public",
+      "joined": true,
+      "suggested": true
     }
   ],
   "whatsappGroups": [
     {
       "id": "wa-tower-c",
       "name": "Tower C residents",
-      "memberCount": 86
+      "memberCount": 86,
+      "topic": "Tower notices and quick help"
     },
     {
       "id": "wa-parents",
       "name": "Parents & kids activities",
-      "memberCount": 142
+      "memberCount": 142,
+      "topic": "Activities and carpools"
+    },
+    {
+      "id": "wa-market",
+      "name": "Buy & sell quick",
+      "memberCount": 210,
+      "topic": "Pre-moderated listings",
+      "pendingApproval": true
+    }
+  ],
+  "neighbours": [
+    {
+      "id": "n-1",
+      "firstName": "Kunal",
+      "tower": "Tower B",
+      "interests": ["FIFA", "Gaming", "Movies"],
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&q=80"
+    },
+    {
+      "id": "n-2",
+      "firstName": "Ananya",
+      "tower": "Tower D",
+      "interests": ["Cycling", "Running", "Yoga"],
+      "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=128&q=80"
+    },
+    {
+      "id": "n-3",
+      "firstName": "Priya",
+      "tower": "Tower A",
+      "interests": ["Cooking", "Books", "Parenting"]
+    },
+    {
+      "id": "n-4",
+      "firstName": "Arjun",
+      "tower": "Tower C",
+      "interests": ["Cricket", "Badminton", "Gym"]
+    },
+    {
+      "id": "n-5",
+      "firstName": "Meera",
+      "tower": "Tower B",
+      "interests": ["Art", "Music", "Yoga"]
+    },
+    {
+      "id": "n-6",
+      "firstName": "Vikram",
+      "tower": "Tower C",
+      "interests": ["FIFA", "Football", "Movies"]
+    },
+    {
+      "id": "n-7",
+      "firstName": "Sana",
+      "tower": "Tower A",
+      "interests": ["Pets", "Gardening", "Cooking"]
+    },
+    {
+      "id": "n-8",
+      "firstName": "Dev",
+      "tower": "Tower D",
+      "interests": ["Cycling", "Running", "Travel"]
+    },
+    {
+      "id": "n-9",
+      "firstName": "Isha",
+      "tower": "Tower B",
+      "interests": ["Books", "Movies", "Parenting"]
+    },
+    {
+      "id": "n-10",
+      "firstName": "Rahul",
+      "tower": "Tower C",
+      "interests": ["Gym", "Cricket", "Gaming"]
+    },
+    {
+      "id": "n-11",
+      "firstName": "Neha",
+      "tower": "Tower A",
+      "interests": ["Yoga", "Meditation", "Cooking"]
+    },
+    {
+      "id": "n-12",
+      "firstName": "Kabir",
+      "tower": "Tower D",
+      "interests": ["Music", "Art", "Photography"]
     }
   ]
 }

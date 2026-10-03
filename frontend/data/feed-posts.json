@@ -1,10 +1,44 @@
 [
   {
+    "id": "post-water-alert",
+    "authorName": "Committee",
+    "authorMeta": "Society · pinned",
+    "postType": "alert",
+    "pinned": true,
+    "body": "Tower B water supply paused 2:00–4:00 PM today for motor replacement. Store water if you are on upper floors.",
+    "postedAt": "2026-10-03T06:00:00.000Z",
+    "commentCount": 2,
+    "reactionCount": 18
+  },
+  {
+    "id": "post-lost-key",
+    "authorName": "Isha Kapoor",
+    "authorMeta": "Tower B · 1h",
+    "postType": "lost_found",
+    "body": "Lost a blue keychain with society fob near the mailroom. Reward if found.",
+    "postedAt": "2026-10-03T08:30:00.000Z",
+    "commentCount": 4,
+    "reactionCount": 6,
+    "imageUrl": "/images/amenities/community-hall.jpg",
+    "imageAlt": "Mailroom area"
+  },
+  {
+    "id": "post-ac-rec",
+    "authorName": "Nikhil",
+    "authorMeta": "Tower C · 3h",
+    "postType": "question",
+    "body": "Who recommends a good AC service vendor for a split unit gas refill?",
+    "postedAt": "2026-10-03T06:00:00.000Z",
+    "commentCount": 7,
+    "reactionCount": 3
+  },
+  {
     "id": "post-fifa",
     "authorName": "Rohan Mehta",
     "authorAvatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=96&q=80",
-    "authorMeta": "Tower B · 2m",
+    "authorMeta": "Tower B · 5h",
     "groupName": "FIFA & Game Night",
+    "postType": "general",
     "body": "Who is in for FIFA tonight at the club lounge? Bring your own controller.",
     "postedAt": "2026-10-02T09:15:00.000Z",
     "commentCount": 5,
@@ -14,11 +48,22 @@
     "id": "post-ride",
     "authorName": "Ananya Iyer",
     "authorAvatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=80",
-    "authorMeta": "Tower D · 4h",
+    "authorMeta": "Tower D · 8h",
     "groupName": "Resident Cyclists Club",
+    "postType": "general",
     "body": "6:15 AM roll-out from Main Gate tomorrow — 25 km steady pace. Lights mandatory.",
     "postedAt": "2026-10-02T06:40:00.000Z",
     "commentCount": 3,
     "reactionCount": 8
+  },
+  {
+    "id": "post-plumber-rec",
+    "authorName": "Priya Nair",
+    "authorMeta": "Tower A · 1d",
+    "postType": "recommendation",
+    "body": "AquaCare fixed our kitchen leak in under an hour — on the society vendor list.",
+    "postedAt": "2026-10-01T14:00:00.000Z",
+    "commentCount": 1,
+    "reactionCount": 9
   }
 ]
