@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { getDemoDb } from "@/lib/demo-store/db";
 import { demoGetEventById, demoGetResidentForUser } from "@/lib/demo-store/readers";
-import type { EventGlyph, EventHostIcon, HomeEvent, Person, Resident } from "@/lib/types/home";
+import type { EventCategory, EventGlyph, EventHostIcon, HomeEvent, Person, Resident } from "@/lib/types/home";
 
 const DEMO_EVENT_CAPACITY = 50;
 
@@ -114,12 +114,18 @@ export function demoCreateEvent(userId: string, input: DemoEventCreateInput): Ho
 
   const id = uniqueSlug(db, slugify(title));
   const glyph = inferGlyph(title, tags);
+  const startsAtIso = new Date(startMs).toISOString();
+  const category: EventCategory =
+    glyph === "wellness" ? "fitness" : glyph === "music" ? "music" : glyph === "ride" || glyph === "game" ? "sports" : "social";
   const event: HomeEvent = {
     id,
     title,
     host: hostLabel(resident),
+    hostName: firstName(resident.name),
+    hostUserId: userId,
     hostIcon: hostIcon(glyph),
-    startsAt: new Date(startMs).toISOString(),
+    startsAt: startsAtIso,
+    endsAt: new Date(startMs + 2 * 60 * 60 * 1000).toISOString(),
     location,
     priceInr: 0,
     glyph,
@@ -128,6 +134,11 @@ export function demoCreateEvent(userId: string, input: DemoEventCreateInput): Ho
     actionLabel: "RSVP",
     actionTone: "solid",
     href: `/events/${id}`,
+    eventType: "free",
+    status: "published",
+    category,
+    capacity: DEMO_EVENT_CAPACITY,
+    tags,
   };
 
   upsertEvent(db, id, event);
@@ -151,7 +162,7 @@ export function demoRsvpEvent(userId: string, eventId: string): HomeEvent {
     return existing;
   }
 
-  if (existing.goingCount >= DEMO_EVENT_CAPACITY) {
+  if (existing.goingCount >= (existing.capacity ?? DEMO_EVENT_CAPACITY)) {
     throw new Error("This event is full.");
   }
 

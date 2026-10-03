@@ -12,24 +12,9 @@ import localBusinessesJson from "@/data/local-businesses.json";
 import marketplaceJson from "@/data/marketplace.json";
 import rentDashboardJson from "@/data/rent-dashboard.json";
 import residentJson from "@/data/resident.json";
-import { nextWeekday } from "@/lib/data/dates";
 import { DEFAULT_RESIDENT_USER_ID } from "@/lib/demo-store/config";
-import type { FeedPost, HomeEvent, Resident } from "@/lib/types/home";
-
-interface EventSchedule {
-  weekday: number;
-  hour: number;
-  minute?: number;
-}
-
-type RawEvent = Omit<HomeEvent, "startsAt"> & { schedule: EventSchedule };
-
-function materializeEvents(raw: RawEvent[]): HomeEvent[] {
-  return raw.map(({ schedule, ...event }) => ({
-    ...event,
-    startsAt: nextWeekday(schedule.weekday, schedule.hour, schedule.minute ?? 0),
-  }));
-}
+import { materializeEvents, type RawEvent } from "@/lib/events/normalize";
+import type { FeedPost, Resident } from "@/lib/types/home";
 
 function upsertBlob(db: Database.Database, key: string, payload: unknown): void {
   db.prepare(

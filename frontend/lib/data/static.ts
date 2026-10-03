@@ -11,7 +11,8 @@ import localBusinessesJson from "@/data/local-businesses.json";
 import marketplaceJson from "@/data/marketplace.json";
 import rentDashboardJson from "@/data/rent-dashboard.json";
 import residentJson from "@/data/resident.json";
-import { nextWeekday } from "@/lib/data/dates";
+import { materializeEvents, type RawEvent } from "@/lib/events/normalize";
+import { isPublishedUpcoming } from "@/lib/events/query";
 import type { CommunityCatalog } from "@/lib/types/community";
 import type { LocalBusiness } from "@/lib/types/local-business";
 import type { FlatOpening } from "@/lib/types/flat-opening";
@@ -41,21 +42,6 @@ function buildDigest(): Digest {
     totalCount: base.totalCount,
     totalPostCount: allPosts.length,
   };
-}
-
-interface EventSchedule {
-  weekday: number;
-  hour: number;
-  minute?: number;
-}
-
-type RawEvent = Omit<HomeEvent, "startsAt"> & { schedule: EventSchedule };
-
-function materializeEvents(raw: RawEvent[]): HomeEvent[] {
-  return raw.map(({ schedule, ...event }) => ({
-    ...event,
-    startsAt: nextWeekday(schedule.weekday, schedule.hour, schedule.minute ?? 0),
-  }));
 }
 
 const events = materializeEvents(eventsJson as RawEvent[]);
@@ -95,7 +81,7 @@ export function getStaticHomeData(options?: { empty?: boolean }): HomeData {
   return {
     resident: getStaticResident(),
     digest: buildDigest(),
-    events: getStaticEvents(),
+    events: getStaticEvents().filter((event) => isPublishedUpcoming(event)),
     amenities: getStaticAmenities(),
     match: extras.match,
     prompt: extras.prompt,

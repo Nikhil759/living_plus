@@ -7,6 +7,7 @@ import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceListing } from "@/lib/types/marketplace";
+import { isPublishedUpcoming } from "@/lib/events/query";
 import type {
   Amenity,
   Digest,
@@ -102,7 +103,7 @@ export function demoGetHomeData(options?: { empty?: boolean }): HomeData {
   return {
     resident: demoGetDefaultResident(),
     digest: buildDigest(db),
-    events: listEntities<HomeEvent>(db, "events"),
+    events: listEntities<HomeEvent>(db, "events").filter((event) => isPublishedUpcoming(event)),
     amenities: listEntities<Amenity>(db, "amenities"),
     match: extras.match ?? null,
     prompt: extras.prompt,

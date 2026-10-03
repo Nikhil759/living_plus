@@ -7,7 +7,7 @@ export function ErrorState({
   action,
 }: {
   message: string;
-  action?: { href: string; label: string };
+  action?: { href: string; label: string } | { onClick: () => void; label: string };
 }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
@@ -15,7 +15,7 @@ export function ErrorState({
         <AlertCircle />
       </IconTile>
       <p className="text-body text-ink-secondary">{message}</p>
-      {action ? (
+      {action && "href" in action ? (
         <Link
           href={action.href}
           className="inline-flex items-center gap-0.5 text-callout font-semibold text-primary"
@@ -23,6 +23,15 @@ export function ErrorState({
           {action.label}
           <ChevronRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
         </Link>
+      ) : action && "onClick" in action ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="inline-flex items-center gap-0.5 text-callout font-semibold text-primary"
+        >
+          {action.label}
+          <ChevronRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+        </button>
       ) : null}
     </div>
   );

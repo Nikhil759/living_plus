@@ -31,13 +31,38 @@ export type EventGlyph = "ride" | "game" | "music" | "wellness" | "general";
 /** Small icon shown next to the host line. */
 export type EventHostIcon = "person" | "celebration" | "club";
 
+export type EventType = "free" | "paid" | "society";
+
+export type EventStatus =
+  | "draft"
+  | "pending_approval"
+  | "published"
+  | "rejected"
+  | "cancelled"
+  | "completed";
+
+export type EventCategory =
+  | "sports"
+  | "fitness"
+  | "kids"
+  | "food"
+  | "music"
+  | "learning"
+  | "social"
+  | "other";
+
+export type EventListTab = "upcoming" | "going" | "hosting" | "past";
+
 export interface HomeEvent {
   id: string;
   title: string;
   host: string;
+  hostName?: string;
+  hostUserId?: string;
   hostIcon: EventHostIcon;
   /** ISO-8601 timestamp. Formatted for display by `formatEventWhen`. */
   startsAt: string;
+  endsAt?: string;
   location: string;
   /** Price in INR. `0` renders as "Free". */
   priceInr: number;
@@ -49,6 +74,15 @@ export interface HomeEvent {
   actionLabel: string;
   actionTone: "solid" | "soft";
   href: string;
+  eventType?: EventType;
+  status?: EventStatus;
+  category?: EventCategory;
+  capacity?: number;
+  tags?: string[];
+  description?: string;
+  viewerGoing?: boolean;
+  isHost?: boolean;
+  isCommittee?: boolean;
 }
 
 export type AmenityStatus = "free" | "open" | "quiet" | "moderate" | "booked";

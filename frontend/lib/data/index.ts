@@ -21,8 +21,15 @@ import {
   demoGetMarketplaceListings,
   demoGetRentDashboard,
 } from "@/lib/demo-store/readers";
+import { demoListUserRsvpEventIds } from "@/lib/demo-store/events-write";
 import { demoHomeResidentForUser, mergeSessionIntoResident } from "@/lib/demo-store/resident-write";
 import { getDemoSessionUser } from "@/lib/demo-store/session-user";
+import {
+  annotateEvents,
+  eventViewerFromResident,
+  filterEvents,
+  type EventListQuery,
+} from "@/lib/events/query";
 import { getDataSource } from "@/lib/data/source";
 import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
@@ -68,6 +75,17 @@ export async function loadEvents(): Promise<HomeEvent[]> {
   if (useDemoStore()) return demoGetEvents();
   if (getDataSource() === "api") return apiGetAsUser<HomeEvent[]>("/v1/events");
   return staticData.getStaticEvents();
+}
+
+export async function loadEventList(query: EventListQuery = {}): Promise<HomeEvent[]> {
+  const [events, resident] = await Promise.all([loadEvents(), loadResident()]);
+  let rsvpIds: string[] = [];
+  if (useDemoStore()) {
+    const session = await getDemoSessionUser();
+    rsvpIds = session ? demoListUserRsvpEventIds(session.id) : demoListUserRsvpEventIds(resident.id);
+  }
+  const viewer = eventViewerFromResident(resident, rsvpIds);
+  return filterEvents(annotateEvents(events, viewer), query);
 }
 
 export async function loadEventById(id: string): Promise<HomeEvent | undefined> {
