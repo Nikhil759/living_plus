@@ -10,6 +10,7 @@ from app.core.errors import AppError
 MAX_COVER_BYTES = 5 * 1024 * 1024
 _COVER_DIR = "event-covers"
 _LISTING_DIR = "listing-photos"
+_BUSINESS_DIR = "business-photos"
 _NAME_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|jpeg|png|webp)$"
 )
@@ -55,6 +56,10 @@ def listing_photo_path(filename: str) -> Path:
     return _stored_path(_upload_dir(_LISTING_DIR), filename)
 
 
+def business_photo_path(filename: str) -> Path:
+    return _stored_path(_upload_dir(_BUSINESS_DIR), filename)
+
+
 def _extension_for(header: bytes) -> str:
     for signature, ext in _SIGNATURES:
         if header.startswith(signature):
@@ -97,3 +102,7 @@ async def save_event_cover(file: UploadFile) -> str:
 
 async def save_listing_photo(file: UploadFile) -> str:
     return f"/v1/uploads/listing-photos/{await _save_image(file, _upload_dir(_LISTING_DIR))}"
+
+
+async def save_business_photo(file: UploadFile) -> str:
+    return f"/v1/uploads/business-photos/{await _save_image(file, _upload_dir(_BUSINESS_DIR))}"

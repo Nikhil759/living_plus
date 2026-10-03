@@ -27,6 +27,16 @@ Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, ma
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
 
 
+def clean_phone(phone: str | None) -> str | None:
+    """Strips spaces and dashes; empty means "not given"."""
+    if phone is None or not phone.strip():
+        return None
+    cleaned = re.sub(r"[\s-]", "", phone)
+    if not _PHONE_RE.match(cleaned):
+        raise ValueError("Enter a valid phone number.")
+    return cleaned
+
+
 class ListingIn(CamelModel):
     """Create and edit share one body, matching the single Sell form."""
 
@@ -59,12 +69,7 @@ class ListingIn(CamelModel):
     @field_validator("phone")
     @classmethod
     def _phone_valid(cls, phone: str | None) -> str | None:
-        if phone is None or not phone.strip():
-            return None
-        cleaned = re.sub(r"[\s-]", "", phone)
-        if not _PHONE_RE.match(cleaned):
-            raise ValueError("Enter a valid phone number.")
-        return cleaned
+        return clean_phone(phone)
 
     @model_validator(mode="after")
     def _price_rules(self) -> Self:

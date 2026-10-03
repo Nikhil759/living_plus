@@ -53,7 +53,7 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
-async def _towers_by_user(
+async def towers_by_user(
     db: AsyncSession, society_id: uuid.UUID, user_ids: set[uuid.UUID]
 ) -> dict[uuid.UUID, str]:
     if not user_ids:
@@ -108,7 +108,7 @@ def _card_fields(
 async def _to_cards(
     db: AsyncSession, member: CurrentMember, listings: list[MarketplaceListing]
 ) -> list[ListingCardOut]:
-    towers = await _towers_by_user(db, member.society_id, {item.seller_id for item in listings})
+    towers = await towers_by_user(db, member.society_id, {item.seller_id for item in listings})
     reported = await _reported_ids(db, member, [item.id for item in listings])
     return [
         ListingCardOut(
@@ -175,7 +175,7 @@ async def _detail(
     seller = await db.get(User, listing.seller_id)
     if seller is None:
         raise AppError("not_found", "Listing not found.", 404)
-    towers = await _towers_by_user(db, member.society_id, {listing.seller_id})
+    towers = await towers_by_user(db, member.society_id, {listing.seller_id})
     reported = await _reported_ids(db, member, [listing.id])
     tower = towers.get(listing.seller_id)
     return ListingDetailOut(
@@ -198,7 +198,7 @@ async def get_listing(
 
 
 async def seller_profile(db: AsyncSession, member: CurrentMember) -> SellerProfileOut:
-    towers = await _towers_by_user(db, member.society_id, {member.user.id})
+    towers = await towers_by_user(db, member.society_id, {member.user.id})
     return SellerProfileOut(
         first_name=first_name(member.user),
         avatar_url=member.user.avatar_url,
@@ -207,7 +207,7 @@ async def seller_profile(db: AsyncSession, member: CurrentMember) -> SellerProfi
     )
 
 
-def _apply_phone(user: User, phone: str | None) -> None:
+def apply_phone(user: User, phone: str | None) -> None:
     if phone:
         user.phone = phone
     if not user.phone:
@@ -229,7 +229,7 @@ def _apply_fields(listing: MarketplaceListing, body: ListingIn) -> None:
 async def create_listing(
     db: AsyncSession, member: CurrentMember, body: ListingIn
 ) -> ListingDetailOut:
-    _apply_phone(member.user, body.phone)
+    apply_phone(member.user, body.phone)
     # society_id and seller always come from the session, never the request body.
     listing = MarketplaceListing(
         id=uuid.uuid4(),
@@ -258,7 +258,7 @@ async def update_listing(
 ) -> ListingDetailOut:
     listing = await manageable_listing(db, member, listing_id)
     if listing.seller_id == member.user.id:
-        _apply_phone(member.user, body.phone)
+        apply_phone(member.user, body.phone)
     _apply_fields(listing, body)
     await db.commit()
     return await _detail(db, member, listing)
@@ -345,7 +345,7 @@ async def report_listing(
     return ReportOut(message="Thanks, the committee will take a look")
 
 
-def _phone_digits(phone: str) -> str:
+def phone_digits(phone: str) -> str:
     digits = re.sub(r"\D", "", phone)
     return f"91{digits}" if len(digits) == 10 else digits
 
@@ -353,7 +353,7 @@ def _phone_digits(phone: str) -> str:
 def _contact_url(
     method: ListingContactMethod, phone: str, buyer: str, tower: str | None, title: str
 ) -> str:
-    digits = _phone_digits(phone)
+    digits = phone_digits(phone)
     if method == ListingContactMethod.call:
         return f"tel:+{digits}"
     who = f"{buyer} from {tower}" if tower else buyer
@@ -373,7 +373,7 @@ async def contact_seller(
     seller = await db.get(User, listing.seller_id)
     if seller is None or not seller.phone:
         raise AppError("seller_unreachable", "The seller can't be reached right now.", 409)
-    towers = await _towers_by_user(db, member.society_id, {member.user.id})
+    towers = await towers_by_user(db, member.society_id, {member.user.id})
     url = _contact_url(
         listing.contact_method,
         seller.phone,

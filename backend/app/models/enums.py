@@ -168,3 +168,54 @@ class ListingSort(StrEnum):
 class ListingTab(StrEnum):
     active = "active"
     sold = "sold"
+
+
+class BusinessCategory(StrEnum):
+    food = "food"
+    tuition = "tuition"
+    childcare = "childcare"
+    pet_care = "pet_care"
+    art = "art"
+    wellness = "wellness"
+    home_services = "home_services"
+
+
+class BusinessAvailability(StrEnum):
+    taking_orders = "taking_orders"
+    fully_booked = "fully_booked"
+    on_break = "on_break"
+
+
+class BusinessReviewStatus(StrEnum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+    removed = "removed"
+
+
+class BusinessServes(StrEnum):
+    within_society = "within_society"
+    all_towers = "all_towers"
+
+
+class OfferingUnit(StrEnum):
+    each = "each"
+    per_meal = "per_meal"
+    per_hour = "per_hour"
+    per_day = "per_day"
+    per_month = "per_month"
+
+
+class BusinessSort(StrEnum):
+    recommended = "recommended"
+    newest = "newest"
+
+
+class Weekday(StrEnum):
+    mon = "mon"
+    tue = "tue"
+    wed = "wed"
+    thu = "thu"
+    fri = "fri"
+    sat = "sat"
+    sun = "sun"

@@ -11,6 +11,9 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.pool import NullPool
 
+# Shared "world" fixture for the local business test files.
+pytest_plugins = ["tests.business_world"]
+
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 TEST_DB_PATH = BACKEND_DIR / ".demo" / "aangan_test.db"
 TEST_DATABASE_URL = os.environ.get(

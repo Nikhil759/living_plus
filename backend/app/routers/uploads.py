@@ -28,6 +28,16 @@ async def get_listing_photo(filename: str) -> FileResponse:
     return FileResponse(upload_service.listing_photo_path(filename))
 
 
+@router.post("/business-photos", response_model=UploadOut)
+async def upload_business_photo(_member: CurrentMemberDep, file: UploadFile) -> UploadOut:
+    return UploadOut(url=await upload_service.save_business_photo(file))
+
+
+@router.get("/business-photos/{filename}")
+async def get_business_photo(filename: str) -> FileResponse:
+    return FileResponse(upload_service.business_photo_path(filename))
+
+
 @router.get("/event-covers/{filename}")
 async def get_event_cover(filename: str) -> FileResponse:
     path = upload_service.event_cover_path(filename)
