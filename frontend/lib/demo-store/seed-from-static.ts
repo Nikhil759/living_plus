@@ -3,7 +3,8 @@ import { STATIC_AMENITY_DETAILS } from "@/lib/amenities/static-catalog";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
-import helpDeskTicketsJson from "@/data/help-desk-tickets.json";
+import helpDeskIssuesJson from "@/data/help-desk-issues.json";
+import helpDeskFeedbackJson from "@/data/help-desk-feedback.json";
 import helpDeskVendorsJson from "@/data/help-desk-vendors.json";
 import feedPostsJson from "@/data/feed-posts.json";
 import homeExtrasJson from "@/data/home-extras.json";
@@ -61,8 +62,12 @@ export function seedDemoDatabaseFromStatic(db: Database.Database): void {
     upsertEntity(db, "help_desk_vendors", vendor.id, vendor);
   }
 
-  for (const ticket of helpDeskTicketsJson) {
-    upsertEntity(db, "help_desk_tickets", ticket.id, ticket);
+  for (const issue of helpDeskIssuesJson) {
+    upsertEntity(db, "help_desk_issues", issue.id, issue);
+  }
+
+  for (const item of helpDeskFeedbackJson) {
+    upsertEntity(db, "help_desk_feedback", item.id, item);
   }
 
   upsertBlob(db, "home_extras", homeExtrasJson);

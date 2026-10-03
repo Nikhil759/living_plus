@@ -3,8 +3,10 @@ import type { AmenityDetail } from "@/lib/types/amenities";
 import announcementsJson from "@/data/announcements.json";
 import communityJson from "@/data/community.json";
 import eventsJson from "@/data/events.json";
-import helpDeskTicketsJson from "@/data/help-desk-tickets.json";
+import helpDeskIssuesJson from "@/data/help-desk-issues.json";
+import helpDeskFeedbackJson from "@/data/help-desk-feedback.json";
 import helpDeskVendorsJson from "@/data/help-desk-vendors.json";
+import { issueToListRow } from "@/lib/help-desk/format";
 import feedPostsJson from "@/data/feed-posts.json";
 import homeExtrasJson from "@/data/home-extras.json";
 import marketplaceJson from "@/data/marketplace.json";
@@ -13,7 +15,7 @@ import residentJson from "@/data/resident.json";
 import { materializeEvents, type RawEvent } from "@/lib/events/normalize";
 import { isPublishedUpcoming } from "@/lib/events/query";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
+import type { HelpDeskFeedback, HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceListing } from "@/lib/types/marketplace";
 import type {
@@ -109,8 +111,20 @@ export function getStaticHelpDeskVendors(): HelpDeskVendor[] {
   return helpDeskVendorsJson as HelpDeskVendor[];
 }
 
+export function getStaticHelpDeskIssues(): HelpDeskIssue[] {
+  return helpDeskIssuesJson as HelpDeskIssue[];
+}
+
+export function getStaticHelpDeskIssueById(id: string): HelpDeskIssue | undefined {
+  return getStaticHelpDeskIssues().find((issue) => issue.id === id);
+}
+
 export function getStaticHelpDeskTickets(): HelpDeskTicket[] {
-  return helpDeskTicketsJson as HelpDeskTicket[];
+  return getStaticHelpDeskIssues().map((issue) => issueToListRow(issue));
+}
+
+export function getStaticHelpDeskFeedback(): HelpDeskFeedback[] {
+  return helpDeskFeedbackJson as HelpDeskFeedback[];
 }
 
 export function getStaticRentDashboard(): RentDashboard {

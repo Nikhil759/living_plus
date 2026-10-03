@@ -26,7 +26,10 @@ export function VendorRow({ vendor, className }: VendorRowProps) {
           <p className="text-headline text-ink">{vendor.name}</p>
           {vendor.societyApproved ? <Badge>Society list</Badge> : null}
         </div>
-        <p className="text-caption text-ink-secondary">{VENDOR_CATEGORY_LABEL[vendor.category]}</p>
+        <p className="text-caption text-ink-secondary">
+          {VENDOR_CATEGORY_LABEL[vendor.category]}
+          {vendor.hoursLabel ? ` · ${vendor.hoursLabel}` : ""}
+        </p>
         {vendor.note ? <p className="mt-1 text-callout text-ink-secondary">{vendor.note}</p> : null}
       </div>
       {href ? (

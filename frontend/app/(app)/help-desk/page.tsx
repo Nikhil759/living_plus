@@ -1,23 +1,19 @@
 import Link from "next/link";
 import {
   AlertCircle,
-  LifeBuoy,
   MessageSquarePlus,
   Phone,
 } from "lucide-react";
+import { HelpDeskHub } from "@/components/help-desk/help-desk-hub";
 import { AppPage } from "@/components/layout/app-page";
-import { SectionHeader } from "@/components/home/section-header";
-import { VendorRow } from "@/components/help-desk/vendor-row";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { GroupedList, ListRow } from "@/components/ui/grouped-list";
 import { IconTile } from "@/components/ui/icon-tile";
-import { loadHelpDeskTickets, loadHelpDeskVendors } from "@/lib/data";
 import {
-  TICKET_CATEGORY_LABEL,
-  TICKET_STATUS_LABEL,
-} from "@/lib/help-desk-labels";
-import { formatFeedAge } from "@/lib/format";
+  helpDeskWriteEnabled,
+  loadHelpDeskIssues,
+  loadHelpDeskVendors,
+  loadResident,
+} from "@/lib/data";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const QUICK_ACTIONS = [
   {
@@ -41,10 +37,15 @@ const QUICK_ACTIONS = [
 ] as const;
 
 export default async function HelpDeskPage() {
-  const [tickets, vendors] = await Promise.all([
-    loadHelpDeskTickets(),
+  const [issues, vendors, resident] = await Promise.all([
+    loadHelpDeskIssues(),
     loadHelpDeskVendors(),
+    loadResident(),
   ]);
+  const supabase = await createServerSupabaseClient();
+  const email =
+    supabase != null ? (await supabase.auth.getUser()).data.user?.email ?? null : null;
+  const isCommittee = resident.roles.some((r) => /committee|admin|rep/i.test(r));
 
   return (
     <AppPage title="Help desk">
@@ -69,47 +70,13 @@ export default async function HelpDeskPage() {
         ))}
       </ul>
 
-      <section className="space-y-4">
-        <SectionHeader title="My requests" adornment={<LifeBuoy className="h-5 w-5 text-ink-tertiary" strokeWidth={1.5} />} />
-        <GroupedList>
-          {tickets.map((ticket) => (
-            <ListRow
-              key={ticket.id}
-              title={ticket.title}
-              detail={`${TICKET_CATEGORY_LABEL[ticket.category]} · opened ${formatFeedAge(ticket.createdAt)}`}
-              chevron={false}
-              trailing={
-                <Badge
-                  dot={
-                    ticket.status === "resolved"
-                      ? "green"
-                      : ticket.status === "open"
-                        ? "amber"
-                        : "amber"
-                  }
-                >
-                  {TICKET_STATUS_LABEL[ticket.status]}
-                </Badge>
-              }
-            />
-          ))}
-        </GroupedList>
-      </section>
-
-      <Card className="space-y-3">
-        <SectionHeader
-          title="Society vendor directory"
-          action={{ label: "See all", href: "/help-desk/directory" }}
-        />
-        <p className="text-callout text-ink-secondary">
-          Empanelled help for flats and common areas — distinct from local business ads.
-        </p>
-        <div className="space-y-2">
-          {vendors.slice(0, 4).map((vendor) => (
-            <VendorRow key={vendor.id} vendor={vendor} />
-          ))}
-        </div>
-      </Card>
+      <HelpDeskHub
+        issues={issues}
+        vendors={vendors}
+        resident={resident}
+        viewerEmail={email}
+        isCommittee={isCommittee}
+      />
     </AppPage>
   );
 }

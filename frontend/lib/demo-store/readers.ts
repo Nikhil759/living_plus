@@ -2,7 +2,8 @@ import type Database from "better-sqlite3";
 import { DEFAULT_RESIDENT_USER_ID } from "@/lib/demo-store/config";
 import { getDemoDb } from "@/lib/demo-store/db";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
+import type { HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
+import { issueToListRow } from "@/lib/help-desk/format";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceListing } from "@/lib/types/marketplace";
 import { isPublishedUpcoming } from "@/lib/events/query";
@@ -144,8 +145,16 @@ export function demoGetHelpDeskVendors(): HelpDeskVendor[] {
   return listEntities<HelpDeskVendor>(getDemoDb(), "help_desk_vendors");
 }
 
+export function demoGetHelpDeskIssues(): HelpDeskIssue[] {
+  return listEntities<HelpDeskIssue>(getDemoDb(), "help_desk_issues");
+}
+
+export function demoGetHelpDeskIssueById(id: string): HelpDeskIssue | undefined {
+  return getEntity<HelpDeskIssue>(getDemoDb(), "help_desk_issues", id);
+}
+
 export function demoGetHelpDeskTickets(): HelpDeskTicket[] {
-  return listEntities<HelpDeskTicket>(getDemoDb(), "help_desk_tickets");
+  return demoGetHelpDeskIssues().map((issue) => issueToListRow(issue));
 }
 
 export function demoGetRentDashboard(): RentDashboard {

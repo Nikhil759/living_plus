@@ -1,0 +1,145 @@
+[
+  {
+    "id": "tkt-lift-b",
+    "number": "HD-1042",
+    "title": "Tower B lift 2 stops at 5th floor",
+    "description": "Lift 2 in Tower B pauses or jerks at the 5th floor landing, especially during morning rush.",
+    "category": "lift",
+    "scope": "common_area",
+    "tower": "Tower B",
+    "areaLabel": "Lift 2",
+    "urgency": "urgent",
+    "status": "open",
+    "createdAt": "2026-09-28T08:00:00.000Z",
+    "reporterIds": ["res-meera"],
+    "reporterEmails": ["meera@example.com"],
+    "followerIds": ["res-meera", "u-f1", "u-f2", "u-f3", "u-f4", "u-f5", "u-f6", "u-f7", "u-f8", "u-f9", "u-f10"],
+    "photoUrls": [],
+    "timeline": [
+      {
+        "id": "tl-1",
+        "kind": "created",
+        "at": "2026-09-28T08:00:00.000Z",
+        "actorName": "Meera Shah",
+        "actorRole": "resident",
+        "message": "Reported the lift stopping at 5th floor."
+      },
+      {
+        "id": "tl-2",
+        "kind": "comment",
+        "at": "2026-09-29T10:15:00.000Z",
+        "actorName": "Rohan K.",
+        "actorRole": "resident",
+        "message": "Same issue yesterday evening — had to take the stairs."
+      }
+    ]
+  },
+  {
+    "id": "tkt-water-c",
+    "number": "HD-1088",
+    "title": "Low pressure in Tower C morning supply",
+    "description": "Water pressure drops between 6–8 AM on the 7th floor and above.",
+    "category": "water",
+    "scope": "common_area",
+    "tower": "Tower C",
+    "areaLabel": "Upper floors",
+    "urgency": "normal",
+    "status": "open",
+    "createdAt": "2026-10-02T06:30:00.000Z",
+    "reporterIds": ["res-nikhil"],
+    "reporterEmails": ["demo@aangan.app", "bn6799@gmail.com"],
+    "followerIds": ["res-nikhil"],
+    "photoUrls": [],
+    "timeline": [
+      {
+        "id": "tl-w1",
+        "kind": "created",
+        "at": "2026-10-02T06:30:00.000Z",
+        "actorName": "Nikhil",
+        "actorRole": "resident",
+        "message": "Opened the ticket."
+      }
+    ]
+  },
+  {
+    "id": "tkt-gym",
+    "number": "HD-0991",
+    "title": "Treadmill #2 belt slipping",
+    "description": "Belt slips when speed goes above 8 km/h. Safety concern during peak hours.",
+    "category": "amenity",
+    "scope": "common_area",
+    "tower": "Tower C",
+    "areaLabel": "Clubhouse gym",
+    "urgency": "normal",
+    "status": "in_progress",
+    "createdAt": "2026-09-25T14:00:00.000Z",
+    "reporterIds": ["res-nikhil"],
+    "reporterEmails": ["demo@aangan.app", "bn6799@gmail.com"],
+    "followerIds": ["res-nikhil"],
+    "photoUrls": ["/images/amenities/gym.jpg"],
+    "assignedVendorId": "v-appliance-1",
+    "timeline": [
+      {
+        "id": "tl-g1",
+        "kind": "created",
+        "at": "2026-09-25T14:00:00.000Z",
+        "actorName": "Nikhil",
+        "actorRole": "resident",
+        "message": "Reported slipping belt on treadmill #2."
+      },
+      {
+        "id": "tl-g2",
+        "kind": "status",
+        "at": "2026-09-26T09:00:00.000Z",
+        "actorName": "Help desk",
+        "actorRole": "committee",
+        "message": "Status changed to In progress."
+      },
+      {
+        "id": "tl-g3",
+        "kind": "vendor",
+        "at": "2026-09-26T09:05:00.000Z",
+        "actorName": "Committee",
+        "actorRole": "committee",
+        "message": "Assigned FitPro Appliance Repair."
+      }
+    ]
+  },
+  {
+    "id": "tkt-ac-flat",
+    "number": "HD-0970",
+    "title": "Bedroom AC not cooling",
+    "description": "Split AC in master bedroom blows air but does not cool. Filter cleaned last week.",
+    "category": "electricity",
+    "scope": "my_flat",
+    "tower": "Tower C",
+    "areaLabel": "Flat 702",
+    "urgency": "normal",
+    "status": "resolved",
+    "createdAt": "2026-09-20T11:00:00.000Z",
+    "reporterIds": ["res-nikhil"],
+    "reporterEmails": ["demo@aangan.app", "bn6799@gmail.com"],
+    "followerIds": ["res-nikhil"],
+    "photoUrls": [],
+    "awaitingConfirmation": true,
+    "confirmationDueAt": "2026-10-10T11:00:00.000Z",
+    "timeline": [
+      {
+        "id": "tl-a1",
+        "kind": "created",
+        "at": "2026-09-20T11:00:00.000Z",
+        "actorName": "Nikhil",
+        "actorRole": "resident",
+        "message": "Reported AC not cooling."
+      },
+      {
+        "id": "tl-a2",
+        "kind": "status",
+        "at": "2026-09-22T16:00:00.000Z",
+        "actorName": "Committee",
+        "actorRole": "committee",
+        "message": "Marked resolved after gas refill."
+      }
+    ]
+  }
+]

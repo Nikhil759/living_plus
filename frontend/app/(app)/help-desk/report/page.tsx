@@ -1,23 +1,12 @@
-import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { ReportIssueForm } from "@/components/help-desk/report-issue-form";
 import { AppPage } from "@/components/layout/app-page";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { helpDeskWriteEnabled, loadHelpDeskIssues, loadResident } from "@/lib/data";
 
-export default function HelpDeskReportPage() {
+export default async function HelpDeskReportPage() {
+  const [issues, resident] = await Promise.all([loadHelpDeskIssues(), loadResident()]);
   return (
-    <AppPage title="Report an issue">
-      <Card>
-        <EmptyState
-          icon={<AlertCircle />}
-          title="Issue reporting connects to the API next."
-          action={
-            <Link href="/help-desk" className="text-callout font-semibold text-primary">
-              Back to Help desk
-            </Link>
-          }
-        />
-      </Card>
+    <AppPage title="Report an issue" backHref="/help-desk" backLabel="Help desk">
+      <ReportIssueForm issues={issues} resident={resident} writeEnabled={helpDeskWriteEnabled()} />
     </AppPage>
   );
 }

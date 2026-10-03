@@ -1,0 +1,20 @@
+[
+  {
+    "id": "fb-1",
+    "topic": "app",
+    "message": "Love the amenity crowd chart — please add pool hours to Home too.",
+    "anonymous": false,
+    "authorName": "Ananya R.",
+    "authorEmail": "ananya@example.com",
+    "createdAt": "2026-10-01T12:00:00.000Z",
+    "read": false
+  },
+  {
+    "id": "fb-2",
+    "topic": "committee",
+    "message": "Can we get a weekly digest of open help-desk tickets in the committee view?",
+    "anonymous": true,
+    "createdAt": "2026-09-30T09:30:00.000Z",
+    "read": true
+  }
+]

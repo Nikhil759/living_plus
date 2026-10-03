@@ -10,6 +10,8 @@ import {
   demoGetEventById,
   demoGetEvents,
   demoGetFeedPosts,
+  demoGetHelpDeskIssueById,
+  demoGetHelpDeskIssues,
   demoGetHelpDeskTickets,
   demoGetHelpDeskVendors,
   demoGetHomeData,
@@ -37,7 +39,7 @@ import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog } from "@/lib/types/community";
 import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
 import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
-import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
+import type { HelpDeskFeedback, HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceCard, MarketplaceListing } from "@/lib/types/marketplace";
 import type {
@@ -240,6 +242,25 @@ export async function loadHelpDeskVendors(): Promise<HelpDeskVendor[]> {
 export async function loadHelpDeskTickets(): Promise<HelpDeskTicket[]> {
   if (useDemoStore()) return demoGetHelpDeskTickets();
   return staticData.getStaticHelpDeskTickets();
+}
+
+export async function loadHelpDeskIssues(): Promise<HelpDeskIssue[]> {
+  if (useDemoStore()) return demoGetHelpDeskIssues();
+  return staticData.getStaticHelpDeskIssues();
+}
+
+export async function loadHelpDeskIssueById(id: string): Promise<HelpDeskIssue | undefined> {
+  if (useDemoStore()) return demoGetHelpDeskIssueById(id);
+  return staticData.getStaticHelpDeskIssueById(id);
+}
+
+export async function loadHelpDeskFeedback(): Promise<HelpDeskFeedback[]> {
+  if (useDemoStore()) return [];
+  return staticData.getStaticHelpDeskFeedback();
+}
+
+export function helpDeskWriteEnabled(): boolean {
+  return useDemoStore();
 }
 
 export async function loadRentDashboard(): Promise<RentDashboard> {

@@ -3,19 +3,8 @@ import { AppPage } from "@/components/layout/app-page";
 import { SectionHeader } from "@/components/home/section-header";
 import { VendorRow } from "@/components/help-desk/vendor-row";
 import { loadHelpDeskVendors } from "@/lib/data";
-import { VENDOR_CATEGORY_LABEL } from "@/lib/help-desk-labels";
+import { VENDOR_CATEGORY_LABEL, VENDOR_CATEGORY_ORDER } from "@/lib/help-desk-labels";
 import type { HelpDeskVendor, VendorCategory } from "@/lib/types/help-desk";
-
-const CATEGORY_ORDER: VendorCategory[] = [
-  "housekeeping",
-  "electrical",
-  "plumbing",
-  "lift",
-  "security",
-  "carpentry",
-  "pest_control",
-  "other",
-];
 
 function groupVendors(vendors: HelpDeskVendor[]): Map<VendorCategory, HelpDeskVendor[]> {
   const map = new Map<VendorCategory, HelpDeskVendor[]>();
@@ -40,7 +29,7 @@ export default async function HelpDeskDirectoryPage() {
         Society-approved house help, electricians, plumbers, and other vendors.
       </p>
       <div className="space-y-8">
-        {CATEGORY_ORDER.map((category) => {
+        {VENDOR_CATEGORY_ORDER.map((category) => {
           const items = grouped.get(category);
           if (!items?.length) return null;
           return (

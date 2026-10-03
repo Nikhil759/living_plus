@@ -7,6 +7,7 @@
     "phone": "+911244000101",
     "whatsapp": "911244000101",
     "note": "Daily maid roster, deep clean, move-in/out",
+    "hoursLabel": "8 AM – 6 PM",
     "societyApproved": true
   },
   {
@@ -39,12 +40,13 @@
     "societyApproved": true
   },
   {
-    "id": "v-lift-1",
-    "name": "Otis lift AMC desk",
-    "category": "lift",
-    "emoji": "🛗",
-    "phone": "+911800102030",
-    "note": "Stuck lift emergencies — call security first",
+    "id": "v-appliance-1",
+    "name": "FitPro Appliance Repair",
+    "category": "appliance",
+    "emoji": "🔩",
+    "whatsapp": "919800112233",
+    "note": "Gym equipment, AC and kitchen appliances",
+    "hoursLabel": "9 AM – 7 PM",
     "societyApproved": true
   },
   {

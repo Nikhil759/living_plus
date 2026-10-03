@@ -1,36 +1,69 @@
 import type {
-  HelpDeskTicketCategory,
-  HelpDeskTicketStatus,
+  HelpDeskCategory,
+  HelpDeskIssueStatus,
+  FeedbackTopic,
   VendorCategory,
 } from "@/lib/types/help-desk";
 import { whatsappHref } from "@/lib/marketplace-labels";
 
 export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
-  housekeeping: "House help & cleaning",
+  housekeeping: "House help",
   electrical: "Electricians",
   plumbing: "Plumbers",
-  lift: "Lift & common areas",
-  security: "Security & gates",
-  carpentry: "Carpentry",
+  carpentry: "Carpenters",
   pest_control: "Pest control",
-  other: "Other",
+  appliance: "Appliance repair",
+  other: "Others",
 };
 
-export const TICKET_CATEGORY_LABEL: Record<HelpDeskTicketCategory, string> = {
-  maintenance: "Maintenance",
+export const VENDOR_CATEGORY_ORDER: VendorCategory[] = [
+  "housekeeping",
+  "electrical",
+  "plumbing",
+  "carpentry",
+  "pest_control",
+  "appliance",
+  "other",
+];
+
+export const TICKET_CATEGORY_LABEL: Record<HelpDeskCategory, string> = {
   lift: "Lift",
-  water: "Water supply",
+  water: "Water",
+  electricity: "Electricity",
+  plumbing: "Plumbing",
   security: "Security",
+  cleanliness: "Cleanliness",
+  parking: "Parking",
   amenity: "Amenity",
-  noise: "Noise & nuisance",
+  noise: "Noise",
   other: "Other",
 };
 
-export const TICKET_STATUS_LABEL: Record<HelpDeskTicketStatus, string> = {
+export const TICKET_STATUS_LABEL: Record<HelpDeskIssueStatus, string> = {
   open: "Open",
   in_progress: "In progress",
   resolved: "Resolved",
+  closed: "Closed",
 };
+
+export const FEEDBACK_TOPIC_LABEL: Record<FeedbackTopic, string> = {
+  committee: "Committee",
+  app: "App",
+  suggestion: "Suggestion",
+};
+
+export const REPORT_CATEGORIES: HelpDeskCategory[] = [
+  "lift",
+  "water",
+  "electricity",
+  "plumbing",
+  "security",
+  "cleanliness",
+  "parking",
+  "amenity",
+  "noise",
+  "other",
+];
 
 export function vendorContactHref(vendor: {
   phone?: string;
