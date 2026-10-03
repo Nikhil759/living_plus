@@ -7,6 +7,7 @@ from app.routers import (
     health,
     home,
     invites,
+    marketplace,
     me,
     societies,
     uploads,
@@ -20,5 +21,6 @@ api_router.include_router(me.router)
 api_router.include_router(home.router)
 api_router.include_router(events.router)
 api_router.include_router(amenities.router)
+api_router.include_router(marketplace.router)
 api_router.include_router(announcements.router)
 api_router.include_router(uploads.router)

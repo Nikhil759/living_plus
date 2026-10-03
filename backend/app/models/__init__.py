@@ -23,6 +23,11 @@ from app.models.enums import (
     GroupMemberRole,
     JoinRequestStatus,
     JoinTargetType,
+    ListingCategory,
+    ListingCondition,
+    ListingContactMethod,
+    ListingSort,
+    ListingStatus,
     MembershipInviteStatus,
     MembershipRole,
     MembershipStatus,
@@ -32,6 +37,7 @@ from app.models.enums import (
 )
 from app.models.event import Event, EventTicket, EventWaitlist, StallApplication
 from app.models.flat import Flat
+from app.models.marketplace import ListingReport, MarketplaceListing
 from app.models.membership import Membership
 from app.models.membership_invite import MembershipInvite
 from app.models.profile import Profile
@@ -66,6 +72,13 @@ __all__ = [
     "JoinRequest",
     "JoinRequestStatus",
     "JoinTargetType",
+    "ListingCategory",
+    "ListingCondition",
+    "ListingContactMethod",
+    "ListingReport",
+    "ListingSort",
+    "ListingStatus",
+    "MarketplaceListing",
     "Membership",
     "MembershipInvite",
     "MembershipInviteStatus",

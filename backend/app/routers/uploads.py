@@ -8,14 +8,24 @@ from app.services import uploads as upload_service
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
-class EventCoverUploadOut(CamelModel):
+class UploadOut(CamelModel):
     url: str
 
 
-@router.post("/event-covers", response_model=EventCoverUploadOut)
-async def upload_event_cover(_member: CurrentMemberDep, file: UploadFile) -> EventCoverUploadOut:
+@router.post("/event-covers", response_model=UploadOut)
+async def upload_event_cover(_member: CurrentMemberDep, file: UploadFile) -> UploadOut:
     url = await upload_service.save_event_cover(file)
-    return EventCoverUploadOut(url=url)
+    return UploadOut(url=url)
+
+
+@router.post("/listing-photos", response_model=UploadOut)
+async def upload_listing_photo(_member: CurrentMemberDep, file: UploadFile) -> UploadOut:
+    return UploadOut(url=await upload_service.save_listing_photo(file))
+
+
+@router.get("/listing-photos/{filename}")
+async def get_listing_photo(filename: str) -> FileResponse:
+    return FileResponse(upload_service.listing_photo_path(filename))
 
 
 @router.get("/event-covers/{filename}")

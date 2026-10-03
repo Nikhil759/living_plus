@@ -129,3 +129,37 @@ class StallApplicationStatus(StrEnum):
     approved = "approved"
     rejected = "rejected"
     paid = "paid"
+
+
+class ListingCategory(StrEnum):
+    furniture = "furniture"
+    electronics = "electronics"
+    kids = "kids"
+    books = "books"
+    sports = "sports"
+    home_kitchen = "home_kitchen"
+
+
+class ListingCondition(StrEnum):
+    new = "new"
+    like_new = "like_new"
+    good = "good"
+    fair = "fair"
+
+
+class ListingStatus(StrEnum):
+    available = "available"
+    reserved = "reserved"
+    sold = "sold"
+    removed = "removed"
+
+
+class ListingContactMethod(StrEnum):
+    whatsapp = "whatsapp"
+    call = "call"
+
+
+class ListingSort(StrEnum):
+    newest = "newest"
+    price_asc = "price_asc"
+    price_desc = "price_desc"
