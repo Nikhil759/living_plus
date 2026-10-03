@@ -20,8 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.deps import CurrentMember
 from app.core.errors import AppError
 from app.models import Amenity, AmenityBooking, AmenityStatus
-from app.models.enums import AmenityBookingStatus, AmenityType, CrowdLevel
+from app.models.enums import AmenityBookingStatus, AmenityType, CrowdLevel, MembershipRole
 from app.schemas.amenity import (
+    AmenityClosureIn,
     AmenityDetailOut,
     CrowdHourOut,
     CrowdOut,
@@ -470,3 +471,19 @@ async def get_crowd(
     return CrowdOut(
         date=chosen, hours=hours, current_hour=current, summary=_crowd_summary(hours, current)
     )
+
+
+async def set_closure(
+    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID, body: AmenityClosureIn
+) -> AmenityDetailOut:
+    if member.role not in (MembershipRole.committee.value, MembershipRole.admin.value):
+        raise AppError("forbidden", "Only the committee can do this.", 403)
+    amenity, status = await load_amenity(db, member, amenity_id)
+    if status is None:
+        status = AmenityStatus(amenity_id=amenity.id, society_id=amenity.society_id)
+        db.add(status)
+    status.crowd_level = CrowdLevel.closed if body.closed else CrowdLevel.quiet
+    status.note = (body.note or "Closed for maintenance") if body.closed else None
+    status.updated_by = member.user.id
+    await db.commit()
+    return await get_amenity(db, member, amenity_id)

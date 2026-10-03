@@ -5,6 +5,7 @@ from datetime import UTC, datetime, time, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.models import (
@@ -501,4 +502,80 @@ async def test_booking_wrong_society_amenity_is_not_found(
     await db_session.flush()
     _enable_local_dev_auth(monkeypatch)
     response = await _book_slot(client, foreign, TODAY + timedelta(days=1), 8)
+    assert response.status_code == 404
+
+
+async def _make_committee(db_session, user: User) -> None:
+    membership = await db_session.scalar(select(Membership).where(Membership.user_id == user.id))
+    membership.role = MembershipRole.committee
+    await db_session.flush()
+
+
+async def test_closure_requires_auth_and_committee(
+    client: AsyncClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = f"/v1/amenities/{world.gym.id}/status"
+    assert (await client.patch(path, json={"closed": True})).status_code == 401
+    _enable_local_dev_auth(monkeypatch)
+    resident = await client.patch(path, json={"closed": True})
+    assert (resident.status_code, resident.json()["code"]) == (403, "forbidden")
+
+
+async def test_committee_closes_and_reopens_an_amenity(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _make_committee(db_session, world.member)
+    _enable_local_dev_auth(monkeypatch)
+    path = f"/v1/amenities/{world.gym.id}/status"
+
+    closed = await client.patch(path, json={"closed": True, "note": "  Closed for maintenance  "})
+    assert closed.status_code == 200
+    assert closed.json()["closureNote"] == "Closed for maintenance"
+    card = next(
+        a for a in (await client.get("/v1/amenities")).json() if a["id"] == str(world.gym.id)
+    )
+    assert (card["statusLabel"], card["detail"]) == ("Closed", "Closed for maintenance")
+
+    reopened = await client.patch(path, json={"closed": False})
+    assert reopened.json()["closureNote"] is None
+    assert reopened.json()["statusLabel"] != "Closed"
+
+
+async def test_closing_without_a_note_uses_a_default(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _make_committee(db_session, world.member)
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.patch(f"/v1/amenities/{world.court.id}/status", json={"closed": True})
+    assert response.json()["closureNote"] == "Closed for maintenance"
+
+
+async def test_closure_validation(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _make_committee(db_session, world.member)
+    _enable_local_dev_auth(monkeypatch)
+    path = f"/v1/amenities/{world.gym.id}/status"
+    assert (await client.patch(path, json={})).status_code == 422
+    assert (await client.patch(path, json={"closed": True, "note": "x" * 201})).status_code == 422
+
+
+async def test_closure_wrong_society_is_not_found(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _make_committee(db_session, world.member)
+    other_society = Society(id=uuid.uuid4(), name="Other", city="Pune", invite_code="AMEN04")
+    db_session.add(other_society)
+    await db_session.flush()
+    foreign = Amenity(
+        id=uuid.uuid4(),
+        society_id=other_society.id,
+        name="Foreign Gym",
+        amenity_type=AmenityType.gym,
+        capacity=10,
+    )
+    db_session.add(foreign)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.patch(f"/v1/amenities/{foreign.id}/status", json={"closed": True})
     assert response.status_code == 404

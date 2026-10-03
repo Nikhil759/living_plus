@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from typing import Literal
 
+from pydantic import Field, field_validator
+
 from app.schemas.base import CamelModel
 from app.schemas.home import AmenityOut
 
@@ -52,3 +54,13 @@ class BookingOut(CamelModel):
     amenity_name: str
     starts_at: datetime
     ends_at: datetime
+
+
+class AmenityClosureIn(CamelModel):
+    closed: bool
+    note: str | None = Field(default=None, max_length=200)
+
+    @field_validator("note")
+    @classmethod
+    def _strip_note(cls, value: str | None) -> str | None:
+        return (value or "").strip() or None

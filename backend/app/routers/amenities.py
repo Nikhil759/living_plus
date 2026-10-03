@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from app.auth import CurrentMemberDep
 from app.core.db import DbSession
 from app.schemas.amenity import (
+    AmenityClosureIn,
     AmenityDetailOut,
     BookingIn,
     BookingOut,
@@ -68,3 +69,10 @@ async def book_slot(
     amenity_id: uuid.UUID, body: BookingIn, db: DbSession, member: CurrentMemberDep
 ) -> BookingOut:
     return await booking_service.book_slot(db, member, amenity_id, body)
+
+
+@router.patch("/{amenity_id}/status", response_model=AmenityDetailOut)
+async def set_closure(
+    amenity_id: uuid.UUID, body: AmenityClosureIn, db: DbSession, member: CurrentMemberDep
+) -> AmenityDetailOut:
+    return await amenity_service.set_closure(db, member, amenity_id, body)
