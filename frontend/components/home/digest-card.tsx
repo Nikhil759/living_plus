@@ -3,6 +3,7 @@ import { ChevronRight, Droplets, Package, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { GroupedList, ListRow } from "@/components/ui/grouped-list";
 import { IconTile } from "@/components/ui/icon-tile";
+import { resolveDigestSummary } from "@/lib/home/digest-summary";
 import type { Digest, DigestItem } from "@/lib/types/home";
 
 function noticeIcon(item: DigestItem) {
@@ -14,6 +15,7 @@ function noticeIcon(item: DigestItem) {
 
 export function DigestCard({ digest }: { digest: Digest }) {
   const items = digest.items.slice(0, 3);
+  const summary = resolveDigestSummary(digest);
 
   return (
     <section className="space-y-4">
@@ -22,7 +24,7 @@ export function DigestCard({ digest }: { digest: Digest }) {
           <Sparkles className="h-4 w-4 text-ink-secondary" strokeWidth={1.5} aria-hidden="true" />
           Summarised by Living+
         </div>
-        {digest.summary ? <p className="text-body text-ink">{digest.summary}</p> : null}
+        {summary ? <p className="text-body text-ink">{summary}</p> : null}
       </Card>
 
       {items.length > 0 ? (

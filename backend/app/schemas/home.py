@@ -68,6 +68,7 @@ class DigestItemOut(CamelModel):
 class DigestOut(CamelModel):
     title: str
     subtitle: str
+    summary: str = ""
     items: list[DigestItemOut]
     total_count: int
 

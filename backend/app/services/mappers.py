@@ -452,6 +452,26 @@ async def map_events(db: AsyncSession, society_id: uuid.UUID) -> list[HomeEventO
     return out
 
 
+def _digest_summary(items: list[DigestItemOut]) -> str:
+    """One-line home digest blurb from notices (placeholder until AI summarisation)."""
+    snippets: list[str] = []
+    for item in items[:3]:
+        body = item.body.strip()
+        if not body:
+            continue
+        clause = body.split(".")[0].strip().rstrip(".")
+        if not clause:
+            continue
+        snippets.append(clause[0].lower() + clause[1:] if len(clause) > 1 else clause.lower())
+    if not snippets:
+        return ""
+    if len(snippets) == 1:
+        return f"{snippets[0]}."
+    if len(snippets) == 2:
+        return f"{snippets[0]}, and {snippets[1]}."
+    return f"{snippets[0]}, {snippets[1]}, and {snippets[2]}."
+
+
 async def map_digest(
     db: AsyncSession, society_id: uuid.UUID, *, tower_name: str
 ) -> DigestOut | None:
@@ -488,6 +508,7 @@ async def map_digest(
     return DigestOut(
         title="Society Digest",
         subtitle=f"Live updates curated for {tower_name}",
+        summary=_digest_summary(items),
         items=items,
         total_count=int(total or len(items)),
     )

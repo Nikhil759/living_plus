@@ -131,5 +131,7 @@ async def test_home_returns_seeded_shape(
     assert len(body["amenities"]) == 1
     assert body["digest"] is not None
     assert len(body["digest"]["items"]) >= 1
+    assert body["digest"]["summary"]
+    assert "tower b" in body["digest"]["summary"].lower()
 
     get_settings.cache_clear()
