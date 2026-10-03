@@ -16,6 +16,18 @@ async function authHeaders(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${await getBrowserAccessToken()}` };
 }
 
+export type MyListingsTab = "active" | "sold";
+
+export async function fetchMyListingsApi(
+  tab: MyListingsTab,
+  signal?: AbortSignal,
+): Promise<MarketplaceCard[]> {
+  return apiGet<MarketplaceCard[]>(`/v1/marketplace/listings/mine?tab=${tab}`, {
+    headers: await authHeaders(),
+    signal,
+  });
+}
+
 export async function fetchListingsApi(
   filters: BrowseFilters,
   signal?: AbortSignal,

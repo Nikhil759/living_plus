@@ -14,6 +14,7 @@ export default function Loading() {
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-9 w-28 rounded-full" />
           </div>
+          <Skeleton className="h-8 w-56" />
           <Skeleton className="h-11 w-full rounded-full" />
           <div className="flex gap-2">
             {Array.from({ length: 5 }, (_, index) => (
