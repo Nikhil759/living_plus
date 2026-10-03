@@ -3,7 +3,7 @@
 import { apiDelete, apiPatch, apiPost, ApiError } from "@/lib/api/client";
 import { resolveApiUrl } from "@/lib/api/config";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventRecurrence, EventType, HomeEvent, StallCategory } from "@/lib/types/home";
 
 export interface EventWriteInput {
   title: string;
@@ -23,6 +23,11 @@ export interface EventWriteInput {
   recurrenceCount?: number;
   saveAsDraft?: boolean;
   publish?: boolean;
+  stallsEnabled?: boolean;
+  stallCount?: number;
+  stallFeeInr?: number;
+  stallCategories?: StallCategory[];
+  stallApplicationDeadline?: string | null;
 }
 
 async function getBrowserAccessToken(): Promise<string> {
@@ -56,6 +61,11 @@ function writeBody(body: EventWriteInput): Record<string, unknown> {
     recurrenceCount: body.recurrenceCount,
     saveAsDraft: body.saveAsDraft,
     publish: body.publish,
+    stallsEnabled: body.stallsEnabled,
+    stallCount: body.stallCount,
+    stallFeeInr: body.stallFeeInr,
+    stallCategories: body.stallCategories,
+    stallApplicationDeadline: body.stallApplicationDeadline,
   };
 }
 
@@ -157,6 +167,34 @@ export async function approveEventApi(slug: string): Promise<HomeEvent> {
   return apiPost<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/approve`, {}, {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function applyStallApi(
+  slug: string,
+  body: { stallType: string; description?: string },
+): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/stalls`, body, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function approveStallApi(slug: string, applicationId: string, spotNo: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(
+    `/v1/events/${encodeURIComponent(slug)}/stalls/${encodeURIComponent(applicationId)}/approve`,
+    { spotNo },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function rejectStallApi(slug: string, applicationId: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(
+    `/v1/events/${encodeURIComponent(slug)}/stalls/${encodeURIComponent(applicationId)}/reject`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
 }
 
 export async function rejectEventApi(slug: string, reason: string): Promise<HomeEvent> {

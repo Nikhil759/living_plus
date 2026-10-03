@@ -14,6 +14,7 @@ import { EventDetailMobileBar } from "@/components/events/event-detail-mobile-ba
 import { EventDetailTopBar } from "@/components/events/event-detail-top-bar";
 import { EventManageActions } from "@/components/events/event-manage-actions";
 import { EventRsvpButton } from "@/components/events/event-rsvp-button";
+import { EventStallSection } from "@/components/events/event-stall-section";
 import { EventShareActions } from "@/components/events/event-share-actions";
 import { AvatarStack } from "@/components/home/avatar-stack";
 import { PageContainer } from "@/components/layout/page-container";
@@ -229,6 +230,8 @@ export function EventDetailScreen({
                   <p className="text-body text-ink-secondary">{event.whatToBring}</p>
                 </section>
               ) : null}
+
+              {event.stallsEnabled ? <EventStallSection event={event} backend={backend} /> : null}
 
               <section className="space-y-3">
                 <SectionHeading>Who&apos;s going</SectionHeading>

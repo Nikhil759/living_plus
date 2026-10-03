@@ -1662,3 +1662,201 @@ async def test_events_cancel_series_requires_a_series(
     from app.core.config import get_settings
 
     get_settings.cache_clear()
+
+
+async def test_events_stalls_apply_approve_and_limits(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    neighbour = await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="neighbour@aangan.app",
+        name="Chaat Seller",
+        role=MembershipRole.owner,
+    )
+    monkeypatch.setenv("ENV", "local")
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Diwali Mela",
+            "locationLabel": "Central lawn",
+            "startsAt": _future_start(21),
+            "eventType": "society",
+            "stallsEnabled": True,
+            "stallCount": 10,
+            "stallFeeInr": 2500,
+            "stallCategories": [{"name": "Chaat", "limit": 1}, {"name": "Handicraft", "limit": 3}],
+            "stallApplicationDeadline": _future_start(14),
+        },
+    )
+    assert created.status_code == 201
+    slug = created.json()["id"]
+    assert created.json()["stallsEnabled"] is True
+    assert created.json()["stallCount"] == 10
+    assert created.json()["stallFeeInr"] == 2500
+
+    approved = await client.post(f"/v1/events/{slug}/approve")
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "published"
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "demo@aangan.app")
+    get_settings.cache_clear()
+    first = await client.post(
+        f"/v1/events/{slug}/stalls",
+        json={"stallType": "Chaat", "description": "Pani puri and dahi bhalla."},
+    )
+    assert first.status_code == 201
+    viewer = first.json()["viewerStall"]
+    assert viewer["stallType"] == "Chaat"
+    assert viewer["status"] == "pending"
+    assert first.json()["stallApplications"] is None
+
+    duplicate = await client.post(
+        f"/v1/events/{slug}/stalls",
+        json={"stallType": "Handicraft", "description": "Second try."},
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["code"] == "conflict"
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", neighbour.email)
+    get_settings.cache_clear()
+    full_type = await client.post(
+        f"/v1/events/{slug}/stalls",
+        json={"stallType": "chaat", "description": "Also chaat."},
+    )
+    assert full_type.status_code == 422
+    assert full_type.json()["code"] == "validation_error"
+
+    second = await client.post(
+        f"/v1/events/{slug}/stalls",
+        json={"stallType": "Handicraft", "description": "Block-printed scarves."},
+    )
+    assert second.status_code == 201
+
+    host_approve = await client.post(
+        f"/v1/events/{slug}/stalls/{first.json()['viewerStall']['id']}/approve",
+        json={"spotNo": "3"},
+    )
+    assert host_approve.status_code == 403
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    get_settings.cache_clear()
+    assigned = await client.post(
+        f"/v1/events/{slug}/stalls/{first.json()['viewerStall']['id']}/approve",
+        json={"spotNo": "3"},
+    )
+    assert assigned.status_code == 200
+    apps = assigned.json()["stallApplications"]
+    assert apps is not None
+    chaat = next(item for item in apps if item["stallType"] == "Chaat")
+    assert chaat["status"] == "approved"
+    assert chaat["spotNo"] == "3"
+
+    taken_spot = await client.post(
+        f"/v1/events/{slug}/stalls/{second.json()['viewerStall']['id']}/approve",
+        json={"spotNo": "3"},
+    )
+    assert taken_spot.status_code == 422
+
+    rejected = await client.post(
+        f"/v1/events/{slug}/stalls/{second.json()['viewerStall']['id']}/reject"
+    )
+    assert rejected.status_code == 200
+    handicraft = next(
+        item for item in rejected.json()["stallApplications"] if item["stallType"] == "Handicraft"
+    )
+    assert handicraft["status"] == "rejected"
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", neighbour.email)
+    get_settings.cache_clear()
+    reapply = await client.post(
+        f"/v1/events/{slug}/stalls",
+        json={"stallType": "Handicraft", "description": "Trying again."},
+    )
+    assert reapply.status_code == 201
+    get_settings.cache_clear()
+
+
+async def test_events_stalls_require_auth(client: AsyncClient) -> None:
+    response = await client.post(
+        "/v1/events/missing/stalls",
+        json={"stallType": "Chaat", "description": "Pani puri."},
+    )
+    assert response.status_code == 401
+
+
+async def test_events_stalls_wrong_society(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other_society = Society(
+        id=uuid.uuid4(),
+        name="Other Society",
+        city="Pune",
+        invite_code="OTHERSTALL",
+    )
+    other_host = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:other-stall@aangan.app",
+        email="other-stall@aangan.app",
+        name="Other Host",
+    )
+    db_session.add_all([other_society, other_host])
+    await db_session.flush()
+    db_session.add(
+        Event(
+            society_id=other_society.id,
+            public_slug="other-mela",
+            event_type=EventType.society,
+            title="Other Mela",
+            host_id=other_host.id,
+            location_label="Lawn",
+            starts_at=datetime.now(UTC) + timedelta(days=10),
+            ends_at=datetime.now(UTC) + timedelta(days=10, hours=4),
+            status=EventStatus.published,
+            stalls_enabled=True,
+            stall_count=4,
+        )
+    )
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post(
+        "/v1/events/other-mela/stalls",
+        json={"stallType": "Chaat", "description": "Pani puri."},
+    )
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_stalls_not_for_free_events(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Morning Walk",
+            "locationLabel": "Park",
+            "startsAt": _future_start(),
+            "stallsEnabled": True,
+        },
+    )
+    assert created.status_code == 422
+    assert created.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()

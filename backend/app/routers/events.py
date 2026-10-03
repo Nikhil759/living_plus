@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter
 
 from app.auth import CurrentMemberDep
@@ -11,9 +13,12 @@ from app.schemas.event import (
     EventRejectIn,
     EventRsvpIn,
     EventUpdate,
+    StallApplyIn,
+    StallApproveIn,
 )
 from app.schemas.home import HomeEventOut
 from app.services import events as event_service
+from app.services import stalls as stall_service
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -124,3 +129,34 @@ async def leave_waitlist(
     slug: str, db: DbSession, member: CurrentMemberDep
 ) -> EventDetailOut:
     return await event_service.leave_waitlist(db, member, slug)
+
+
+@router.post("/{slug}/stalls", response_model=EventDetailOut, status_code=201)
+async def apply_stall(
+    slug: str,
+    body: StallApplyIn,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await stall_service.apply_stall(db, member, slug, body)
+
+
+@router.post("/{slug}/stalls/{application_id}/approve", response_model=EventDetailOut)
+async def approve_stall(
+    slug: str,
+    application_id: uuid.UUID,
+    body: StallApproveIn,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await stall_service.approve_stall(db, member, slug, application_id, body)
+
+
+@router.post("/{slug}/stalls/{application_id}/reject", response_model=EventDetailOut)
+async def reject_stall(
+    slug: str,
+    application_id: uuid.UUID,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await stall_service.reject_stall(db, member, slug, application_id)

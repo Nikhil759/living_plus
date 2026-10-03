@@ -131,8 +131,24 @@ describe("eventMainAction", () => {
     assert.deepEqual(eventMainAction({ ...future, eventType: "society", stallsEnabled: true }), {
       kind: "stall",
       label: "Apply for a stall",
-      enabled: false,
+      enabled: true,
     });
+    assert.deepEqual(
+      eventMainAction({
+        ...future,
+        eventType: "society",
+        stallsEnabled: true,
+        viewerStall: {
+          id: "s1",
+          stallType: "Chaat",
+          feeInr: 2500,
+          status: "pending",
+          applicantId: "u1",
+          applicantName: "Nikhil",
+        },
+      }),
+      { kind: "stall", label: "Application pending", enabled: false },
+    );
     assert.deepEqual(eventMainAction({ ...future, status: "cancelled" }), {
       kind: "cancelled",
       label: "Cancelled",

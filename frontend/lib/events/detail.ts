@@ -159,7 +159,33 @@ export function guestStepperLabel(count: number): string {
 }
 
 export function isMutedEventAction(kind: EventMainActionKind): boolean {
-  return kind === "ended" || kind === "cancelled" || kind === "pending" || kind === "draft" || kind === "rejected" || kind === "stall";
+  return kind === "ended" || kind === "cancelled" || kind === "pending" || kind === "draft" || kind === "rejected";
+}
+
+export function stallActionFor(event: HomeEvent): EventMainAction {
+  const stall = event.viewerStall;
+  const fee = event.stallFeeInr ?? stall?.feeInr ?? 0;
+  if (stall?.status === "pending") {
+    return { kind: "stall", label: "Application pending", enabled: false };
+  }
+  if (stall?.status === "approved") {
+    if (fee > 0) {
+      return { kind: "stall", label: `Pay stall fee · ${formatPriceInr(fee)}`, enabled: false };
+    }
+    return {
+      kind: "stall",
+      label: stall.spotNo ? `Stall approved · Spot ${stall.spotNo}` : "Stall approved",
+      enabled: false,
+    };
+  }
+  if (stall?.status === "paid") {
+    return {
+      kind: "stall",
+      label: stall.spotNo ? `Your stall · Spot ${stall.spotNo}` : "Your stall",
+      enabled: false,
+    };
+  }
+  return { kind: "stall", label: "Apply for a stall", enabled: true };
 }
 
 export function eventBanners(event: HomeEvent): EventBanner[] {
@@ -210,7 +236,7 @@ export function eventMainAction(event: HomeEvent, now: number = Date.now()): Eve
     return { kind: "waitlisted", label: "On the waitlist", enabled: true };
   }
   if (event.eventType === "society" && event.stallsEnabled) {
-    return { kind: "stall", label: "Apply for a stall", enabled: false };
+    return stallActionFor(event);
   }
   if (full) return { kind: "waitlist", label: "Join waitlist", enabled: true };
   if ((event.eventType ?? "free") === "paid" || event.priceInr > 0) {

@@ -18,11 +18,19 @@ from app.models import (
     Post,
     Profile,
     Society,
+    StallApplication,
     Tower,
     User,
 )
 from app.models.enums import CrowdLevel, EventRecurrence, EventStatus
-from app.schemas.event import EventAttendeeFullOut, EventDetailOut, EventHostOut, EventListItemOut
+from app.schemas.event import (
+    EventAttendeeFullOut,
+    EventDetailOut,
+    EventHostOut,
+    EventListItemOut,
+    StallApplicationOut,
+    StallCategoryOut,
+)
 from app.schemas.home import (
     AmenityOut,
     DigestItemOut,
@@ -382,6 +390,49 @@ async def full_attendees_for(db: AsyncSession, event_id: uuid.UUID) -> list[Even
     return out
 
 
+def parse_stall_categories(raw: list[object] | None) -> list[StallCategoryOut]:
+    out: list[StallCategoryOut] = []
+    for item in raw or []:
+        if isinstance(item, str):
+            name = item.strip()
+            if name:
+                out.append(StallCategoryOut(name=name))
+            continue
+        if isinstance(item, dict):
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            limit_raw = item.get("limit")
+            limit = int(limit_raw) if isinstance(limit_raw, int) and limit_raw > 0 else None
+            out.append(StallCategoryOut(name=name, limit=limit))
+    return out
+
+
+async def stall_applications_for(
+    db: AsyncSession, event_id: uuid.UUID
+) -> list[StallApplicationOut]:
+    rows = (
+        await db.execute(
+            select(StallApplication, User).join(User, User.id == StallApplication.user_id).where(
+                StallApplication.event_id == event_id
+            ).order_by(StallApplication.created_at)
+        )
+    ).all()
+    return [
+        StallApplicationOut(
+            id=str(application.id),
+            stall_type=application.stall_type,
+            description=application.description,
+            fee_inr=application.fee_paise // 100,
+            spot_no=application.spot_no,
+            status=application.status,
+            applicant_id=str(user.id),
+            applicant_name=user.name or "Neighbour",
+        )
+        for application, user in rows
+    ]
+
+
 def event_to_detail(
     event: Event,
     *,
@@ -390,6 +441,8 @@ def event_to_detail(
     attendees: list[EventAttendeeFullOut] | None,
     is_committee: bool,
     show_rejection: bool,
+    viewer_stall: StallApplicationOut | None = None,
+    stall_applications: list[StallApplicationOut] | None = None,
 ) -> EventDetailOut:
     return EventDetailOut(
         **list_item.model_dump(),
@@ -402,6 +455,16 @@ def event_to_detail(
         attendees=attendees,
         rejection_reason=event.rejection_reason if show_rejection else None,
         stalls_enabled=event.stalls_enabled,
+        stall_count=event.stall_count,
+        stall_fee_inr=event.stall_fee_paise // 100,
+        stall_categories=parse_stall_categories(event.stall_categories),
+        stall_application_deadline=(
+            event.stall_application_deadline.isoformat()
+            if event.stall_application_deadline
+            else None
+        ),
+        viewer_stall=viewer_stall,
+        stall_applications=stall_applications,
         is_committee=is_committee,
     )
 

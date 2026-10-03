@@ -40,6 +40,11 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
   const [priceInr, setPriceInr] = useState(String(initial.priceInr));
   const [recurrence, setRecurrence] = useState<EventRecurrence>(initial.recurrence);
   const [recurrenceCount, setRecurrenceCount] = useState(String(initial.recurrenceCount));
+  const [stallsEnabled, setStallsEnabled] = useState(initial.stallsEnabled);
+  const [stallCount, setStallCount] = useState(String(initial.stallCount));
+  const [stallFeeInr, setStallFeeInr] = useState(String(initial.stallFeeInr));
+  const [stallCategoriesText, setStallCategoriesText] = useState(initial.stallCategoriesText);
+  const [stallDeadline, setStallDeadline] = useState(initial.stallDeadline);
   const [title, setTitle] = useState(initial.title);
   const [location, setLocation] = useState(initial.locationLabel);
   const [startsAtLocal, setStartsAtLocal] = useState(initial.startsAt);
@@ -122,6 +127,11 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
       priceInr: Math.min(10_000, Math.max(50, Number(priceInr) || 250)),
       recurrence,
       recurrenceCount: Math.min(12, Math.max(2, Number(recurrenceCount) || 4)),
+      stallsEnabled,
+      stallCount: Math.min(80, Math.max(1, Number(stallCount) || 10)),
+      stallFeeInr: Math.min(10_000, Math.max(0, Number(stallFeeInr) || 0)),
+      stallCategoriesText,
+      stallDeadline,
     };
   }
 
@@ -200,6 +210,69 @@ export function HostEventForm({ backend, event, isCommittee = false }: HostEvent
             })}
           </div>
         </fieldset>
+        {eventType === "society" ? (
+          <fieldset className="space-y-3">
+            <legend className="text-caption font-medium text-ink-secondary">Stalls</legend>
+            <label className="flex items-center gap-2 text-callout text-ink">
+              <input
+                type="checkbox"
+                checked={stallsEnabled}
+                onChange={(e) => setStallsEnabled(e.target.checked)}
+              />
+              Take stall applications
+            </label>
+            {stallsEnabled ? (
+              <div className="space-y-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block space-y-1.5">
+                    <span className="text-caption font-medium text-ink-secondary">Number of stalls</span>
+                    <input
+                      className={inputClassName}
+                      type="number"
+                      min={1}
+                      max={80}
+                      value={stallCount}
+                      onChange={(e) => setStallCount(e.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-caption font-medium text-ink-secondary">Stall fee (₹)</span>
+                    <input
+                      className={inputClassName}
+                      type="number"
+                      min={0}
+                      max={10000}
+                      step={50}
+                      value={stallFeeInr}
+                      onChange={(e) => setStallFeeInr(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <label className="block space-y-1.5">
+                  <span className="text-caption font-medium text-ink-secondary">Types and limits</span>
+                  <input
+                    className={inputClassName}
+                    value={stallCategoriesText}
+                    onChange={(e) => setStallCategoriesText(e.target.value)}
+                    placeholder="Chaat:2, Handicraft, Games:3"
+                  />
+                  <p className="text-caption text-ink-tertiary">
+                    Comma-separated. Add :2 after a type to cap how many of that stall you will take.
+                  </p>
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-caption font-medium text-ink-secondary">Application deadline</span>
+                  <input
+                    className={inputClassName}
+                    type="datetime-local"
+                    value={stallDeadline}
+                    onChange={(e) => setStallDeadline(e.target.value)}
+                  />
+                </label>
+              </div>
+            ) : null}
+          </fieldset>
+        ) : null}
         {eventType === "paid" ? (
           <label className="block space-y-1.5">
             <span className="text-caption font-medium text-ink-secondary">Ticket price (₹)</span>

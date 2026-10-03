@@ -74,6 +74,24 @@ export type EventCategory =
 
 export type EventListTab = "upcoming" | "going" | "hosting" | "past";
 
+export type StallApplicationStatus = "pending" | "approved" | "rejected" | "paid";
+
+export interface StallCategory {
+  name: string;
+  limit?: number | null;
+}
+
+export interface StallApplication {
+  id: string;
+  stallType: string;
+  description?: string | null;
+  feeInr: number;
+  spotNo?: string | null;
+  status: StallApplicationStatus;
+  applicantId: string;
+  applicantName: string;
+}
+
 export interface HomeEvent {
   id: string;
   title: string;
@@ -118,6 +136,12 @@ export interface HomeEvent {
   cancelReason?: string;
   rejectionReason?: string;
   stallsEnabled?: boolean;
+  stallCount?: number | null;
+  stallFeeInr?: number;
+  stallCategories?: StallCategory[];
+  stallApplicationDeadline?: string | null;
+  viewerStall?: StallApplication | null;
+  stallApplications?: StallApplication[] | null;
   hostProfile?: EventHostProfile;
   /** Host and committee only. Neighbours get `null`. */
   attendees?: EventAttendee[] | null;

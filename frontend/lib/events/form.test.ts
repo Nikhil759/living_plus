@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { approvalExplain, eventNeedsApproval, hostSubmitLabel } from "./approval";
-import { addHoursToLocalInput, eventFormDefaults, eventFormPayload, parseTagList } from "./form";
+import {
+  addHoursToLocalInput,
+  eventFormDefaults,
+  eventFormPayload,
+  parseStallCategories,
+  parseTagList,
+} from "./form";
 
 describe("event form helpers", () => {
   it("parses tags and pads a local end time", () => {
@@ -40,6 +46,15 @@ describe("event form helpers", () => {
     assert.equal(payload.coverUrl, "https://images.unsplash.com/photo-1");
     assert.equal(payload.eventType, "free");
     assert.equal(payload.recurrence, "none");
+    assert.equal(payload.stallsEnabled, false);
+  });
+
+  it("parses stall types with optional limits", () => {
+    assert.deepEqual(parseStallCategories(" Chaat:2, Handicraft, Games:3, Chaat:9 "), [
+      { name: "Chaat", limit: 2 },
+      { name: "Handicraft", limit: undefined },
+      { name: "Games", limit: 3 },
+    ]);
   });
 
   it("labels paid and society submits as needing approval", () => {

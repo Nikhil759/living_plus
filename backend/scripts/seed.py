@@ -676,6 +676,16 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "category": EventCategory.social,
             "cover_url": "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=1200&q=80",
             "description": "Prestige Meridian Park's annual Diwali Mela takes over the amphitheatre and central lawn with food stalls, handicrafts, and games for the kids. Come in festive wear, stay for the lamps, and apply early if you want a stall.",
+            "stalls_enabled": True,
+            "stall_count": 10,
+            "stall_fee_paise": 250000,
+            "stall_categories": [
+                {"name": "Chaat", "limit": 2},
+                {"name": "Food stall", "limit": 4},
+                {"name": "Handicraft", "limit": 3},
+                {"name": "Games", "limit": 2},
+            ],
+            "stall_application_deadline": datetime.now(UTC) + timedelta(days=14),
         },
     ]
 
@@ -719,6 +729,12 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             event.what_to_bring = spec.get("what_to_bring")
             if spec.get("description"):
                 event.description = spec["description"]
+
+        event.stalls_enabled = spec.get("stalls_enabled", False)
+        event.stall_count = spec.get("stall_count")
+        event.stall_fee_paise = spec.get("stall_fee_paise", 0)
+        event.stall_categories = spec.get("stall_categories") or []
+        event.stall_application_deadline = spec.get("stall_application_deadline")
 
         for t_idx in range(3):
             attendee = users[f"resident.{t_idx}"]

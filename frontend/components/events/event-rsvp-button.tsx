@@ -294,6 +294,32 @@ export function EventRsvpButton({
     );
   }
 
+  if (action.kind === "stall") {
+    if (!action.enabled) {
+      return (
+        <div className={cn(className)}>
+          <p className="text-callout text-ink-tertiary">{action.label}</p>
+          {errorLine}
+        </div>
+      );
+    }
+    return (
+      <div className={cn("space-y-2", fullWidth && "w-full", className)}>
+        <button
+          type="button"
+          className={buttonVariants({
+            variant: "primary",
+            className: fullWidth ? "w-full" : undefined,
+          })}
+          onClick={() => document.getElementById("event-stalls")?.scrollIntoView({ behavior: "smooth" })}
+        >
+          {action.label}
+        </button>
+        {errorLine}
+      </div>
+    );
+  }
+
   if (isMutedEventAction(action.kind)) {
     return (
       <div className={cn(className)}>

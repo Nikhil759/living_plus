@@ -1,4 +1,4 @@
-import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
+import type { EventCategory, EventRecurrence, EventType, HomeEvent, StallCategory } from "@/lib/types/home";
 import { EVENT_CATEGORIES } from "@/lib/events/categories";
 
 export interface EventFormValues {
@@ -17,6 +17,38 @@ export interface EventFormValues {
   priceInr: number;
   recurrence: EventRecurrence;
   recurrenceCount: number;
+  stallsEnabled: boolean;
+  stallCount: number;
+  stallFeeInr: number;
+  stallCategoriesText: string;
+  stallDeadline: string;
+}
+
+export function parseStallCategories(value: string): StallCategory[] {
+  const seen = new Set<string>();
+  const out: StallCategory[] = [];
+  for (const part of value.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const sep = trimmed.lastIndexOf(":");
+    const name = (sep > 0 ? trimmed.slice(0, sep) : trimmed).trim();
+    const limitRaw = sep > 0 ? Number(trimmed.slice(sep + 1)) : NaN;
+    if (name.length < 2) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      name,
+      limit: Number.isInteger(limitRaw) && limitRaw > 0 ? limitRaw : undefined,
+    });
+  }
+  return out;
+}
+
+export function formatStallCategories(categories: StallCategory[] | undefined): string {
+  return (categories ?? [])
+    .map((item) => (item.limit ? `${item.name}:${item.limit}` : item.name))
+    .join(", ");
 }
 
 function pad(n: number): string {
@@ -64,6 +96,11 @@ export function eventFormDefaults(event?: HomeEvent): EventFormValues {
     priceInr: event?.priceInr && event.priceInr > 0 ? event.priceInr : 250,
     recurrence: event?.recurrence && event.recurrence !== "none" ? event.recurrence : "none",
     recurrenceCount: 4,
+    stallsEnabled: Boolean(event?.stallsEnabled),
+    stallCount: event?.stallCount ?? 10,
+    stallFeeInr: event?.stallFeeInr && event.stallFeeInr > 0 ? event.stallFeeInr : 0,
+    stallCategoriesText: formatStallCategories(event?.stallCategories),
+    stallDeadline: event?.stallApplicationDeadline ? toLocalInput(event.stallApplicationDeadline) : "",
   };
 }
 
@@ -84,6 +121,17 @@ export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?:
     priceInr: values.eventType === "paid" ? values.priceInr : undefined,
     recurrence: values.recurrence,
     recurrenceCount: values.recurrence === "none" ? undefined : values.recurrenceCount,
+    stallsEnabled: values.eventType === "society" && values.stallsEnabled,
+    stallCount: values.eventType === "society" && values.stallsEnabled ? values.stallCount : undefined,
+    stallFeeInr: values.eventType === "society" && values.stallsEnabled ? values.stallFeeInr : undefined,
+    stallCategories:
+      values.eventType === "society" && values.stallsEnabled
+        ? parseStallCategories(values.stallCategoriesText)
+        : undefined,
+    stallApplicationDeadline:
+      values.eventType === "society" && values.stallsEnabled && values.stallDeadline
+        ? new Date(values.stallDeadline).toISOString()
+        : undefined,
     ...extra,
   };
 }

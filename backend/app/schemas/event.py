@@ -9,6 +9,7 @@ from app.models.enums import (
     EventRecurrence,
     EventStatus,
     EventType,
+    StallApplicationStatus,
 )
 from app.schemas.base import CamelModel
 from app.schemas.home import HomeEventOut, PersonOut
@@ -48,6 +49,65 @@ def _normalize_cover_url(value: str | None) -> str | None:
     raise ValueError("Cover must be an uploaded file or an http(s) URL.")
 
 
+class StallCategoryIn(CamelModel):
+    name: str = Field(min_length=2, max_length=80)
+    limit: int | None = Field(default=None, ge=1, le=50)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 2:
+            raise ValueError("Stall type needs a name.")
+        return cleaned
+
+
+class StallApplyIn(CamelModel):
+    stall_type: str = Field(min_length=2, max_length=80)
+    description: str | None = Field(default=None, max_length=500)
+
+    @field_validator("stall_type")
+    @classmethod
+    def normalize_type(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 2:
+            raise ValueError("Pick a stall type.")
+        return cleaned
+
+    @field_validator("description")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        return _normalize_optional_text(value)
+
+
+class StallApproveIn(CamelModel):
+    spot_no: str = Field(min_length=1, max_length=20)
+
+    @field_validator("spot_no")
+    @classmethod
+    def normalize_spot(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Assign a stall spot.")
+        return cleaned
+
+
+class StallCategoryOut(CamelModel):
+    name: str
+    limit: int | None = None
+
+
+class StallApplicationOut(CamelModel):
+    id: str
+    stall_type: str
+    description: str | None = None
+    fee_inr: int = 0
+    spot_no: str | None = None
+    status: StallApplicationStatus
+    applicant_id: str
+    applicant_name: str
+
+
 class EventCreate(CamelModel):
     title: str = Field(min_length=3, max_length=200)
     location_label: str = Field(min_length=1, max_length=200)
@@ -66,6 +126,11 @@ class EventCreate(CamelModel):
     recurrence_count: int | None = Field(default=None, ge=2, le=12)
     recurrence_ends_on: date | None = None
     save_as_draft: bool = False
+    stalls_enabled: bool = False
+    stall_count: int | None = Field(default=None, ge=1, le=80)
+    stall_fee_inr: int | None = Field(default=None, ge=0, le=10_000)
+    stall_categories: list[StallCategoryIn] = Field(default_factory=list, max_length=20)
+    stall_application_deadline: datetime | None = None
 
     @field_validator("tags")
     @classmethod
@@ -97,6 +162,11 @@ class EventUpdate(CamelModel):
     what_to_bring: str | None = Field(default=None, max_length=500)
     price_inr: int | None = Field(default=None, ge=50, le=10_000)
     publish: bool = False
+    stalls_enabled: bool | None = None
+    stall_count: int | None = Field(default=None, ge=1, le=80)
+    stall_fee_inr: int | None = Field(default=None, ge=0, le=10_000)
+    stall_categories: list[StallCategoryIn] | None = Field(default=None, max_length=20)
+    stall_application_deadline: datetime | None = None
 
     @field_validator("tags")
     @classmethod
@@ -191,4 +261,10 @@ class EventDetailOut(EventListItemOut):
     attendees: list[EventAttendeeFullOut] | None = None
     rejection_reason: str | None = None
     stalls_enabled: bool = False
+    stall_count: int | None = None
+    stall_fee_inr: int = 0
+    stall_categories: list[StallCategoryOut] = Field(default_factory=list)
+    stall_application_deadline: str | None = None
+    viewer_stall: StallApplicationOut | None = None
+    stall_applications: list[StallApplicationOut] | None = None
     is_committee: bool = False

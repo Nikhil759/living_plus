@@ -27,6 +27,7 @@ from app.schemas.event import (
     EventRejectIn,
     EventRsvpIn,
     EventUpdate,
+    StallCategoryIn,
 )
 from app.schemas.home import HomeEventOut
 from app.services import event_series, mappers
@@ -90,6 +91,68 @@ def _price_paise(event_type: EventType, price_inr: int | None) -> int:
     if price_inr is None:
         raise AppError("validation_error", "Paid events need a ticket price.", 422)
     return price_inr * 100
+
+
+_STALL_UPDATE_FIELDS = {
+    "stalls_enabled",
+    "stall_count",
+    "stall_fee_inr",
+    "stall_categories",
+    "stall_application_deadline",
+}
+
+
+def _stall_config(
+    event_type: EventType,
+    *,
+    enabled: bool,
+    count: int | None,
+    fee_inr: int | None,
+    categories: list[StallCategoryIn],
+    deadline: datetime | None,
+    starts_at: datetime,
+) -> dict[str, object]:
+    if event_type != EventType.society:
+        if enabled:
+            raise AppError("validation_error", "Stalls are only for society events.", 422)
+        return {
+            "stalls_enabled": False,
+            "stall_count": None,
+            "stall_fee_paise": 0,
+            "stall_categories": [],
+            "stall_application_deadline": None,
+        }
+    if not enabled:
+        return {
+            "stalls_enabled": False,
+            "stall_count": None,
+            "stall_fee_paise": 0,
+            "stall_categories": [],
+            "stall_application_deadline": None,
+        }
+    deadline_utc = _as_utc(deadline) if deadline is not None else None
+    starts_utc = _as_utc(starts_at)
+    if deadline_utc is not None and deadline_utc >= starts_utc:
+        raise AppError(
+            "validation_error",
+            "Stall applications must close before the event starts.",
+            422,
+        )
+    seen: set[str] = set()
+    cats: list[dict[str, object]] = []
+    for category in categories:
+        key = category.name.casefold()
+        if key in seen:
+            raise AppError("validation_error", "Stall types must be unique.", 422)
+        seen.add(key)
+        cats.append({"name": category.name, "limit": category.limit})
+    return {
+        "stalls_enabled": True,
+        "stall_count": count or 10,
+        "stall_fee_paise": (fee_inr or 0) * 100,
+        "stall_categories": cats,
+        "stall_application_deadline": deadline_utc,
+    }
 
 
 def _require_committee(member: CurrentMember) -> None:
@@ -268,6 +331,9 @@ async def get_event_detail(
     attendees = None
     if is_host or is_committee:
         attendees = await mappers.full_attendees_for(db, event.id)
+    stall_apps = await mappers.stall_applications_for(db, event.id)
+    viewer_id = str(member.user.id)
+    viewer_stall = next((app for app in stall_apps if app.applicant_id == viewer_id), None)
     return mappers.event_to_detail(
         event,
         list_item=list_item,
@@ -275,6 +341,8 @@ async def get_event_detail(
         attendees=attendees,
         is_committee=is_committee,
         show_rejection=is_host or is_committee,
+        viewer_stall=viewer_stall,
+        stall_applications=stall_apps if (is_host or is_committee) else None,
     )
 
 
@@ -370,6 +438,11 @@ async def _expand_series(db: AsyncSession, event: Event) -> None:
                 recurrence_ends_on=event.recurrence_ends_on,
                 series_id=series_id,
                 occurrence_index=index,
+                stalls_enabled=event.stalls_enabled,
+                stall_count=event.stall_count,
+                stall_fee_paise=event.stall_fee_paise,
+                stall_categories=list(event.stall_categories or []),
+                stall_application_deadline=event.stall_application_deadline,
             )
         )
         await db.flush()
@@ -392,6 +465,15 @@ async def create_event(
     starts, ends = _event_window(body.starts_at, body.ends_at)
     status = EventStatus.draft if body.save_as_draft else _submit_status(body.event_type)
     slug = await _unique_slug(db, member.society_id, _slugify(body.title))
+    stalls = _stall_config(
+        body.event_type,
+        enabled=body.stalls_enabled,
+        count=body.stall_count,
+        fee_inr=body.stall_fee_inr,
+        categories=body.stall_categories,
+        deadline=body.stall_application_deadline,
+        starts_at=starts,
+    )
 
     event = Event(
         society_id=member.society_id,
@@ -414,6 +496,7 @@ async def create_event(
         recurrence=body.recurrence,
         recurrence_count=body.recurrence_count,
         recurrence_ends_on=body.recurrence_ends_on,
+        **stalls,
     )
     db.add(event)
     await db.flush()
@@ -476,6 +559,37 @@ async def update_event(
                 422,
             )
         event.price_paise = _price_paise(event.event_type, body.price_inr)
+
+    if provided & _STALL_UPDATE_FIELDS:
+        current_cats = mappers.parse_stall_categories(event.stall_categories)
+        stalls = _stall_config(
+            event.event_type,
+            enabled=body.stalls_enabled if "stalls_enabled" in provided else event.stalls_enabled,
+            count=body.stall_count if "stall_count" in provided else event.stall_count,
+            fee_inr=(
+                body.stall_fee_inr
+                if "stall_fee_inr" in provided
+                else event.stall_fee_paise // 100
+            ),
+            categories=(
+                body.stall_categories
+                if "stall_categories" in provided and body.stall_categories is not None
+                else [
+                    StallCategoryIn(name=item.name, limit=item.limit) for item in current_cats
+                ]
+            ),
+            deadline=(
+                body.stall_application_deadline
+                if "stall_application_deadline" in provided
+                else event.stall_application_deadline
+            ),
+            starts_at=event.starts_at,
+        )
+        event.stalls_enabled = bool(stalls["stalls_enabled"])
+        event.stall_count = stalls["stall_count"]  # type: ignore[assignment]
+        event.stall_fee_paise = int(stalls["stall_fee_paise"])
+        event.stall_categories = stalls["stall_categories"]  # type: ignore[assignment]
+        event.stall_application_deadline = stalls["stall_application_deadline"]  # type: ignore[assignment]
 
     next_starts = event.starts_at
     next_ends = event.ends_at
@@ -623,6 +737,11 @@ async def duplicate_event(
         audience_type=event.audience_type,
         audience_group_id=event.audience_group_id,
         audience_tower_ids=list(event.audience_tower_ids or []),
+        stalls_enabled=event.stalls_enabled,
+        stall_count=event.stall_count,
+        stall_fee_paise=event.stall_fee_paise,
+        stall_categories=list(event.stall_categories or []),
+        stall_application_deadline=event.stall_application_deadline,
     )
     db.add(copy)
     await db.commit()
