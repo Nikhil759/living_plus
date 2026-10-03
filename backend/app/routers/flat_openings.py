@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 
 from app.auth import CurrentMemberDep
 from app.core.db import DbSession
@@ -15,7 +15,9 @@ from app.schemas.flat_opening import (
     OpeningDetailOut,
     OpeningIn,
     OpeningOptionsOut,
+    OpeningRemoveIn,
 )
+from app.schemas.marketplace import ContactOut
 from app.services import flat_openings as opening_service
 
 router = APIRouter(prefix="/flat-openings", tags=["flat-openings"])
@@ -60,3 +62,32 @@ async def update_opening(
     opening_id: uuid.UUID, body: OpeningIn, db: DbSession, member: CurrentMemberDep
 ) -> OpeningDetailOut:
     return await opening_service.update_opening(db, member, opening_id, body)
+
+
+@router.post("/{opening_id}/fill", response_model=OpeningDetailOut)
+async def mark_filled(
+    opening_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> OpeningDetailOut:
+    return await opening_service.mark_filled(db, member, opening_id)
+
+
+@router.post("/{opening_id}/renew", response_model=OpeningDetailOut)
+async def renew_opening(
+    opening_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> OpeningDetailOut:
+    return await opening_service.renew(db, member, opening_id)
+
+
+@router.post("/{opening_id}/remove", status_code=204)
+async def remove_opening(
+    opening_id: uuid.UUID, body: OpeningRemoveIn, db: DbSession, member: CurrentMemberDep
+) -> Response:
+    await opening_service.remove(db, member, opening_id, body.reason)
+    return Response(status_code=204)
+
+
+@router.post("/{opening_id}/contact", response_model=ContactOut)
+async def contact_poster(
+    opening_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> ContactOut:
+    return await opening_service.contact_poster(db, member, opening_id)

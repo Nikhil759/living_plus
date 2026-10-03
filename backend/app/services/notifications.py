@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import CurrentMember
 from app.models import Notification
 from app.schemas.notification import NotificationOut
+from app.services.flat_opening_reminders import send_due_reminders
 from app.services.marketplace import now
 
 _LIMIT = 100
@@ -45,6 +46,7 @@ def _scoped(member: CurrentMember):
 
 
 async def list_notifications(db: AsyncSession, member: CurrentMember) -> list[NotificationOut]:
+    await send_due_reminders(db, member)
     result = await db.execute(
         select(Notification)
         .where(*_scoped(member))
@@ -66,6 +68,7 @@ async def list_notifications(db: AsyncSession, member: CurrentMember) -> list[No
 
 
 async def has_unread(db: AsyncSession, member: CurrentMember) -> bool:
+    await send_due_reminders(db, member)
     count = await db.scalar(
         select(func.count())
         .select_from(Notification)

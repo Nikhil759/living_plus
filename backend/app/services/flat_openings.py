@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,7 @@ from app.models import (
     User,
 )
 from app.models.enums import (
+    ListingContactMethod,
     OpeningBudget,
     OpeningFurnishing,
     OpeningKind,
@@ -31,7 +33,15 @@ from app.schemas.flat_opening import (
     TowerOut,
     today_ist,
 )
-from app.services.marketplace import apply_phone, first_name, is_committee, now, towers_by_user
+from app.schemas.marketplace import ContactOut
+from app.services.marketplace import (
+    apply_phone,
+    first_name,
+    is_committee,
+    now,
+    phone_digits,
+    towers_by_user,
+)
 
 LISTING_DAYS = 30
 RENEW_WINDOW = timedelta(days=3)
@@ -284,3 +294,65 @@ async def update_opening(
     _apply_fields(opening, body)
     await db.commit()
     return await _detail(db, member, opening)
+
+
+async def mark_filled(
+    db: AsyncSession, member: CurrentMember, opening_id: uuid.UUID
+) -> OpeningDetailOut:
+    opening = await own_opening(db, member, opening_id)
+    opening.status = OpeningStatus.filled
+    await db.commit()
+    return await _detail(db, member, opening)
+
+
+async def renew(db: AsyncSession, member: CurrentMember, opening_id: uuid.UUID) -> OpeningDetailOut:
+    """The poster's "Still available": another 30 days, and a fresh reminder later."""
+    opening = await own_opening(db, member, opening_id)
+    if opening.status == OpeningStatus.filled:
+        raise AppError("opening_closed", "A filled opening can't be renewed.", 409)
+    opening.expires_at = now() + timedelta(days=LISTING_DAYS)
+    opening.reminder_sent_at = None
+    await db.commit()
+    return await _detail(db, member, opening)
+
+
+async def remove(
+    db: AsyncSession, member: CurrentMember, opening_id: uuid.UUID, reason: str | None
+) -> None:
+    opening = await get_opening(db, member, opening_id)
+    mine = opening.poster_id == member.user.id
+    if not mine and not is_committee(member):
+        raise AppError("forbidden", "Only the poster can remove this opening.", 403)
+    if not mine and not reason:
+        raise AppError("reason_required", "Give a reason for removing this opening.", 422)
+    opening.status = OpeningStatus.removed
+    opening.removed_reason = reason
+    opening.removed_by_id = member.user.id
+    await db.commit()
+
+
+async def contact_poster(
+    db: AsyncSession, member: CurrentMember, opening_id: uuid.UUID
+) -> ContactOut:
+    """The poster's number only ever leaves the server inside this on-demand link."""
+    opening = await get_opening(db, member, opening_id)
+    if opening.poster_id == member.user.id:
+        raise AppError("own_opening", "This is your own opening.", 422)
+    if opening_state(opening, now()) != "active":
+        raise AppError("opening_closed", "This opening is no longer available.", 409)
+    poster = await db.get(User, opening.poster_id)
+    if poster is None or not poster.phone:
+        raise AppError("poster_unreachable", "The poster can't be reached right now.", 409)
+    tower = (await _tower_names(db, {opening.tower_id}))[opening.tower_id]
+    mine = await towers_by_user(db, member.society_id, {member.user.id})
+    digits = phone_digits(poster.phone)
+    if opening.contact_method == ListingContactMethod.call:
+        return ContactOut(method=opening.contact_method, url=f"tel:+{digits}")
+    who = first_name(member.user)
+    if mine.get(member.user.id):
+        who = f"{who} from {mine[member.user.id]}"
+    title = opening_title(opening.kind, opening.bhk, tower)
+    text = f"Hi {first_name(poster)}, I'm {who}. Is the {title} on Living+ still available?"
+    return ContactOut(
+        method=opening.contact_method, url=f"https://wa.me/{digits}?text={quote(text)}"
+    )
