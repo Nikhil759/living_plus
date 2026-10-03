@@ -1273,3 +1273,233 @@ async def test_events_committee_can_cancel(
     assert cancelled.json()["status"] == "cancelled"
     assert cancelled.json()["cancelReason"] == "Noise complaint"
     get_settings.cache_clear()
+
+
+async def test_events_waitlist_requires_auth(client: AsyncClient) -> None:
+    response = await client.post("/v1/events/tiny-table/waitlist", json={"qty": 1})
+    assert response.status_code == 401
+
+
+async def test_events_waitlist_join_leave_and_promote(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="waiter@aangan.app",
+        name="Waiter",
+        role=MembershipRole.tenant,
+    )
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="later@aangan.app",
+        name="Later",
+        role=MembershipRole.tenant,
+    )
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Tiny Table",
+            "locationLabel": "Cafe",
+            "startsAt": _future_start(),
+            "capacity": 1,
+        },
+    )
+    slug = created.json()["id"]
+    filled = await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+    assert filled.status_code == 200
+    assert filled.json()["goingCount"] == 1
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "waiter@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    waiting = await client.post(f"/v1/events/{slug}/waitlist", json={"qty": 1})
+    assert waiting.status_code == 200
+    assert waiting.json()["viewerWaitlisted"] is True
+    assert waiting.json()["waitlistCount"] == 1
+    assert waiting.json()["goingCount"] == 1
+    assert waiting.json()["viewerGoing"] is False
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "later@aangan.app")
+    get_settings.cache_clear()
+    second = await client.post(f"/v1/events/{slug}/waitlist", json={"qty": 1})
+    assert second.status_code == 200
+    assert second.json()["waitlistCount"] == 2
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "demo@aangan.app")
+    get_settings.cache_clear()
+    left = await client.delete(f"/v1/events/{slug}/rsvp")
+    assert left.status_code == 200
+    assert left.json()["goingCount"] == 1
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "waiter@aangan.app")
+    get_settings.cache_clear()
+    promoted = await client.get(f"/v1/events/{slug}")
+    assert promoted.json()["viewerGoing"] is True
+    assert promoted.json()["viewerWaitlisted"] is False
+    assert promoted.json()["waitlistCount"] == 1
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "later@aangan.app")
+    get_settings.cache_clear()
+    still_waiting = await client.get(f"/v1/events/{slug}")
+    assert still_waiting.json()["viewerWaitlisted"] is True
+    assert still_waiting.json()["viewerGoing"] is False
+
+    dropped = await client.delete(f"/v1/events/{slug}/waitlist")
+    assert dropped.status_code == 200
+    assert dropped.json()["viewerWaitlisted"] is False
+    assert dropped.json()["waitlistCount"] == 0
+    get_settings.cache_clear()
+
+
+async def test_events_waitlist_not_found(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/missing-event/waitlist", json={"qty": 1})
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_waitlist_wrong_society(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other_society = Society(
+        id=uuid.uuid4(),
+        name="Other",
+        city="Gurgaon",
+        invite_code="OTHER07",
+    )
+    other_host = User(
+        id=uuid.uuid4(),
+        supabase_uid="seed:other-wait@aangan.app",
+        email="other-wait@aangan.app",
+        name="Other Host",
+    )
+    db_session.add_all([other_society, other_host])
+    await db_session.flush()
+    starts = datetime.now(UTC) + timedelta(days=5)
+    db_session.add(
+        Event(
+            id=uuid.uuid4(),
+            society_id=other_society.id,
+            public_slug="other-wait",
+            event_type=EventType.free,
+            title="Other Meetup",
+            host_id=other_host.id,
+            location_label="Elsewhere",
+            starts_at=starts,
+            ends_at=starts + timedelta(hours=2),
+            capacity=1,
+            status=EventStatus.published,
+        )
+    )
+    await db_session.flush()
+
+    _enable_local_dev_auth(monkeypatch)
+    response = await client.post("/v1/events/other-wait/waitlist", json={"qty": 1})
+    assert response.status_code == 404
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_waitlist_rejects_when_already_going(
+    client: AsyncClient, demo_member: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={"title": "Open Table", "locationLabel": "Lawn", "startsAt": _future_start()},
+    )
+    slug = created.json()["id"]
+    await client.post(f"/v1/events/{slug}/rsvp", json={"qty": 1})
+    response = await client.post(f"/v1/events/{slug}/waitlist", json={"qty": 1})
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+
+async def test_events_waitlist_paid_does_not_auto_promote(
+    client: AsyncClient, demo_member: User, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="committee@aangan.app",
+        name="Committee Lead",
+        role=MembershipRole.committee,
+    )
+    neighbour = await _add_same_society_member(
+        db_session,
+        demo_member,
+        email="paid-goer@aangan.app",
+        name="Goer",
+        role=MembershipRole.tenant,
+    )
+    _enable_local_dev_auth(monkeypatch)
+    created = await client.post(
+        "/v1/events",
+        json={
+            "title": "Paid Class",
+            "locationLabel": "Studio",
+            "startsAt": _future_start(),
+            "eventType": "paid",
+            "priceInr": 300,
+            "capacity": 1,
+        },
+    )
+    slug = created.json()["id"]
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "committee@aangan.app")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    approved = await client.post(f"/v1/events/{slug}/approve")
+    assert approved.status_code == 200
+
+    event = await db_session.scalar(select(Event).where(Event.public_slug == slug))
+    assert event is not None
+    db_session.add(
+        EventTicket(
+            id=uuid.uuid4(),
+            event_id=event.id,
+            society_id=event.society_id,
+            user_id=neighbour.id,
+            qty=1,
+            status=EventTicketStatus.confirmed,
+        )
+    )
+    await db_session.flush()
+
+    monkeypatch.setenv("LOCAL_DEV_AUTH_EMAIL", "demo@aangan.app")
+    get_settings.cache_clear()
+    waiting = await client.post(f"/v1/events/{slug}/waitlist", json={"qty": 1})
+    assert waiting.status_code == 200
+    assert waiting.json()["viewerWaitlisted"] is True
+
+    ticket = await db_session.scalar(
+        select(EventTicket).where(
+            EventTicket.event_id == event.id,
+            EventTicket.user_id == neighbour.id,
+        )
+    )
+    assert ticket is not None
+    ticket.status = EventTicketStatus.cancelled
+    await db_session.flush()
+    await db_session.commit()
+
+    still = await client.get(f"/v1/events/{slug}")
+    assert still.json()["viewerWaitlisted"] is True
+    assert still.json()["viewerGoing"] is False
+    assert still.json()["goingCount"] == 0
+    get_settings.cache_clear()

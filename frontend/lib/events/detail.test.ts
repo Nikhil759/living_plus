@@ -116,7 +116,12 @@ describe("eventMainAction", () => {
     assert.deepEqual(eventMainAction({ ...future, goingCount: 16, capacity: 16 }), {
       kind: "waitlist",
       label: "Join waitlist",
-      enabled: false,
+      enabled: true,
+    });
+    assert.deepEqual(eventMainAction({ ...future, goingCount: 16, capacity: 16, viewerWaitlisted: true }), {
+      kind: "waitlisted",
+      label: "On the waitlist",
+      enabled: true,
     });
     assert.deepEqual(eventMainAction({ ...future, viewerGoing: true }), {
       kind: "leave",

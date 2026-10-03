@@ -13,6 +13,7 @@ export type EventMainActionKind =
   | "rsvp"
   | "pay"
   | "waitlist"
+  | "waitlisted"
   | "leave"
   | "stall"
   | "ended"
@@ -137,11 +138,16 @@ export function eventRsvpQty(guestCount: number): number {
 }
 
 export function eventMaxGuests(
-  event: Pick<HomeEvent, "guestLimit" | "capacity" | "goingCount" | "viewerGoing" | "viewerGuestCount">,
+  event: Pick<
+    HomeEvent,
+    "guestLimit" | "capacity" | "goingCount" | "viewerGoing" | "viewerGuestCount" | "viewerWaitlisted"
+  >,
 ): number {
   const limit = event.guestLimit ?? 0;
   if (limit <= 0) return 0;
   if (event.capacity == null) return limit;
+  const full = event.goingCount >= event.capacity;
+  if (event.viewerWaitlisted || (full && !event.viewerGoing)) return limit;
   const ownQty = event.viewerGoing ? eventRsvpQty(event.viewerGuestCount ?? 0) : 0;
   const remaining = event.capacity - event.goingCount + ownQty;
   return Math.max(0, Math.min(limit, remaining - 1));
@@ -200,10 +206,13 @@ export function eventMainAction(event: HomeEvent, now: number = Date.now()): Eve
   if (event.viewerGoing) {
     return { kind: "leave", label: "Can't make it?", enabled: true };
   }
+  if (event.viewerWaitlisted) {
+    return { kind: "waitlisted", label: "On the waitlist", enabled: true };
+  }
   if (event.eventType === "society" && event.stallsEnabled) {
     return { kind: "stall", label: "Apply for a stall", enabled: false };
   }
-  if (full) return { kind: "waitlist", label: "Join waitlist", enabled: false };
+  if (full) return { kind: "waitlist", label: "Join waitlist", enabled: true };
   if ((event.eventType ?? "free") === "paid" || event.priceInr > 0) {
     return { kind: "pay", label: `Book ticket · ${formatPriceInr(event.priceInr)}`, enabled: false };
   }

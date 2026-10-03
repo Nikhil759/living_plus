@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
-import { leaveEventApi, rsvpEventApi, rsvpEventDemo } from "@/lib/api/events-client";
+import {
+  joinWaitlistApi,
+  leaveEventApi,
+  leaveWaitlistApi,
+  rsvpEventApi,
+  rsvpEventDemo,
+} from "@/lib/api/events-client";
 import { buttonVariants } from "@/components/ui/button";
 import {
   eventGoingLabel,
@@ -38,18 +44,21 @@ export function EventRsvpButton({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [going, setGoing] = useState(alreadyGoing);
+  const [waitlisted, setWaitlisted] = useState(Boolean(event.viewerWaitlisted));
   const [guests, setGuests] = useState(event.viewerGuestCount ?? 0);
-  const action = eventMainAction({ ...event, viewerGoing: going });
+  const action = eventMainAction({ ...event, viewerGoing: going, viewerWaitlisted: waitlisted });
   const maxGuests = eventMaxGuests({
     ...event,
     viewerGoing: going,
+    viewerWaitlisted: waitlisted,
   });
   const showGuests = maxGuests > 0 || guests > 0;
 
   useEffect(() => {
     setGoing(alreadyGoing);
+    setWaitlisted(Boolean(event.viewerWaitlisted));
     setGuests(event.viewerGuestCount ?? 0);
-  }, [alreadyGoing, event.viewerGuestCount]);
+  }, [alreadyGoing, event.viewerWaitlisted, event.viewerGuestCount]);
 
   async function join(nextGuests = guests) {
     if (action.kind !== "rsvp" && action.kind !== "leave" && action.kind !== "pay" && action.kind !== "waitlist") {
@@ -61,10 +70,16 @@ export function EventRsvpButton({
     try {
       if (backend === "demo") {
         await rsvpEventDemo(event.id);
+        setGoing(true);
+      } else if (action.kind === "waitlist") {
+        await joinWaitlistApi(event.id, eventRsvpQty(nextGuests));
+        setWaitlisted(true);
+        setGoing(false);
       } else {
         await rsvpEventApi(event.id, eventRsvpQty(nextGuests));
+        setGoing(true);
+        setWaitlisted(false);
       }
-      setGoing(true);
       setGuests(nextGuests);
       router.refresh();
     } catch (err) {
@@ -95,9 +110,48 @@ export function EventRsvpButton({
     }
   }
 
+  async function saveWaitlist(nextGuests = guests) {
+    if (backend !== "api") {
+      setError("The waitlist is only available on the API.");
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await joinWaitlistApi(event.id, eventRsvpQty(nextGuests));
+      setWaitlisted(true);
+      setGuests(nextGuests);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update the waitlist.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function leaveWaitlist() {
+    if (backend !== "api") {
+      setError("The waitlist is only available on the API.");
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await leaveWaitlistApi(event.id);
+      setWaitlisted(false);
+      setGuests(0);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update RSVP.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   const goingLabel = eventGoingLabel(guests);
   const errorLine = error ? <p className="text-caption text-error">{error}</p> : null;
-  const guestsDirty = going && guests !== (event.viewerGuestCount ?? 0);
+  const guestsDirty =
+    (going || waitlisted) && guests !== (event.viewerGuestCount ?? 0);
 
   function GuestStepper({ compact = false }: { compact?: boolean }) {
     if (!showGuests) return null;
@@ -186,6 +240,54 @@ export function EventRsvpButton({
           >
             {pending ? "Saving…" : "Can't make it?"}
           </button>
+        </div>
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (action.kind === "waitlisted") {
+    const leaveWaitlistButton = (
+      <button
+        type="button"
+        className={layout === "bar" ? "text-caption text-ink-tertiary hover:text-ink-secondary" : "text-callout text-ink-tertiary hover:text-ink-secondary"}
+        disabled={pending}
+        onClick={() => void leaveWaitlist()}
+      >
+        {pending ? "Saving…" : "Leave waitlist"}
+      </button>
+    );
+    const updateGuestsButton = guestsDirty ? (
+      <button
+        type="button"
+        className={
+          layout === "bar"
+            ? "text-caption font-semibold text-primary"
+            : buttonVariants({ variant: "secondary", className: fullWidth ? "w-full" : undefined })
+        }
+        disabled={pending}
+        onClick={() => void saveWaitlist(guests)}
+      >
+        {pending ? "Saving…" : "Update guests"}
+      </button>
+    ) : null;
+    if (layout === "bar") {
+      return (
+        <div className={cn("flex min-w-0 flex-1 flex-col items-end gap-1", className)}>
+          <p className="text-headline text-ink-secondary">On the waitlist</p>
+          <GuestStepper compact />
+          {updateGuestsButton ?? leaveWaitlistButton}
+          {errorLine}
+        </div>
+      );
+    }
+    return (
+      <div className={cn("space-y-3", className)}>
+        <p className="text-body font-semibold text-ink-secondary">On the waitlist</p>
+        <GuestStepper />
+        <div className="flex flex-col items-start gap-1">
+          {updateGuestsButton}
+          {leaveWaitlistButton}
         </div>
         {errorLine}
       </div>

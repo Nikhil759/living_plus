@@ -107,3 +107,20 @@ async def rsvp_event(
 @router.delete("/{slug}/rsvp", response_model=HomeEventOut)
 async def leave_event(slug: str, db: DbSession, member: CurrentMemberDep) -> HomeEventOut:
     return await event_service.leave_event(db, member, slug)
+
+
+@router.post("/{slug}/waitlist", response_model=EventDetailOut)
+async def join_waitlist(
+    slug: str,
+    body: EventRsvpIn,
+    db: DbSession,
+    member: CurrentMemberDep,
+) -> EventDetailOut:
+    return await event_service.join_waitlist(db, member, slug, body)
+
+
+@router.delete("/{slug}/waitlist", response_model=EventDetailOut)
+async def leave_waitlist(
+    slug: str, db: DbSession, member: CurrentMemberDep
+) -> EventDetailOut:
+    return await event_service.leave_waitlist(db, member, slug)

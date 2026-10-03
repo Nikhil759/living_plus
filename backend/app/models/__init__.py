@@ -30,7 +30,7 @@ from app.models.enums import (
     SocietyPlan,
     StallApplicationStatus,
 )
-from app.models.event import Event, EventTicket, StallApplication
+from app.models.event import Event, EventTicket, EventWaitlist, StallApplication
 from app.models.flat import Flat
 from app.models.membership import Membership
 from app.models.membership_invite import MembershipInvite
@@ -57,6 +57,7 @@ __all__ = [
     "EventTicket",
     "EventTicketStatus",
     "EventType",
+    "EventWaitlist",
     "Flat",
     "Group",
     "GroupMember",

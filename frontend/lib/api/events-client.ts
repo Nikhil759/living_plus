@@ -105,6 +105,22 @@ export async function rsvpEventApi(slug: string, qty = 1): Promise<HomeEvent> {
   );
 }
 
+export async function joinWaitlistApi(slug: string, qty = 1): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiPost<HomeEvent>(
+    `/v1/events/${encodeURIComponent(slug)}/waitlist`,
+    { qty },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function leaveWaitlistApi(slug: string): Promise<HomeEvent> {
+  const token = await getBrowserAccessToken();
+  return apiDelete<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/waitlist`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function leaveEventApi(slug: string): Promise<HomeEvent> {
   const token = await getBrowserAccessToken();
   return apiDelete<HomeEvent>(`/v1/events/${encodeURIComponent(slug)}/rsvp`, {

@@ -164,6 +164,8 @@ class EventListItemOut(HomeEventOut):
     spots_taken: int
     viewer_going: bool = False
     viewer_guest_count: int = 0
+    viewer_waitlisted: bool = False
+    waitlist_count: int = 0
     is_host: bool = False
     tags: list[str] = Field(default_factory=list)
     amenity_id: str | None = None

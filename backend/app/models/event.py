@@ -83,6 +83,7 @@ class Event(Base, IdTimestampMixin):
     stall_application_deadline: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     tickets: Mapped[list["EventTicket"]] = relationship(back_populates="event")
+    waitlist: Mapped[list["EventWaitlist"]] = relationship(back_populates="event")
     stall_applications: Mapped[list["StallApplication"]] = relationship(back_populates="event")
 
 
@@ -108,6 +109,26 @@ class EventTicket(Base, IdTimestampMixin):
     checked_in_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     event: Mapped["Event"] = relationship(back_populates="tickets")
+
+
+class EventWaitlist(Base, IdTimestampMixin):
+    __tablename__ = "event_waitlist"
+    __table_args__ = (
+        UniqueConstraint("event_id", "user_id", name="uq_event_waitlist_event_user"),
+    )
+
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), index=True
+    )
+    society_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    qty: Mapped[int] = mapped_column(Integer, default=1)
+
+    event: Mapped["Event"] = relationship(back_populates="waitlist")
 
 
 class StallApplication(Base, IdTimestampMixin):

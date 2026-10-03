@@ -12,6 +12,7 @@ from app.models import (
     EventTicket,
     EventTicketStatus,
     EventType,
+    EventWaitlist,
     Flat,
     Membership,
     Post,
@@ -177,6 +178,8 @@ def event_to_list_item(
     viewer_going: bool,
     is_host: bool,
     viewer_guest_count: int = 0,
+    viewer_waitlisted: bool = False,
+    waitlist_count: int = 0,
 ) -> EventListItemOut:
     card = event_to_home_event(event, host_label=host_label, going_count=going_count, going=going)
     return EventListItemOut(
@@ -189,6 +192,8 @@ def event_to_list_item(
         spots_taken=going_count,
         viewer_going=viewer_going,
         viewer_guest_count=viewer_guest_count,
+        viewer_waitlisted=viewer_waitlisted,
+        waitlist_count=waitlist_count,
         is_host=is_host,
         tags=list(event.tags or []),
         amenity_id=str(event.amenity_id) if event.amenity_id else None,
@@ -267,6 +272,27 @@ async def viewer_rsvp_qty(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.U
 
 async def viewer_going_for(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> bool:
     return await viewer_rsvp_qty(db, event_id, user_id) > 0
+
+
+async def viewer_waitlist_qty(db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID) -> int:
+    qty = await db.scalar(
+        select(EventWaitlist.qty).where(
+            EventWaitlist.event_id == event_id,
+            EventWaitlist.user_id == user_id,
+        )
+    )
+    return int(qty or 0)
+
+
+async def waitlist_count_for(db: AsyncSession, event_id: uuid.UUID) -> int:
+    return int(
+        await db.scalar(
+            select(func.count())
+            .select_from(EventWaitlist)
+            .where(EventWaitlist.event_id == event_id)
+        )
+        or 0
+    )
 
 
 async def hosted_count_for(db: AsyncSession, host_id: uuid.UUID, society_id: uuid.UUID) -> int:

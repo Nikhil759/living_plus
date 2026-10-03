@@ -101,6 +101,8 @@ export interface HomeEvent {
   description?: string;
   viewerGoing?: boolean;
   viewerGuestCount?: number;
+  viewerWaitlisted?: boolean;
+  waitlistCount?: number;
   isHost?: boolean;
   isCommittee?: boolean;
   whatToBring?: string;

@@ -241,7 +241,7 @@ export function isPublishedUpcoming(event: HomeEvent, now: number = Date.now()):
   return (event.status ?? "published") === "published" && Date.parse(event.startsAt) >= now;
 }
 
-export function eventStatusPills(event: Pick<HomeEvent, "status" | "capacity" | "goingCount" | "viewerGoing" | "isHost" | "isCommittee">): string[] {
+export function eventStatusPills(event: Pick<HomeEvent, "status" | "capacity" | "goingCount" | "viewerGoing" | "viewerWaitlisted" | "isHost" | "isCommittee">): string[] {
   const pills: string[] = [];
   const status = event.status ?? "published";
   const capacity = event.capacity;
@@ -254,6 +254,7 @@ export function eventStatusPills(event: Pick<HomeEvent, "status" | "capacity" | 
     pills.push("Pending approval");
   }
   if (event.viewerGoing && status !== "cancelled") pills.push("You're going");
+  if (event.viewerWaitlisted && status !== "cancelled") pills.push("On the waitlist");
   if (status === "published" && left != null) {
     if (left <= 0) pills.push("Full · join waitlist");
     else if (left <= 5) pills.push(`${left} spots left`);

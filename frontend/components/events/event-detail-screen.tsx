@@ -236,6 +236,9 @@ export function EventDetailScreen({
                   {going.length > 0 ? <AvatarStack people={going} total={event.goingCount} size="xs" /> : null}
                   <p className="text-caption text-ink-secondary">
                     {event.goingCount} {event.goingCount === 1 ? "neighbour" : "neighbours"}
+                    {event.waitlistCount
+                      ? ` · ${event.waitlistCount} on the waitlist`
+                      : ""}
                   </p>
                 </div>
                 {event.attendees && event.attendees.length > 0 ? (

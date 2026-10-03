@@ -8,7 +8,7 @@ from sqlalchemy.sql import ColumnElement
 
 from app.auth.deps import CurrentMember
 from app.core.errors import AppError
-from app.models import Event, EventTicket, Flat, GroupMember
+from app.models import Event, EventTicket, EventWaitlist, Flat, GroupMember
 from app.models.enums import (
     EventAudience,
     EventCategory,
@@ -149,6 +149,8 @@ async def _to_list_item(db: AsyncSession, event: Event, member: CurrentMember) -
     going_count = await mappers.going_count_for(db, event.id)
     going = await mappers.public_going_for(db, event.id)
     viewer_qty = await mappers.viewer_rsvp_qty(db, event.id, member.user.id)
+    wait_qty = await mappers.viewer_waitlist_qty(db, event.id, member.user.id)
+    party = viewer_qty or wait_qty
     return mappers.event_to_list_item(
         event,
         host_label=host,
@@ -156,7 +158,9 @@ async def _to_list_item(db: AsyncSession, event: Event, member: CurrentMember) -
         going=going,
         viewer_going=viewer_qty > 0,
         is_host=event.host_id == member.user.id,
-        viewer_guest_count=max(viewer_qty - 1, 0),
+        viewer_guest_count=max(party - 1, 0),
+        viewer_waitlisted=wait_qty > 0,
+        waitlist_count=await mappers.waitlist_count_for(db, event.id),
     )
 
 
@@ -393,6 +397,7 @@ async def update_event(
                 422,
             )
         event.capacity = body.capacity
+        await _promote_waitlist(db, event)
     if "price_inr" in provided:
         going = await mappers.going_count_for(db, event.id)
         if going > 0:
@@ -456,6 +461,11 @@ async def cancel_event(
     ).all()
     for ticket in tickets:
         ticket.status = EventTicketStatus.cancelled
+    waiting = (
+        await db.scalars(select(EventWaitlist).where(EventWaitlist.event_id == event.id))
+    ).all()
+    for entry in waiting:
+        await db.delete(entry)
     await db.commit()
     return await get_event_detail(db, member, slug)
 
@@ -527,12 +537,7 @@ async def duplicate_event(
     return await get_event_detail(db, member, copy_slug)
 
 
-async def rsvp_event(
-    db: AsyncSession,
-    member: CurrentMember,
-    slug: str,
-    body: EventRsvpIn,
-) -> HomeEventOut:
+async def _published_event(db: AsyncSession, member: CurrentMember, slug: str) -> Event:
     event = await db.scalar(
         select(Event).where(
             Event.society_id == member.society_id,
@@ -542,59 +547,110 @@ async def rsvp_event(
     )
     if event is None:
         raise AppError("not_found", "Event not found.", 404)
+    return event
 
-    if event.event_type == EventType.paid and event.price_paise > 0:
-        raise AppError("payment_required", "Paid events are not bookable yet.", 400)
 
-    going = await mappers.going_count_for(db, event.id)
-    existing = await db.scalar(
-        select(EventTicket).where(
-            EventTicket.event_id == event.id,
-            EventTicket.user_id == member.user.id,
-        )
-    )
-    guests = body.qty - 1
-    if guests > event.guest_limit:
+def _assert_guest_qty(event: Event, qty: int) -> None:
+    if qty - 1 > event.guest_limit:
         raise AppError(
             "validation_error",
             "This event allows fewer guests than that.",
             422,
         )
 
+
+async def _ticket_for_user(
+    db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID
+) -> EventTicket | None:
+    return await db.scalar(
+        select(EventTicket).where(
+            EventTicket.event_id == event_id,
+            EventTicket.user_id == user_id,
+        )
+    )
+
+
+async def _waitlist_for_user(
+    db: AsyncSession, event_id: uuid.UUID, user_id: uuid.UUID
+) -> EventWaitlist | None:
+    return await db.scalar(
+        select(EventWaitlist).where(
+            EventWaitlist.event_id == event_id,
+            EventWaitlist.user_id == user_id,
+        )
+    )
+
+
+async def _set_confirmed_ticket(
+    db: AsyncSession,
+    event: Event,
+    user_id: uuid.UUID,
+    qty: int,
+) -> None:
+    ticket = await _ticket_for_user(db, event.id, user_id)
+    if ticket is not None:
+        ticket.status = EventTicketStatus.confirmed
+        ticket.qty = qty
+        ticket.amount_paise = 0
+    else:
+        db.add(
+            EventTicket(
+                event_id=event.id,
+                society_id=event.society_id,
+                user_id=user_id,
+                qty=qty,
+                amount_paise=0,
+                status=EventTicketStatus.confirmed,
+            )
+        )
+    waiting = await _waitlist_for_user(db, event.id, user_id)
+    if waiting is not None:
+        await db.delete(waiting)
+
+
+async def _promote_waitlist(db: AsyncSession, event: Event) -> None:
+    if event.event_type != EventType.free or event.status != EventStatus.published:
+        return
+    remaining = event.capacity - await mappers.going_count_for(db, event.id)
+    entries = (
+        await db.scalars(
+            select(EventWaitlist)
+            .where(EventWaitlist.event_id == event.id)
+            .order_by(EventWaitlist.created_at.asc(), EventWaitlist.id.asc())
+        )
+    ).all()
+    for entry in entries:
+        if entry.qty > remaining:
+            break
+        await _set_confirmed_ticket(db, event, entry.user_id, entry.qty)
+        remaining -= entry.qty
+
+
+async def rsvp_event(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventRsvpIn,
+) -> HomeEventOut:
+    event = await _published_event(db, member, slug)
+    if event.event_type == EventType.paid and event.price_paise > 0:
+        raise AppError("payment_required", "Paid events are not bookable yet.", 400)
+
+    _assert_guest_qty(event, body.qty)
+    going = await mappers.going_count_for(db, event.id)
+    existing = await _ticket_for_user(db, event.id, member.user.id)
     confirmed = existing is not None and existing.status == EventTicketStatus.confirmed
     taken_by_self = existing.qty if confirmed else 0
     if going - taken_by_self + body.qty > event.capacity:
         raise AppError("capacity_full", "This event is full.", 409)
 
-    if existing is not None:
-        existing.status = EventTicketStatus.confirmed
-        existing.qty = body.qty
-        existing.amount_paise = 0
-    else:
-        db.add(
-            EventTicket(
-                event_id=event.id,
-                society_id=member.society_id,
-                user_id=member.user.id,
-                qty=body.qty,
-                amount_paise=0,
-                status=EventTicketStatus.confirmed,
-            )
-        )
+    await _set_confirmed_ticket(db, event, member.user.id, body.qty)
     await db.commit()
     return await _event_out(db, event)
 
 
 async def leave_event(db: AsyncSession, member: CurrentMember, slug: str) -> HomeEventOut:
-    event = await db.scalar(
-        select(Event).where(
-            Event.society_id == member.society_id,
-            Event.public_slug == slug,
-        )
-    )
-    if event is None:
-        raise AppError("not_found", "Event not found.", 404)
-
+    event = await _event_for_society(db, member, slug)
     ticket = await db.scalar(
         select(EventTicket).where(
             EventTicket.event_id == event.id,
@@ -604,8 +660,58 @@ async def leave_event(db: AsyncSession, member: CurrentMember, slug: str) -> Hom
     )
     if ticket is not None:
         ticket.status = EventTicketStatus.cancelled
+        await _promote_waitlist(db, event)
         await db.commit()
     return await _event_out(db, event)
+
+
+async def join_waitlist(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+    body: EventRsvpIn,
+) -> EventDetailOut:
+    event = await _published_event(db, member, slug)
+    _assert_guest_qty(event, body.qty)
+    existing = await _ticket_for_user(db, event.id, member.user.id)
+    if existing is not None and existing.status == EventTicketStatus.confirmed:
+        raise AppError("validation_error", "You are already going to this event.", 422)
+
+    going = await mappers.going_count_for(db, event.id)
+    if going + body.qty <= event.capacity:
+        if event.event_type == EventType.paid and event.price_paise > 0:
+            raise AppError("payment_required", "Paid events are not bookable yet.", 400)
+        await _set_confirmed_ticket(db, event, member.user.id, body.qty)
+        await db.commit()
+        return await get_event_detail(db, member, slug)
+
+    waiting = await _waitlist_for_user(db, event.id, member.user.id)
+    if waiting is not None:
+        waiting.qty = body.qty
+    else:
+        db.add(
+            EventWaitlist(
+                event_id=event.id,
+                society_id=member.society_id,
+                user_id=member.user.id,
+                qty=body.qty,
+            )
+        )
+    await db.commit()
+    return await get_event_detail(db, member, slug)
+
+
+async def leave_waitlist(
+    db: AsyncSession,
+    member: CurrentMember,
+    slug: str,
+) -> EventDetailOut:
+    event = await _event_for_society(db, member, slug)
+    waiting = await _waitlist_for_user(db, event.id, member.user.id)
+    if waiting is not None:
+        await db.delete(waiting)
+        await db.commit()
+    return await get_event_detail(db, member, slug)
 
 
 async def _event_out(db: AsyncSession, event: Event) -> HomeEventOut:
