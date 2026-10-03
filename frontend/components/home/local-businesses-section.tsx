@@ -3,32 +3,34 @@ import { Store } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LocalBusinessFeedCard } from "@/components/home/local-business-feed-card";
 import { SectionHeader } from "@/components/home/section-header";
-import type { LocalBusiness } from "@/lib/types/local-business";
+import { homePicks } from "@/lib/local-businesses/view";
+import type { BusinessCard } from "@/lib/types/local-business";
 
 const HOME_FEED_LIMIT = 4;
 
 export interface LocalBusinessesSectionProps {
-  businesses: LocalBusiness[];
+  businesses: BusinessCard[];
 }
 
 export function LocalBusinessesSection({ businesses }: LocalBusinessesSectionProps) {
-  const picks = businesses.slice(0, HOME_FEED_LIMIT);
+  // Up to four featured businesses come first.
+  const picks = homePicks(businesses, HOME_FEED_LIMIT);
 
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Local businesses"
-        subtitle="Tiffin, services and shops nearby"
-        action={picks.length > 0 ? { label: "Directory", href: "/local-businesses" } : undefined}
+        subtitle="Run by your neighbours"
+        action={picks.length > 0 ? { label: "See all", href: "/local-businesses" } : undefined}
       />
 
       {picks.length === 0 ? (
         <EmptyState
           icon={<Store />}
-          title="Directory coming soon"
+          title="No businesses yet. Be the first to list yours."
           action={
-            <Link href="/local-businesses" className="text-callout font-semibold text-primary">
-              Browse directory
+            <Link href="/local-businesses/new" className="text-callout font-semibold text-primary">
+              List your business
             </Link>
           }
         />

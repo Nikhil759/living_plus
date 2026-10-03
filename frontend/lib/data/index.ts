@@ -15,8 +15,6 @@ import {
   demoGetHelpDeskTickets,
   demoGetHelpDeskVendors,
   demoGetHomeData,
-  demoGetLocalBusinessById,
-  demoGetLocalBusinesses,
   demoGetMarketplaceListingById,
   demoGetMarketplaceListings,
   demoGetRentDashboard,
@@ -38,7 +36,7 @@ import { getDataSource } from "@/lib/data/source";
 import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { LocalBusiness } from "@/lib/types/local-business";
+import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
 import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
@@ -166,14 +164,20 @@ export async function loadMarketplaceListingById(
   }
 }
 
-export async function loadLocalBusinesses(): Promise<LocalBusiness[]> {
-  if (useDemoStore()) return demoGetLocalBusinesses();
-  return staticData.getStaticLocalBusinesses();
+/** Local businesses only exist in the live backend; elsewhere Home just shows its empty state. */
+export async function loadLocalBusinesses(): Promise<BusinessCard[]> {
+  if (!marketplaceIsLive()) return [];
+  return apiGetAsUser<BusinessCard[]>("/v1/local-businesses");
 }
 
-export async function loadLocalBusinessById(id: string): Promise<LocalBusiness | undefined> {
-  if (useDemoStore()) return demoGetLocalBusinessById(id);
-  return staticData.getStaticLocalBusinessById(id);
+export async function loadLocalBusinessById(id: string): Promise<BusinessDetail | undefined> {
+  if (!marketplaceIsLive()) return undefined;
+  try {
+    return await apiGetAsUser<BusinessDetail>(`/v1/local-businesses/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return undefined;
+    throw error;
+  }
 }
 
 export async function loadFeedPosts(): Promise<FeedPost[]> {

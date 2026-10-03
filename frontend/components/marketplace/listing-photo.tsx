@@ -1,5 +1,7 @@
 "use client";
 
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faImage } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import { LISTING_CATEGORY_ICON } from "@/lib/marketplace/icons";
@@ -9,7 +11,9 @@ import type { ListingCategory } from "@/lib/types/marketplace";
 
 interface ListingPhotoProps {
   title: string;
-  category: ListingCategory;
+  /** Pick the icon from a marketplace category, or pass one directly. */
+  category?: ListingCategory;
+  icon?: IconDefinition;
   src?: string | null;
   className?: string;
   /** Larger icon for the item page's main photo. */
@@ -17,7 +21,7 @@ interface ListingPhotoProps {
 }
 
 /** A tinted tile with the category icon is always painted, so a missing photo never shows alt text. */
-export function ListingPhoto({ title, category, src, className, large }: ListingPhotoProps) {
+export function ListingPhoto({ title, category, icon, src, className, large }: ListingPhotoProps) {
   const resolved = resolveListingPhoto(src);
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
@@ -36,7 +40,7 @@ export function ListingPhoto({ title, category, src, className, large }: Listing
     <div className={cn("relative overflow-hidden bg-primary-tint", className)}>
       <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <FontAwesomeIcon
-          icon={LISTING_CATEGORY_ICON[category]}
+          icon={icon ?? (category ? LISTING_CATEGORY_ICON[category] : faImage)}
           className={cn("text-primary/40", large ? "h-16 w-16" : "h-9 w-9")}
         />
       </div>

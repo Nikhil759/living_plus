@@ -6,6 +6,7 @@ import { FeedPostItem } from "@/components/home/feed-post-item";
 import { FlatOpeningsSection } from "@/components/home/flat-openings-section";
 import { HelpDeskSection } from "@/components/home/help-desk-section";
 import { HomePhotoBanner } from "@/components/home/home-photo-banner";
+import type { BusinessCard } from "@/lib/types/local-business";
 import { LocalBusinessesSection } from "@/components/home/local-businesses-section";
 import { MarketplaceSection } from "@/components/home/marketplace-section";
 import { NeighbourMatchCard } from "@/components/home/neighbour-match-card";
@@ -27,7 +28,6 @@ import {
   getStaticHelpDeskTickets,
   getStaticHelpDeskVendors,
   getStaticHomeData,
-  getStaticLocalBusinesses,
   getStaticMarketplaceListings,
   getStaticRentDashboard,
 } from "@/lib/data/static";
@@ -43,7 +43,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   let loadError: string | null = null;
   let data;
   let listings;
-  let businesses;
+  let businesses: BusinessCard[];
   let openings;
   let tickets;
   let vendors;
@@ -65,7 +65,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         : "Could not load home data.";
     data = getStaticHomeData({ empty });
     listings = getStaticMarketplaceListings();
-    businesses = getStaticLocalBusinesses();
+    businesses = [];
     openings = getStaticFlatOpenings();
     tickets = getStaticHelpDeskTickets();
     vendors = getStaticHelpDeskVendors();

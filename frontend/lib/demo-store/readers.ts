@@ -2,7 +2,6 @@ import type Database from "better-sqlite3";
 import { DEFAULT_RESIDENT_USER_ID } from "@/lib/demo-store/config";
 import { getDemoDb } from "@/lib/demo-store/db";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { LocalBusiness } from "@/lib/types/local-business";
 import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
@@ -140,14 +139,6 @@ export function demoGetMarketplaceListings(): MarketplaceListing[] {
 
 export function demoGetMarketplaceListingById(id: string): MarketplaceListing | undefined {
   return getEntity<MarketplaceListing>(getDemoDb(), "marketplace", id);
-}
-
-export function demoGetLocalBusinesses(): LocalBusiness[] {
-  return listEntities<LocalBusiness>(getDemoDb(), "local_businesses");
-}
-
-export function demoGetLocalBusinessById(id: string): LocalBusiness | undefined {
-  return getEntity<LocalBusiness>(getDemoDb(), "local_businesses", id);
 }
 
 export function demoGetFlatOpenings(): FlatOpening[] {

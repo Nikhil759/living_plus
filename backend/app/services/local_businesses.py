@@ -195,6 +195,7 @@ async def detail(
         can_manage=is_owner,
         rejection_reason=business.rejection_reason if is_owner or is_committee(member) else None,
         can_review=is_committee(member) and business.review_status == BusinessReviewStatus.pending,
+        can_moderate=is_committee(member),
     )
 
 

@@ -167,6 +167,8 @@ class BusinessDetailOut(BusinessCardOut):
     # Only shown to the owner and the committee.
     rejection_reason: str | None
     can_review: bool
+    # Any committee member may take a business or a note down.
+    can_moderate: bool
 
 
 class UpdateIn(CamelModel):

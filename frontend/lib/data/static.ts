@@ -7,14 +7,12 @@ import helpDeskTicketsJson from "@/data/help-desk-tickets.json";
 import helpDeskVendorsJson from "@/data/help-desk-vendors.json";
 import feedPostsJson from "@/data/feed-posts.json";
 import homeExtrasJson from "@/data/home-extras.json";
-import localBusinessesJson from "@/data/local-businesses.json";
 import marketplaceJson from "@/data/marketplace.json";
 import rentDashboardJson from "@/data/rent-dashboard.json";
 import residentJson from "@/data/resident.json";
 import { materializeEvents, type RawEvent } from "@/lib/events/normalize";
 import { isPublishedUpcoming } from "@/lib/events/query";
 import type { CommunityCatalog } from "@/lib/types/community";
-import type { LocalBusiness } from "@/lib/types/local-business";
 import type { FlatOpening } from "@/lib/types/flat-opening";
 import type { HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
 import type { RentDashboard } from "@/lib/types/rent";
@@ -102,14 +100,6 @@ export function getStaticMarketplaceListings(): MarketplaceListing[] {
 
 export function getStaticMarketplaceListingById(id: string): MarketplaceListing | undefined {
   return getStaticMarketplaceListings().find((item) => item.id === id);
-}
-
-export function getStaticLocalBusinesses(): LocalBusiness[] {
-  return localBusinessesJson as LocalBusiness[];
-}
-
-export function getStaticLocalBusinessById(id: string): LocalBusiness | undefined {
-  return getStaticLocalBusinesses().find((biz) => biz.id === id);
 }
 
 export function getStaticFlatOpenings(): FlatOpening[] {

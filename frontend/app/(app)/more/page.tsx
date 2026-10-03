@@ -21,7 +21,7 @@ const LINKS = [
   { href: "/amenities", label: "Amenities", detail: "Gym, pool, courts", icon: Waves },
   { href: "/announcements", label: "Notices", detail: "Society announcements", icon: Megaphone },
   { href: "/marketplace", label: "Marketplace", detail: "Second-hand from neighbours", icon: ShoppingBag },
-  { href: "/local-businesses", label: "Local businesses", detail: "Tiffin, services, shops", icon: Store },
+  { href: "/local-businesses", label: "Local businesses", detail: "Run by your neighbours", icon: Store },
   { href: "/flat-openings", label: "Flat openings", detail: "Rooms, flatmates, full flats", icon: Home },
   { href: "/help-desk", label: "Help desk", detail: "Issues, feedback, directory", icon: LifeBuoy },
   { href: "/rent", label: "Rent", detail: "Due date, payment history, auto-pay", icon: IndianRupee },
