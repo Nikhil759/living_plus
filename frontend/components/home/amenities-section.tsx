@@ -1,22 +1,10 @@
+import Link from "next/link";
 import { Waves } from "lucide-react";
 import { SectionHeader } from "@/components/home/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatusDot, type StatusTone } from "@/components/ui/status-dot";
-import type { Amenity, AmenityStatus } from "@/lib/types/home";
-
-function statusTone(status: AmenityStatus): StatusTone {
-  if (status === "booked") return "red";
-  if (status === "moderate") return "amber";
-  return "green";
-}
-
-function statusLabel(status: AmenityStatus): string {
-  if (status === "booked") return "Busy";
-  if (status === "moderate") return "Moderate";
-  if (status === "quiet") return "Quiet";
-  if (status === "free" || status === "open") return "Quiet";
-  return status;
-}
+import { StatusDot } from "@/components/ui/status-dot";
+import { amenityHref, amenityStatusLabel, amenityTone } from "@/lib/amenities/view";
+import type { Amenity } from "@/lib/types/home";
 
 export function AmenitiesSection({
   amenities,
@@ -40,16 +28,18 @@ export function AmenitiesSection({
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {amenities.map((amenity) => (
-            <li
-              key={amenity.id}
-              className="rounded-tile bg-card p-4 shadow-card"
-            >
-              <p className="text-headline text-ink">{amenity.name}</p>
-              <p className="mt-2 flex items-center gap-1.5 text-caption text-ink-secondary">
-                <StatusDot tone={statusTone(amenity.status)} />
-                {statusLabel(amenity.status)}
-              </p>
-              <p className="mt-1 text-caption text-ink-tertiary">{amenity.detail}</p>
+            <li key={amenity.id}>
+              <Link
+                href={amenityHref(amenity.id)}
+                className="block h-full rounded-tile bg-card p-4 shadow-card"
+              >
+                <p className="text-headline text-ink">{amenity.name}</p>
+                <p className="mt-2 flex items-center gap-1.5 text-caption text-ink-secondary">
+                  <StatusDot tone={amenityTone(amenity.status)} />
+                  {amenityStatusLabel(amenity)}
+                </p>
+                <p className="mt-1 text-caption text-ink-tertiary">{amenity.detail}</p>
+              </Link>
             </li>
           ))}
         </ul>

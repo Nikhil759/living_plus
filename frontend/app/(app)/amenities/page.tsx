@@ -1,18 +1,22 @@
 import { Waves } from "lucide-react";
+import { AmenitiesBrowser } from "@/components/amenities/amenities-browser";
+import { MyBookings } from "@/components/amenities/my-bookings";
 import { AppPage } from "@/components/layout/app-page";
-import { AmenitiesSection } from "@/components/home/amenities-section";
 import { EmptyState } from "@/components/ui/empty-state";
-import { loadAmenities } from "@/lib/data";
+import { loadAmenities, loadMyBookings } from "@/lib/data";
 
 export default async function AmenitiesPage() {
-  const amenities = await loadAmenities();
+  const [amenities, bookings] = await Promise.all([loadAmenities(), loadMyBookings()]);
 
   return (
     <AppPage title="Amenities">
       {amenities.length === 0 ? (
-        <EmptyState icon={<Waves />} title="No live amenity data" />
+        <EmptyState icon={<Waves />} title="No amenities yet" />
       ) : (
-        <AmenitiesSection amenities={amenities} showSeeAll={false} />
+        <div className="space-y-8">
+          <MyBookings bookings={bookings} />
+          <AmenitiesBrowser amenities={amenities} />
+        </div>
       )}
     </AppPage>
   );

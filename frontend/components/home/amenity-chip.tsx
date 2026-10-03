@@ -43,6 +43,12 @@ const STATUS_STYLES: Record<AmenityStatus, StatusStyle> = {
     dot: "bg-outline-variant",
     detail: "text-on-surface-variant",
   },
+  closed: {
+    chip: "bg-surface-container-lowest",
+    name: "text-on-surface-variant",
+    dot: "bg-outline-variant",
+    detail: "text-on-surface-variant",
+  },
 };
 
 export interface AmenityChipProps {

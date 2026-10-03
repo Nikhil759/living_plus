@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 import { apiGetAsUser, getServerAccessToken } from "@/lib/api/server-auth";
-import { fetchAnnouncements, fetchAmenities } from "@/lib/api/amenities";
+import { fetchAnnouncements, fetchAmenities, fetchMyBookings } from "@/lib/api/amenities";
 import { fetchHomeData } from "@/lib/api/home";
 import { useDemoStore } from "@/lib/demo-store/config";
 import {
@@ -24,6 +24,7 @@ import {
 import { demoListUserRsvpEventIds } from "@/lib/demo-store/events-write";
 import { demoHomeResidentForUser, mergeSessionIntoResident } from "@/lib/demo-store/resident-write";
 import { getDemoSessionUser } from "@/lib/demo-store/session-user";
+import type { AmenityBooking } from "@/lib/types/amenities";
 import { attachHostProfile } from "@/lib/events/detail";
 import {
   annotateEvent,
@@ -122,6 +123,12 @@ export async function loadAmenities(): Promise<Amenity[]> {
   if (useDemoStore()) return demoGetAmenities();
   if (getDataSource() === "api") return fetchAmenities();
   return staticData.getStaticAmenities();
+}
+
+/** Upcoming bookings exist only when the API is the data source. */
+export async function loadMyBookings(): Promise<AmenityBooking[]> {
+  if (useDemoStore() || getDataSource() !== "api") return [];
+  return fetchMyBookings();
 }
 
 export async function loadAnnouncements(): Promise<DigestItem[]> {

@@ -147,15 +147,25 @@ export interface HomeEvent {
   attendees?: EventAttendee[] | null;
 }
 
-export type AmenityStatus = "free" | "open" | "quiet" | "moderate" | "booked";
+export type AmenityStatus = "free" | "open" | "quiet" | "moderate" | "booked" | "closed";
+export type AmenityKind = "bookable" | "walk_in" | "space";
+export type AmenityCategory = "sports" | "fitness" | "spaces" | "other";
 
 export interface Amenity {
   id: string;
   name: string;
   emoji: string;
   status: AmenityStatus;
-  /** Short human text, e.g. "Moderate · 6 active". */
+  /** Short human text, e.g. "Next free: 6–7 PM". */
   detail: string;
+  /** The fields below come from the API; older mock data omits them. */
+  kind?: AmenityKind;
+  category?: AmenityCategory;
+  imageUrl?: string | null;
+  /** Live label: Quiet, Moderate, Busy or Closed. */
+  statusLabel?: string;
+  action?: "book" | "view" | "host";
+  actionLabel?: string;
 }
 
 export interface DigestItem {
