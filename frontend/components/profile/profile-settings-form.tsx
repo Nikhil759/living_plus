@@ -68,7 +68,7 @@ export function ProfileSettingsForm({ initial, backend }: ProfileSettingsFormPro
           <span className="text-caption font-medium text-ink-secondary">Bio</span>
           <textarea
             className={`${inputClassName} min-h-[88px] resize-y`}
-            maxLength={2000}
+            maxLength={140}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder="A line or two about you"

@@ -8,7 +8,7 @@ export function ProfileInterests({ interests }: ProfileInterestsProps) {
   if (interests.length === 0) {
     return (
       <p className="mt-3 text-caption text-ink-tertiary">
-        No interests yet — add a few so neighbours can find you.
+        Add a few interests so neighbours with the same hobbies can find you.
       </p>
     );
   }
