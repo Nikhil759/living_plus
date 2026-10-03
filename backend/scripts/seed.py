@@ -20,7 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_sessionmaker
 from business_seed_data import BUSINESSES, DEMO_FOLLOWS, DEMO_RECOMMENDS, SeedBusiness
+from opening_seed_data import OPENINGS
 from app.models import (
+    FlatOpening,
+    OpeningStatus,
     Amenity,
     BusinessFollow,
     BusinessRecommendation,
@@ -1069,6 +1072,42 @@ async def seed_local_businesses(
                 )
 
 
+async def seed_flat_openings(
+    session: AsyncSession, society: Society, users: dict[str, User], flats: dict[str, Flat]
+) -> None:
+    """Re-running resets each demo opening and the demo resident's expiry reminder."""
+    now = datetime.now(UTC)
+    today = now.astimezone(timezone(timedelta(hours=5, minutes=30))).date()
+    await session.execute(
+        delete(Notification).where(
+            Notification.user_id == users["demo"].id, Notification.kind == "opening_expiring"
+        )
+    )
+    for item in OPENINGS:
+        poster = users[item.poster]
+        if not poster.phone:
+            poster.phone = _fake_phone(item.poster)
+        opening = await session.get(FlatOpening, sid(f"opening.{item.key}"))
+        if opening is None:
+            opening = FlatOpening(id=sid(f"opening.{item.key}"), society_id=society.id)
+            session.add(opening)
+        listed = now - timedelta(days=item.posted_days_ago)
+        opening.poster_id, opening.tower_id = poster.id, flats[f"{item.tower}-101"].tower_id
+        opening.kind, opening.bhk, opening.floor = item.kind, item.bhk, item.floor
+        opening.furnishing, opening.rent_inr = item.furnishing, item.rent
+        opening.deposit_inr = item.deposit
+        opening.maintenance_included = item.maintenance is None
+        opening.maintenance_inr = item.maintenance
+        opening.available_from = (
+            today + timedelta(days=item.available_in_days) if item.available_in_days else None
+        )
+        opening.preference, opening.included = item.preference, [i.value for i in item.included]
+        opening.description, opening.contact_method = item.description, item.via
+        opening.status = OpeningStatus.active
+        opening.listed_at, opening.expires_at = listed, listed + timedelta(days=30)
+        opening.reminder_sent_at = opening.removed_reason = opening.removed_by_id = None
+
+
 async def run_seed() -> None:
     session_factory = get_sessionmaker()
     async with session_factory() as session:
@@ -1082,6 +1121,7 @@ async def run_seed() -> None:
         await seed_events(session, society, users)
         await seed_marketplace(session, society, users)
         await seed_local_businesses(session, society, users, flats)
+        await seed_flat_openings(session, society, users, flats)
         await session.commit()
         action = "Updated" if existing else "Created"
         print(f"{action} demo data for {society.name} (society code {INVITE_CODE}).")
