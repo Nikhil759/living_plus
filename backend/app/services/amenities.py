@@ -368,8 +368,11 @@ _LEGACY_AMENITY_IDS: dict[str, str] = {
 
 
 async def resolve_amenity_id(
-    db: AsyncSession, society_id: uuid.UUID, raw: str
+    db: AsyncSession, society_id: uuid.UUID, raw: uuid.UUID | str
 ) -> uuid.UUID:
+    # Event schemas already parse the id; only route params arrive as strings.
+    if isinstance(raw, uuid.UUID):
+        return raw
     try:
         return uuid.UUID(raw)
     except ValueError as err:
@@ -387,7 +390,7 @@ async def resolve_amenity_id(
 
 
 async def load_amenity(
-    db: AsyncSession, member: CurrentMember, amenity_id: str
+    db: AsyncSession, member: CurrentMember, amenity_id: uuid.UUID | str
 ) -> tuple[Amenity, AmenityStatus | None]:
     resolved = await resolve_amenity_id(db, member.society_id, amenity_id)
     row = (
