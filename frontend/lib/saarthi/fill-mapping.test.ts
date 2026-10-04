@@ -6,6 +6,8 @@ import {
   eventFill,
   feedbackFill,
   fillCurrent,
+  followUpText,
+  freshValues,
   groupFill,
   listingFill,
   openingFill,
@@ -90,5 +92,17 @@ describe("Fill with Saarthi mapping", () => {
   it("keeps the event's length when Saarthi only moves the start", () => {
     assert.equal(endForFilledStart("2026-10-11T16:00", "2026-10-11T18:00", "2026-10-11T06:30"), "2026-10-11T08:30");
     assert.equal(endForFilledStart("2026-10-11T16:00", "2026-10-11T15:00", "2026-10-11T19:00"), "2026-10-11T21:00");
+  });
+
+  it("sends an answer with the original sentence and applies only what changed", () => {
+    assert.equal(
+      followUpText("fifa night at my flat", "Which day?", "saturday 8pm"),
+      'fifa night at my flat\nYou asked "Which day?" and I answered: saturday 8pm',
+    );
+    const last = { title: "FIFA Night", category: "social" };
+    assert.deepEqual(
+      freshValues({ title: "FIFA Night", category: "sports", startsAt: "2026-10-10T20:00" }, last),
+      { category: "sports", startsAt: "2026-10-10T20:00" },
+    );
   });
 });

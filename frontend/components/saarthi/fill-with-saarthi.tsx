@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
 import { getDataSource } from "@/lib/data/source";
 import { fillForm } from "@/lib/saarthi/api";
+import { followUpText, freshValues } from "@/lib/saarthi/fill-mapping";
 import type { FillForm, FillHint } from "@/lib/types/saarthi";
 import { cn } from "@/lib/utils";
 
@@ -30,23 +31,31 @@ export function FillWithSaarthi({ form, current, itemId, onFill, onMeToo, classN
   const [question, setQuestion] = useState<string | null>(null);
   const [hints, setHints] = useState<FillHint[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // While Saarthi waits for an answer: the sentence it was working from and what it filled.
+  const [thread, setThread] = useState<{ original: string; filled: Record<string, unknown> } | null>(null);
   const busy = state === "thinking";
   const editing = Boolean(current);
 
   if (getDataSource() !== "api") return null;
 
   async function run() {
-    const ask = text.trim();
-    if (ask.length < 2 || busy) return;
+    const said = text.trim();
+    if (said.length < 2 || busy) return;
+    const answering = thread !== null && question !== null;
+    const ask = answering ? followUpText(thread.original, question, said) : said;
     setState("thinking");
     setNote(null);
     try {
       const result = await fillForm(form, ask, current, itemId);
-      const filledSomething = Object.keys(result.values).length > 0;
-      if (filledSomething) onFill(result.values);
+      const lastFilled = answering ? thread.filled : {};
+      const values = freshValues(result.values, lastFilled);
+      const filledSomething = Object.keys(values).length > 0;
+      if (filledSomething) onFill(values);
       setQuestion(result.question);
       setHints(result.hints);
       setState(filledSomething ? "happy" : "idle");
+      setThread(result.question ? { original: answering ? ask : said, filled: { ...lastFilled, ...result.values } } : null);
+      if (result.question || answering) setText("");
       if (!filledSomething && !result.question) {
         setNote(editing ? "I couldn't find a change in that. Try saying what to change." : "I couldn't find anything to fill from that.");
       }
@@ -56,19 +65,43 @@ export function FillWithSaarthi({ form, current, itemId, onFill, onMeToo, classN
     }
   }
 
+  const waiting = question !== null && thread !== null;
+
+  function startOver() {
+    setThread(null);
+    setQuestion(null);
+    setText("");
+  }
+
   return (
     <section
       aria-label="Fill with Saarthi"
       className={cn("space-y-2 rounded-card bg-primary/5 p-3 ring-1 ring-primary/15", className)}
     >
+      {waiting ? (
+        <div className="flex items-start gap-2.5">
+          <SaarthiAvatar state={state} size="sm" />
+          <div className="min-w-0 flex-1">
+            <p className="text-callout text-ink">{question}</p>
+            <p className="text-caption text-ink-tertiary">
+              Answer below, or set it in the form yourself.{" "}
+              <button type="button" onClick={startOver} className="font-semibold text-primary">
+                Start over
+              </button>
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center gap-2.5">
-        <SaarthiAvatar state={state} size="sm" />
+        {waiting ? <span className="w-7 shrink-0" aria-hidden /> : <SaarthiAvatar state={state} size="sm" />}
         <input
           value={text}
           maxLength={500}
           disabled={busy}
-          aria-label={editing ? "Tell Saarthi what to change" : "Describe it for Saarthi"}
-          placeholder={editing ? "Tell me what to change…" : "Describe it and I'll fill this in."}
+          aria-label={waiting ? "Answer Saarthi" : editing ? "Tell Saarthi what to change" : "Describe it for Saarthi"}
+          placeholder={
+            waiting ? "Your answer, e.g. Saturday at 8 PM" : editing ? "Tell me what to change…" : "Describe it and I'll fill this in."
+          }
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             // The box sits inside the page's form: Enter fills, it never submits that form.
@@ -80,10 +113,9 @@ export function FillWithSaarthi({ form, current, itemId, onFill, onMeToo, classN
           className="h-9 min-w-0 flex-1 rounded-tile bg-surface-container-lowest px-3 text-callout text-ink outline-none ring-primary/30 placeholder:text-ink-tertiary focus:ring-2"
         />
         <Button type="button" size="sm" variant="primary" disabled={busy || text.trim().length < 2} onClick={() => void run()}>
-          {busy ? "Filling…" : editing ? "Change" : "Fill"}
+          {busy ? "Filling…" : waiting ? "Answer" : editing ? "Change" : "Fill"}
         </Button>
       </div>
-      {question ? <p className="text-caption text-ink">{question}</p> : null}
       {note ? <p className="text-caption text-ink-secondary">{note}</p> : null}
       {hints.length > 0 ? (
         <ul className="space-y-1.5">

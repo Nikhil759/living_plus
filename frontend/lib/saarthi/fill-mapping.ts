@@ -188,3 +188,16 @@ export function endForFilledStart(oldStart: string, oldEnd: string, newStart: st
   if (Number.isNaN(end.getTime())) return oldEnd;
   return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
 }
+
+/** An answer to Saarthi's question goes back with the original sentence, so nothing is lost. */
+export function followUpText(original: string, question: string, answer: string): string {
+  const tail = `\nYou asked "${question}" and I answered: ${answer}`;
+  return `${original.slice(0, Math.max(0, 500 - tail.length))}${tail}`.slice(-500);
+}
+
+/** Only values that are new or changed since the last fill, so the resident's own edits stay. */
+export function freshValues(values: Raw, lastFilled: Raw): Raw {
+  return Object.fromEntries(
+    Object.entries(values).filter(([key, value]) => JSON.stringify(lastFilled[key]) !== JSON.stringify(value)),
+  );
+}
