@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "demo:seed": "tsx scripts/seed-demo-db.ts",
-    "demo:import-pg": "npm run demo:seed && cd ../backend && uv run python scripts/export_demo_sqlite.py"
+    "demo:import-pg": "npm run demo:seed && cd ../backend && uv run python scripts/export_demo_sqlite.py",
+    "test": "tsx --test $(find lib components -name '*.test.ts')"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.3.1",

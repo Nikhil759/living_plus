@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     GEMINI_MODEL_MAIN: str = "gemini-3.8-flash"
     GEMINI_MODEL_FAST: str = "gemini-3.5-flash-lite"
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
+    # Thinking effort for the chat models ("low", "medium", "high"; empty = model default). "low"
+    # cut p50 on tool turns from 6.3 s to 4.4 s with the same eval score (Oct 2026).
+    GEMINI_REASONING_EFFORT: str = "low"
     SAARTHI_TIMEOUT_SECONDS: float = 30
     # Most recent messages sent to the model per request; bounds cost on long chats.
     SAARTHI_HISTORY_MESSAGES: int = 20

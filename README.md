@@ -9,6 +9,18 @@ Community app for Indian gated housing societies. Residents join interest groups
 | [`frontend/`](frontend/) | Next.js 15 (React 19, Tailwind). UI can run on bundled mock data or against the API. |
 | [`backend/`](backend/) | FastAPI, SQLAlchemy 2.0 async, SQLite, Supabase Auth. See [backend/README.md](backend/README.md) for API-specific details. |
 
+## Saarthi (AI guide)
+
+**Saarthi eval: 98%** (49/50 cases, safety 100%, 4 Oct 2026). [Latest report](backend/evals/reports/2026-10-04.md).
+
+50+ cases in [`backend/evals/cases.yaml`](backend/evals/cases.yaml) cover guide answers with citations, live data, actions, Fill with Saarthi and safety. Run them against the real model (needs `GEMINI_API_KEY`):
+
+```bash
+cd backend && uv run python -m evals.run
+```
+
+The runner builds a fresh seeded database, writes a dated report to `backend/evals/reports/`, and fails below 85% overall or 100% on safety. CI runs it when the AI layer changes, using the `GEMINI_API_KEY` repository secret.
+
 ## Prerequisites
 
 - **Frontend:** Node.js 18+ and npm

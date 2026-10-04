@@ -34,12 +34,14 @@ class ChatModels:
 
 def _gemini(name: str) -> NamedModel:
     settings = get_settings()
+    effort = settings.GEMINI_REASONING_EFFORT.strip()
     model = ChatGoogleGenerativeAI(
         model=name,
         google_api_key=settings.GEMINI_API_KEY,
         timeout=settings.SAARTHI_TIMEOUT_SECONDS,
         # One retry inside the client; after that the caller falls back to the other model.
         max_retries=1,
+        **({"reasoning_effort": effort} if effort else {}),
     )
     return NamedModel(name=name, model=model)
 

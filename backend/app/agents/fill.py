@@ -179,7 +179,9 @@ def fill_prompt(
     lines = [
         f'You fill the "{FORM_LABELS[form]}" form in Living+ for a resident of their society.',
         f"Today is {local:%A, %d %B %Y}, {local:%H:%M} IST. Dates and times are IST. A weekday "
-        "name means its next occurrence, never a time that has already passed.",
+        "name means its next occurrence, never a time that has already passed: if it names "
+        "today's weekday and that time is already over, use the same weekday next week. Always "
+        "set the start when a day or weekday and a time are given.",
         "Fill only fields the resident's text states or clearly implies; leave everything else "
         "empty. Never invent prices, dates or names. Write titles and descriptions in a warm, "
         "short style in the resident's own language.",

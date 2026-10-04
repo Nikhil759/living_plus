@@ -94,6 +94,12 @@ Full requirements: `SAARTHI-REQUIREMENTS.md`. Models come from config: `GEMINI_M
 
 **Fill with Saarthi** (`POST /v1/saarthi/fill`): every create and edit form has a one-line box. The fast model returns that form's fields via structured output (`app/agents/fill.py`); `app/services/saarthi_fill.py` cleans them against the form's limits and adds live hints from existing services: event space clashes and the 10:30 PM hall cap, a "Me too" on a similar open issue, a marketplace price range. In edit mode (`current`, `itemId`) only the changed fields come back. It never submits; filled fields carry a sparkle until the resident edits them. Logged to `llm_calls` with purpose `fill`.
 
+**Home "Today"** (`GET /v1/saarthi/today`): facts from existing services (notices, my bookings and events today, events filling up that match my interests, urgent issues in my tower) summarised by the fast model in 2–3 sentences. Cached per resident for the IST day under a fingerprint of those facts, so it is written once in the morning and again only when something important changes.
+
+**AI usage** (`GET /v1/saarthi/usage`, committee only): per-day requests, tokens, estimated cost (USD and rupees), p50/p95 latency and failures from `llm_calls`; thumbs up/down from `chat_messages`; top questions the guide couldn't answer.
+
+**Evaluation:** `backend/evals/cases.yaml` (guide, live, actions, fill, safety) and `evals/run.py`, which drives the real API on a fresh seeded database and writes a dated report. CI (`.github/workflows/ci.yml`) runs lint and tests on every push and the eval when the AI layer changes. `GEMINI_REASONING_EFFORT=low` is the default: it cut tool-turn p50 from 6.3 s to 4.4 s with the same score.
+
 Planned agent roles:
 - **Supervisor:** small, fast model routes to a specialist (structured output).
 - **Amenity agent:** availability, rules, booking.
