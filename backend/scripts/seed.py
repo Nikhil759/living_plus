@@ -180,9 +180,11 @@ RESIDENT_NAMES: list[tuple[str, str, list[str]]] = [
 ]
 
 
-# Background residents so the society feels lived in (420 homes, 260+ neighbours). Their profiles
-# are hidden and never list football, so the demo's people, lists and interest counts don't change.
-NEIGHBOUR_COUNT = 230
+# Demo scale: 420 homes, ~750 approved members (~1.8 accounts per occupied flat). Primary neighbours
+# fill almost every flat once; household members add spouses/tenants on those flats. Profiles stay
+# hidden so named cast, groups, and football interest counts stay stable.
+TARGET_APPROVED_MEMBERS = 752
+VACANT_FLATS = 15
 NEIGHBOUR_FIRST = [
     "Aarav", "Vihaan", "Aditya", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya", "Atharv",
     "Ayaan", "Kabir", "Dhruv", "Nikhil", "Siddharth", "Varun", "Harsh", "Yash", "Gaurav",
@@ -435,7 +437,8 @@ async def seed_neighbours(session: AsyncSession, society: Society, flats: dict[s
         key=lambda k: (int(k.split("-")[1]) % 100, int(k.split("-")[1]) // 100, k[0]),
     )
     pick = random.Random(7)
-    for idx in range(NEIGHBOUR_COUNT):
+    to_seed = max(0, len(free) - VACANT_FLATS)
+    for idx in range(to_seed):
         membership_id = sid(f"membership.neighbour.{idx}")
         if await session.get(Membership, membership_id) is not None:
             continue
@@ -471,6 +474,78 @@ async def seed_neighbours(session: AsyncSession, society: Society, flats: dict[s
                     show_flat=False,
                 )
             )
+    await session.flush()
+
+
+async def seed_household_members(session: AsyncSession, society: Society) -> None:
+    """Co-residents (spouse, parent, tenant) sharing flats that already have a primary member."""
+    current = await session.scalar(
+        select(func.count())
+        .select_from(Membership)
+        .where(
+            Membership.society_id == society.id,
+            Membership.status == MembershipStatus.approved,
+        )
+    )
+    shortfall = TARGET_APPROVED_MEMBERS - (current or 0)
+    if shortfall <= 0:
+        return
+
+    flat_ids = list(
+        await session.scalars(
+            select(Membership.flat_id)
+            .where(
+                Membership.society_id == society.id,
+                Membership.flat_id.is_not(None),
+            )
+            .group_by(Membership.flat_id)
+        )
+    )
+    if not flat_ids:
+        return
+
+    pick = random.Random(11)
+    idx = 0
+    added = 0
+    while added < shortfall:
+        membership_id = sid(f"membership.household.{idx}")
+        if await session.get(Membership, membership_id) is not None:
+            idx += 1
+            continue
+        first = NEIGHBOUR_FIRST[(idx * 3) % len(NEIGHBOUR_FIRST)]
+        last = NEIGHBOUR_LAST[(idx * 5) % len(NEIGHBOUR_LAST)]
+        email = f"{first}.{last}.household.{idx}@example.com".lower()
+        user = await get_or_create(
+            session,
+            User,
+            sid(f"user.household.{idx}"),
+            supabase_uid=f"seed:{email}",
+            email=email,
+            name=f"{first} {last}",
+        )
+        flat_id = pick.choice(flat_ids)
+        session.add(
+            Membership(
+                id=membership_id,
+                user_id=user.id,
+                society_id=society.id,
+                flat_id=flat_id,
+                role=MembershipRole.tenant if idx % 2 else MembershipRole.owner,
+                status=MembershipStatus.approved,
+            )
+        )
+        if await session.get(Profile, user.id) is None:
+            session.add(
+                Profile(
+                    user_id=user.id,
+                    society_id=society.id,
+                    interests=pick.sample(NEIGHBOUR_INTERESTS, k=1 + idx % 2),
+                    is_visible=False,
+                    show_flat=False,
+                )
+            )
+        added += 1
+        idx += 1
     await session.flush()
 
 
@@ -766,7 +841,7 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
     wa_specs = [
         ("Tower C Updates", "Notices for Tower C residents", 142),
         ("FIFA Weekend Lobby", "Pick-up games & watch parties", 38),
-        ("Society Marketplace", f"Buy/sell within {SOCIETY_DISPLAY_NAME}", 256),
+        ("Society Marketplace", f"Buy/sell within {SOCIETY_DISPLAY_NAME}", 712),
     ]
     for idx, (name, topic, count) in enumerate(wa_specs):
         chat = await get_or_create(
@@ -1382,6 +1457,7 @@ async def run_seed() -> None:
         await seed_events(session, society, users)
         await seed_marketplace(session, society, users)
         await seed_local_businesses(session, society, users, flats)
+        await seed_household_members(session, society)
         await seed_flat_openings(session, society, users, flats)
         await session.commit()
         action = "Updated" if existing else "Created"
