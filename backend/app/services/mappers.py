@@ -548,7 +548,7 @@ def map_resident(
 
 
 def _discover_neighbours(profiles: Sequence[Row[tuple[Profile, User]]]) -> NeighbourMatchOut | None:
-    """No shared interests yet: invite the resident to add theirs instead of hiding the card."""
+    """No shared interests yet: point the resident at the groups instead of hiding the card."""
     sharing = [person for profile, person in profiles if profile.interests]
     if not sharing:
         return None
@@ -556,15 +556,15 @@ def _discover_neighbours(profiles: Sequence[Row[tuple[Profile, User]]]) -> Neigh
         label="Find people like you",
         title="Find people like you",
         description=f"{len(sharing)} neighbours have shared their interests. "
-        "Add yours to meet the ones you have in common.",
+        "Join a group to meet the ones you have in common.",
         people=[
             PersonOut(id=str(p.id), name=p.name or "Neighbour", avatar_url=p.avatar_url)
             for p in sharing[:3]
         ],
         total_count=len(sharing),
         active_summary="",
-        action_label="Add your interests",
-        action_href="/profile",
+        action_label="Explore groups",
+        action_href="/community?tab=groups",
     )
 
 

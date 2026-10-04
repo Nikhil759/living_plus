@@ -163,9 +163,10 @@ async def test_match_card_finds_shared_interests_or_invites_adding_them(
     assert match["title"] == "Neighbours like you" and match["totalCount"] == 1
     assert match["actionHref"] == "/community/new"
 
-    # No interests (e.g. a new Google sign-in): the card stays, asking for them.
+    # No interests (e.g. a new Google sign-in): the card stays and points to the groups.
     profile.interests = []
     await db_session.flush()
     match = (await client.get("/v1/home")).json()["match"]
     assert match["title"] == "Find people like you" and match["totalCount"] == 2
-    assert match["actionLabel"] == "Add your interests" and match["actionHref"] == "/profile"
+    assert match["actionLabel"] == "Explore groups"
+    assert match["actionHref"] == "/community?tab=groups"

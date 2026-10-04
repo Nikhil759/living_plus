@@ -18,7 +18,7 @@ import type { FeedPost } from "@/lib/types/home";
 import type { Resident } from "@/lib/types/home";
 import { cn } from "@/lib/utils";
 
-type CommunityTab = "feed" | "groups" | "whatsapp" | "people";
+export type CommunityTab = "feed" | "groups" | "whatsapp" | "people";
 
 function groupIcon(name: string) {
   const n = name.toLowerCase();
@@ -32,14 +32,17 @@ export function CommunityBrowser({
   feedPosts,
   resident,
   writeEnabled = false,
+  initialTab = "feed",
 }: {
   catalog: CommunityCatalog;
   feedPosts: FeedPost[];
   resident: Resident;
   /** Live backend: requests, invites and admin approvals work. */
   writeEnabled?: boolean;
+  /** Opened from a link like /community?tab=groups. */
+  initialTab?: CommunityTab;
 }) {
-  const [tab, setTab] = useState<CommunityTab>("feed");
+  const [tab, setTab] = useState<CommunityTab>(initialTab);
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("all");
   const [interestFilter, setInterestFilter] = useState<string | null>(null);
 
