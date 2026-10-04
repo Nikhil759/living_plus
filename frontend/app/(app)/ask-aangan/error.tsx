@@ -3,5 +3,5 @@
 import { ScreenError } from "@/components/layout/screen-error";
 
 export default function Error() {
-  return <ScreenError title="Ask Living+" />;
+  return <ScreenError title="Saarthi" />;
 }

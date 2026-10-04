@@ -1,22 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useSaarthi } from "@/components/saarthi/saarthi-provider";
 
-/** Cmd/Ctrl+K opens Ask Living+. */
+/** Cmd/Ctrl+K opens or closes Saarthi from anywhere in the app. */
 export function AskShortcut() {
-  const router = useRouter();
+  const { toggle } = useSaarthi();
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        router.push("/ask-aangan");
+        toggle();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router]);
+  }, [toggle]);
 
   return null;
 }

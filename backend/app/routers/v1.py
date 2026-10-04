@@ -12,6 +12,7 @@ from app.routers import (
     marketplace,
     me,
     notifications,
+    saarthi,
     societies,
     uploads,
 )
@@ -30,3 +31,4 @@ api_router.include_router(marketplace.router)
 api_router.include_router(notifications.router)
 api_router.include_router(announcements.router)
 api_router.include_router(uploads.router)
+api_router.include_router(saarthi.router)

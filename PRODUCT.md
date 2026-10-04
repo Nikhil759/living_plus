@@ -1,6 +1,6 @@
 # Living+: Product
 
-> Working name. Living+ is the resident-facing brand. The assistant is **Ask Living+**.
+> Working name. Living+ is the resident-facing brand. The AI guide is **Saarthi** (see `SAARTHI-REQUIREMENTS.md`).
 
 ## Context
 Built for the Masters Union take-home (Senior AI Full-Stack Engineer), **Track A**: find a real problem, build a live AI-native product end to end, and show a credible path to a $10M business. 7-day build.
@@ -62,7 +62,7 @@ Users join a society with an **invite code**, pick tower, flat and role, and sta
 - Booking with **fair-use rules** (slot length, max hours per week, advance window). Hall and amphitheatre bookings need committee approval.
 - Natural-language booking through the assistant: "book badminton court for me and 3 friends Saturday 7pm".
 
-### Ask Living+ (society concierge, RAG), built last
+### Saarthi (AI guide: answers with citations, acts, fills forms)
 - Answers questions from the society's bylaws, notices and meeting minutes, **with citations**.
 - Says "I couldn't find this in your society's documents" rather than guessing.
 - Examples: "Can I do renovation on Sunday?", "Who is the plumber vendor?", "What did the AGM decide on parking?"
@@ -84,7 +84,7 @@ Users join a society with an **invite code**, pick tower, flat and role, and sta
 - Approving or rejecting members
 
 ## Scope for the 7-day build
-**Deep:** auth, roles and society join; community (groups, WhatsApp directory, connection agent); all three event types with Razorpay and stalls; amenities booking; concierge RAG; ops agent; tracing, evals, rate limits.
+**Deep:** auth, roles and society join; community (groups, WhatsApp directory, connection agent); all three event types with Razorpay and stalls; amenities booking; Saarthi guide RAG; ops agent; tracing, evals, rate limits.
 
 **Light:** feed, profiles, help-desk UI, marketplace, committee console, AI daily digest.
 
@@ -96,4 +96,4 @@ Users join a society with an **invite code**, pick tower, flat and role, and sta
 - Enterprise custom features: a services line, not in the build.
 
 ## Demo society (seed data)
-"Sector 50 Residency", Gurgaon, invite code `AANGAN50`, towers A–D, about 20 residents with realistic Indian names and varied interests (FIFA, running, cricket, dance, cooking, books, dogs, yoga). Test login `demo@aangan.app` (owner, Tower C) and `committee@aangan.app`. The data should feel lived-in: upcoming events, bookings, active groups, a few open tickets.
+"Prestige Meridian Park", Gurugram, master invite code `LIVING-OPEN-50`, towers A–D, about 20 residents with realistic Indian names and varied interests (FIFA, running, cricket, dance, cooking, books, dogs, yoga). Test login `demo@aangan.app` (owner, Tower C) and `committee@aangan.app`. The data should feel lived-in: upcoming events, bookings, active groups, a few open tickets.

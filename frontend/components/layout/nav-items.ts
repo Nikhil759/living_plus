@@ -14,7 +14,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Shown in mobile bottom nav only (centre Ask tab). */
+  /** Mobile bottom nav only: the centre Ask tab, which opens Saarthi instead of navigating. */
   primary?: boolean;
   /** Desktop sidebar only — omitted from bottom nav. */
   sidebarOnly?: boolean;

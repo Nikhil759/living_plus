@@ -1,0 +1,26 @@
+/* Saarthi animated face (copied from saarthi-animated/). Put class "saarthi" on the svg and add one state class:
+   (none) = idle, "is-talking", "is-thinking", "is-happy". */
+.saarthi .sf-eye, .saarthi .sf-talk, .saarthi .sf-brows, .saarthi .sf-head { transform-box: fill-box; transform-origin: center; }
+.saarthi .sf-talk, .saarthi .sf-dots, .saarthi .sf-happy-eyes { display: none; }
+.saarthi.is-talking .sf-smile { display: none; }
+.saarthi.is-talking .sf-talk { display: inline; }
+.saarthi.is-thinking .sf-smile { display: none; }
+.saarthi.is-thinking .sf-dots { display: inline; }
+.saarthi.is-thinking .sf-eyes { transform: translate(6px, -6px); }
+.saarthi.is-thinking .sf-brows { transform: translateY(-6px); }
+.saarthi.is-happy .sf-eyes { display: none; }
+.saarthi.is-happy .sf-happy-eyes { display: inline; }
+@media (prefers-reduced-motion: no-preference) {
+  .saarthi .sf-eye { animation: sf-blink 4.5s infinite; }
+  .saarthi .sf-head { transform-origin: 50% 90%; animation: sf-sway 6s ease-in-out infinite; }
+  .saarthi.is-talking .sf-talk { animation: sf-talk .32s ease-in-out infinite alternate; }
+  .saarthi.is-thinking .sf-dots circle { animation: sf-dot 1.2s infinite; }
+  .saarthi.is-thinking .sf-dots circle:nth-child(2) { animation-delay: .2s; }
+  .saarthi.is-thinking .sf-dots circle:nth-child(3) { animation-delay: .4s; }
+  .saarthi.is-happy .sf-head { animation: sf-nod .9s ease-in-out 2; }
+}
+@keyframes sf-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes sf-sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes sf-talk { from { transform: scaleY(.35); } to { transform: scaleY(1.15); } }
+@keyframes sf-dot { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes sf-nod { 0%, 100% { transform: rotate(0); } 50% { transform: translateY(6px) rotate(0); } }

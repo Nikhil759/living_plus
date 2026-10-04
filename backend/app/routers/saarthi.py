@@ -1,0 +1,80 @@
+import json
+import logging
+import uuid
+from collections.abc import AsyncIterator
+from typing import Any
+
+from fastapi import APIRouter, Response
+from fastapi.responses import StreamingResponse
+
+from app.agents.llm import ChatModelsDep
+from app.auth import CurrentMemberDep
+from app.core.db import DbSession
+from app.schemas.saarthi import (
+    ChatIn,
+    ChatMessageOut,
+    ChatSessionDetailOut,
+    ChatSessionOut,
+    FeedbackIn,
+)
+from app.services import saarthi_chat
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/saarthi", tags=["saarthi"])
+
+
+def _sse(event: str, data: dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@router.post("/chat")
+async def chat(
+    body: ChatIn, db: DbSession, member: CurrentMemberDep, models: ChatModelsDep
+) -> StreamingResponse:
+    # Limits, ownership and validation fail here as normal JSON errors, before streaming starts.
+    session, history = await saarthi_chat.start_turn(db, member, body)
+
+    async def events() -> AsyncIterator[str]:
+        try:
+            async for event, data in saarthi_chat.stream_reply(
+                db, member, session, history, body, models
+            ):
+                yield _sse(event, data)
+        except Exception:
+            # Headers are already sent, so report a friendly error event instead of a 500.
+            logger.exception("saarthi stream failed")
+            yield _sse("error", {"code": "saarthi_failed", "message": saarthi_chat.FRIENDLY_ERROR})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/sessions", response_model=list[ChatSessionOut])
+async def list_sessions(db: DbSession, member: CurrentMemberDep) -> list[ChatSessionOut]:
+    sessions = await saarthi_chat.list_sessions(db, member)
+    return [ChatSessionOut.model_validate(s) for s in sessions]
+
+
+@router.get("/sessions/{session_id}", response_model=ChatSessionDetailOut)
+async def get_session(
+    session_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> ChatSessionDetailOut:
+    return await saarthi_chat.get_session_detail(db, member, session_id)
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> Response:
+    await saarthi_chat.delete_session(db, member, session_id)
+    return Response(status_code=204)
+
+
+@router.post("/messages/{message_id}/feedback", response_model=ChatMessageOut)
+async def feedback(
+    message_id: uuid.UUID, body: FeedbackIn, db: DbSession, member: CurrentMemberDep
+) -> ChatMessageOut:
+    return await saarthi_chat.set_feedback(db, member, message_id, body)

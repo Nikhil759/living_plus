@@ -14,6 +14,12 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.1.1",
     "uvicorn[standard]>=0.54.0",
     "python-multipart>=0.0.32",
+    "langgraph>=1.2.12",
+    "langchain-google-genai>=4.4.0",
+    "langchain-core>=1.6.6",
+    "redis>=8.1.0",
+    "langfuse>=4.16.0",
+    "langchain>=1.4.3",
 ]
 
 [dependency-groups]

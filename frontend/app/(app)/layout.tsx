@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { AskShortcut } from "@/components/layout/ask-shortcut";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Sidebar } from "@/components/layout/sidebar";
+import { SaarthiPanel, SaarthiShell } from "@/components/saarthi/saarthi-panel";
+import { SaarthiProvider } from "@/components/saarthi/saarthi-provider";
 import { ApiError } from "@/lib/api/client";
 import { loadResident } from "@/lib/data";
 import { getStaticResident } from "@/lib/data/static";
@@ -22,11 +24,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-dvh bg-canvas">
-      <AskShortcut />
-      <Sidebar resident={resident} />
-      <div className="min-w-0 lg:pl-sidebar">{children}</div>
-      <BottomNav />
-    </div>
+    <SaarthiProvider residentName={resident.name}>
+      <div className="min-h-dvh bg-canvas">
+        <AskShortcut />
+        <Sidebar resident={resident} />
+        <SaarthiShell>{children}</SaarthiShell>
+        <BottomNav />
+        <SaarthiPanel />
+      </div>
+    </SaarthiProvider>
   );
 }

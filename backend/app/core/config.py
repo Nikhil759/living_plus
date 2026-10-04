@@ -24,6 +24,24 @@ class Settings(BaseSettings):
     # Local event cover files. Path is relative to the process working directory.
     UPLOAD_DIR: str = "./.uploads"
 
+    # Saarthi (Gemini). Empty key: the app runs, Saarthi answers "not available".
+    GEMINI_API_KEY: str = ""
+    # Stronger model for chat; fast Flash-Lite for summaries, form fill and fallback.
+    GEMINI_MODEL_MAIN: str = "gemini-3.8-flash"
+    GEMINI_MODEL_FAST: str = "gemini-3.5-flash-lite"
+    GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
+    SAARTHI_TIMEOUT_SECONDS: float = 30
+    # Most recent messages sent to the model per request; bounds cost on long chats.
+    SAARTHI_HISTORY_MESSAGES: int = 20
+    SAARTHI_MAX_MESSAGE_CHARS: int = 2000
+    SAARTHI_CHAT_PER_10MIN: int = 30
+    SAARTHI_CHAT_PER_DAY: int = 200
+
+    # Optional Langfuse tracing; off unless both keys are set.
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
     @field_validator("DATABASE_URL")
     @classmethod
     def require_sqlite_driver(cls, value: str) -> str:

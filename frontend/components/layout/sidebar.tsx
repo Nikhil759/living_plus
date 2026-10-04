@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Search } from "lucide-react";
 import { LivingWordmark } from "@/components/brand/living-wordmark";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { SaarthiAvatar } from "@/components/saarthi/saarthi-avatar";
+import { useSaarthi } from "@/components/saarthi/saarthi-provider";
 import { isNavActive, sidebarNavItems } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 import type { Resident } from "@/lib/types/home";
@@ -18,6 +19,7 @@ export function Sidebar({ resident }: SidebarProps) {
   const pathname = usePathname();
   const links = sidebarNavItems();
   const role = resident.roles[0];
+  const saarthi = useSaarthi();
 
   return (
     <aside className="glass fixed inset-y-0 left-0 z-40 hidden w-sidebar flex-col lg:flex">
@@ -28,14 +30,16 @@ export function Sidebar({ resident }: SidebarProps) {
       </div>
 
       <div className="px-4 pb-4">
-        <Link
-          href="/ask-aangan"
-          className="flex h-11 items-center gap-2 rounded-full bg-quiet px-3.5 text-callout text-ink-tertiary transition-colors duration-premium ease-premium hover:bg-quiet"
+        <button
+          type="button"
+          onClick={saarthi.toggle}
+          aria-expanded={saarthi.isOpen}
+          className="flex h-11 w-full items-center gap-2 rounded-full bg-quiet pl-1.5 pr-3.5 text-callout text-ink-tertiary transition-colors duration-premium ease-premium hover:bg-primary-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          <Search className="h-5 w-5 text-ink-secondary" strokeWidth={1.5} aria-hidden="true" />
-          <span className="flex-1 text-left">Ask Living+…</span>
+          <SaarthiAvatar size="md" state={saarthi.avatarState} />
+          <span className="flex-1 text-left">Ask Saarthi…</span>
           <kbd className="rounded-md bg-card px-1.5 py-0.5 text-caption text-ink-tertiary">⌘K</kbd>
-        </Link>
+        </button>
       </div>
 
       <nav aria-label="Primary" className="flex-1 overflow-y-auto px-3">

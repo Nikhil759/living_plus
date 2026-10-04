@@ -266,3 +266,31 @@ class OpeningBudget(StrEnum):
 class OpeningSort(StrEnum):
     newest = "newest"
     rent_asc = "rent_asc"
+
+
+class ChatRole(StrEnum):
+    user = "user"
+    assistant = "assistant"
+
+
+class ChatMessageStatus(StrEnum):
+    ok = "ok"
+    error = "error"
+
+
+class ChatFeedback(StrEnum):
+    up = "up"
+    down = "down"
+
+
+class LlmPurpose(StrEnum):
+    chat = "chat"
+    summary = "summary"
+    fill = "fill"
+    route = "route"
+
+
+class LlmOutcome(StrEnum):
+    ok = "ok"
+    fallback = "fallback"
+    error = "error"

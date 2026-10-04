@@ -5,13 +5,13 @@
 |---|---|---|
 | Frontend | Next.js (App Router, TypeScript), Tailwind, shadcn/ui | Deployed on Vercel |
 | API | FastAPI + Pydantic v2 | Validation and structured errors built in |
-| Database | Postgres on Supabase, pgvector | App data and embeddings in one place |
+| Database | SQLite (aiosqlite) | One file for app data; guide embeddings stored as blobs with FTS5 keyword search (a society's guide is a few hundred chunks, so cosine scoring in Python is fast enough) |
 | ORM / migrations | SQLAlchemy 2.0 async + Alembic | Migrations required by the brief |
 | Auth | Supabase Auth (email/password + Google); FastAPI verifies the JWT | Social login; authorisation stays in our API |
-| Cache / rate limits | Redis (Upstash) | Rate limits, amenity status, repeated LLM answers |
-| Jobs | arq worker | Reminders, digest, ticket release, document ingestion |
-| Agents | LangGraph | Interrupts give human-in-the-loop approval |
-| Tracing | Langfuse + our `llm_calls` table | Per-request traces, cost and latency dashboard |
+| Cache / rate limits | Redis (Upstash) when reachable, in-process fallback | Rate limits, repeated LLM answers |
+| Jobs | FastAPI background tasks (arq later if needed) | Document ingestion, reminders |
+| AI | Google Gemini via LangGraph + langchain-google-genai | Saarthi: answers, tools, confirmations (interrupts) |
+| Tracing | our `llm_calls` table, plus Langfuse when keys are set | Per-request traces, cost and latency dashboard |
 | Integrations | Razorpay (+ webhooks), Resend, Twilio WhatsApp sandbox | 2+ integrations with retries and webhooks |
 | Deploy | Railway/Render (API + worker), Vercel (frontend), GitHub Actions CI | |
 
@@ -21,7 +21,7 @@
 3. Router calls a service; the service always filters by the member's society_id.
 4. Typed response, or `{code, message}` error.
 
-AI requests follow the same path into LangGraph. **Agent tools wrap the same services**, run with the calling user's permissions, and never use raw SQL.
+Saarthi requests follow the same path into LangGraph. **Agent tools wrap the same services**, run with the calling user's permissions, and never use raw SQL.
 
 ## Backend layout
 ```
@@ -34,7 +34,7 @@ backend/app/
   routers/       societies, community, events, amenities, tickets,
                  marketplace, payments, notifications, assistant, admin, webhooks
   services/      business logic (shared by routers and agents)
-  agents/        graph, supervisor, amenity, event, ops, connection, concierge, tools/
+  agents/        Saarthi: prompts/saarthi.md (persona), llm, graph, pricing, tracing, tools/
   rag/           ingest, chunking, retrieval
   integrations/  razorpay, resend, whatsapp
   workers/       arq jobs
@@ -79,23 +79,26 @@ Every table except `users` has `society_id`; every query filters on it.
 
 **AI and system**
 - `documents`, `document_chunks` (embedding vector, HNSW index)
-- `chat_sessions`, `chat_messages` (citations jsonb)
+- `chat_sessions` (per resident, soft delete), `chat_messages` (citations, cards, feedback)
 - `agent_runs`, `approvals` (action_type, payload, status)
 - `notifications` (priority critical/normal, channel)
-- `llm_calls` (model, tokens, cost, latency, trace_id)
+- `llm_calls` (purpose, model, tokens, cost, latency, outcome, trace_id, detail)
 - `listings`, `audit_log`
 
 **Key indexes:** society_id everywhere; (society_id, starts_at) on events; HNSW on chunk embeddings; exclusion constraint on bookings; unique Razorpay and webhook ids.
 
-## Agents (LangGraph)
+## Saarthi (LangGraph + Gemini)
+Full requirements: `SAARTHI-REQUIREMENTS.md`. Models come from config: `GEMINI_MODEL_MAIN` for chat, `GEMINI_MODEL_FAST` for summaries, form fill and fallback, `GEMINI_EMBED_MODEL` for the guide. Each call times out, retries once, then falls back to the other model. Chat streams over SSE (`POST /v1/saarthi/chat`).
+
+Planned agent roles:
 - **Supervisor:** small, fast model routes to a specialist (structured output).
 - **Amenity agent:** availability, rules, booking.
 - **Event agent:** plans events, picks venue and time, drafts, invites matching residents.
 - **Ops agent:** triages new tickets, dedupes, suggests vendor.
 - **Connection agent:** interest matching for people and groups.
-- **Concierge:** RAG with citations (built last).
+- **Society guide:** RAG over `society-guide/` documents with citations.
 - **Approvals:** risky actions (see PRODUCT.md) create an `approvals` row and interrupt the graph; committee approve/reject resumes it.
-- **Memory:** LangGraph Postgres checkpointer, one thread per chat session.
+- **Memory:** chat history from `chat_messages`; a LangGraph SQLite checkpointer (separate file) arrives with confirmations.
 - **Models:** router model, main model, fallback model, all from config. Retry once, then fall back.
 - **Safety:** user content and document text passed as data inside delimiters; tools validate arguments; an agent can never change its own society or role.
 
@@ -108,7 +111,7 @@ Every table except `users` has `society_id`; every query filters on it.
 6. Help desk
 7. Notifications + worker
 8. Agents
-9. RAG concierge
+9. Saarthi society guide (RAG)
 10. Evals, rate limits, cost dashboard
 
 Detailed task prompts: `docs/build-prompts.md`.

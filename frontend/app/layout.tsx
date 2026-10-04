@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import "./globals.css";
+import "@/styles/saarthi-face.css";
 
 config.autoAddCss = false;
 
