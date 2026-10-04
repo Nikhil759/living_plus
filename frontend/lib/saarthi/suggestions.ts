@@ -45,13 +45,40 @@ const BY_SECTION: Array<[prefix: string, questions: string[]]> = [
       "What are people talking about?",
     ],
   ],
+  [
+    "/local-businesses",
+    [
+      "What's on today's tiffin menu?",
+      "Any maths tuition in the society?",
+      "Who does pet sitting here?",
+      "Can I list my home business?",
+    ],
+  ],
+  [
+    "/flat-openings",
+    [
+      "Any 2 BHK flats under ₹40,000?",
+      "Is there a room for a working woman?",
+      "What documents do tenants need?",
+      "How do I post a flat opening?",
+    ],
+  ],
+  [
+    "/guide",
+    [
+      "What changed at the last AGM?",
+      "What are the quiet hours?",
+      "How much does the hall cost for a birthday?",
+      "What are the fines for wrong parking?",
+    ],
+  ],
 ];
 
 const DEFAULT_QUESTIONS = [
   "What's on today?",
+  "When is a court free tonight?",
   "What time can I shift luggage?",
-  "Can I do renovation work on Sunday?",
-  "When is maintenance due?",
+  "Any new notices this week?",
 ];
 
 export function suggestionsFor(pathname: string): string[] {

@@ -36,6 +36,10 @@ os.environ.update(
     REDIS_URL="redis://localhost:6379/0",
     LOCAL_DEV_AUTH_EMAIL="",
     UPLOAD_DIR=str(BACKEND_DIR / ".demo" / "test_uploads"),
+    # Tests never call Gemini or Langfuse, even when backend/.env has real keys.
+    GEMINI_API_KEY="",
+    LANGFUSE_PUBLIC_KEY="",
+    LANGFUSE_SECRET_KEY="",
 )
 
 from app.core.db import build_engine, get_db  # noqa: E402

@@ -514,6 +514,24 @@ async def _neighbours(db: AsyncSession, member: CurrentMember) -> list[Neighbour
     ]
 
 
+async def interest_count(db: AsyncSession, member: CurrentMember, interest: str) -> int:
+    """Other approved residents who list this interest. A count only: hidden profiles are
+    included, but no names or details ever leave this function."""
+    wanted = interest.strip().lower()
+    rows = await db.execute(
+        select(Profile.user_id, Profile.interests)
+        .join(Membership, Membership.user_id == Profile.user_id)
+        .where(
+            Profile.society_id == member.society_id,
+            Membership.society_id == member.society_id,
+            Membership.status == MembershipStatus.approved,
+            Profile.user_id != member.user.id,
+        )
+        .distinct()
+    )
+    return sum(1 for _, interests in rows if wanted in {i.lower() for i in interests})
+
+
 async def catalog(db: AsyncSession, member: CurrentMember) -> CatalogOut:
     groups = list(
         await db.scalars(

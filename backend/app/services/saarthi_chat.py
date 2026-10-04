@@ -11,8 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents import saarthi
+from app.agents.graph import Toolbox
 from app.agents.llm import ChatModels
 from app.agents.prompts import system_prompt
+from app.agents.tools.base import ToolContext
+from app.agents.tools.read import READ_TOOLS
 from app.auth.deps import CurrentMember
 from app.core import rate_limit
 from app.core.cache import get_cache
@@ -174,6 +177,7 @@ async def stream_reply(
             guide_found=True,
         )
         citations: list[dict[str, Any]] = cached["citations"]
+        cards: list[dict[str, Any]] = []
     else:
         society = await db.get(Society, member.society_id)
         system = system_prompt(
@@ -190,6 +194,9 @@ async def stream_reply(
         async for kind, payload in saarthi.stream_turn(
             models,
             retriever,
+            Toolbox(
+                ctx=ToolContext(db=db, member=member, now=datetime.now(UTC)), tools=READ_TOOLS
+            ),
             saarthi.build_messages(system, history, body.message),
             _retrieval_query(history, body.message),
             {"session_id": str(session.id), "society_id": str(member.society_id)},
@@ -203,6 +210,7 @@ async def stream_reply(
         assert found is not None
         result = found
         citations = saarthi.citations_for(result.text, result.passages)
+        cards = [card.model_dump(by_alias=True) for card in result.cards]
     failed = result.outcome == LlmOutcome.error
 
     reply = ChatMessage(
@@ -211,6 +219,7 @@ async def stream_reply(
         role=ChatRole.assistant,
         content=FRIENDLY_ERROR if failed else result.text,
         citations=[] if failed else citations,
+        cards=[] if failed else cards,
         status=ChatMessageStatus.error if failed else ChatMessageStatus.ok,
         created_at=datetime.now(UTC),
     )
@@ -239,6 +248,7 @@ async def stream_reply(
             # Questions the guide couldn't answer feed "top unanswered questions" (AI usage page).
             "unanswered": NOT_FOUND_PHRASE in result.text.lower(),
             "question": body.message[:300],
+            "tools": result.tool_log,
             "retrieved": [
                 {
                     "chunk": str(p.chunk_id),
@@ -254,11 +264,12 @@ async def stream_reply(
     if failed:
         yield "error", {"code": "saarthi_failed", "message": FRIENDLY_ERROR}
         return
-    if cache_key and not cached and result.guide_found and citations:
+    # Live answers (any tool used) are never cached; only guide answers are.
+    if cache_key and not cached and result.guide_found and citations and not result.tool_log:
         await get_cache().set(
             cache_key, {"text": result.text, "citations": citations}, ANSWER_CACHE_SECONDS
         )
-    yield "done", {"messageId": str(reply.id), "citations": citations}
+    yield "done", {"messageId": str(reply.id), "citations": citations, "cards": cards}
 
 
 def _retrieval_query(history: list[tuple[ChatRole, str]], message: str) -> str:

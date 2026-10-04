@@ -64,3 +64,31 @@ guide:
   - question: Is there a rule about solar panels on balconies?
     must_contain: ["couldn't find"]
     cite: []
+
+# live: the right tool (and key arguments) must be called; answers come from app data.
+live:
+  - question: What's on today?
+    tool: find_events
+  - question: When is a badminton court free tonight?
+    tool: free_slots
+    args: {amenity: badminton}
+  - question: What's happening this weekend?
+    tool: find_events
+  - question: What's the status of my lift complaint?
+    tool: my_issues
+  - question: Any cycles for sale?
+    tool: search_listings
+    args: {text: cycle}
+  - question: What's on today's tiffin menu?
+    tool: business_details
+  - question: How many residents are interested in football?
+    tool: neighbours_with_interest
+    args: {interest: football}
+  - question: Is the hall free this Saturday evening?
+    tool: space_schedule
+    args: {space: hall}
+  - question: Any 2 BHK flats available?
+    tool: search_openings
+    args: {bhk: 2}
+  - question: Which WhatsApp groups can I join?
+    tool: whatsapp_groups

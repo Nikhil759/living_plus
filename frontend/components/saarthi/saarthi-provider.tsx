@@ -20,6 +20,7 @@ import type {
   ChatFeedback,
   ChatSessionSummary,
   Citation,
+  SaarthiCard,
   SaarthiEvent,
 } from "@/lib/types/saarthi";
 
@@ -34,6 +35,7 @@ export interface UiMessage {
   feedback: ChatFeedback | null;
   saved: boolean;
   citations: Citation[];
+  cards: SaarthiCard[];
 }
 
 interface SaarthiContextValue {
@@ -115,6 +117,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           feedback: null,
           saved: true,
           citations: [],
+          cards: [],
         },
         {
           id: replyId,
@@ -124,6 +127,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           feedback: null,
           saved: false,
           citations: [],
+          cards: [],
         },
       ]);
       setBusy(true);
@@ -164,13 +168,20 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
             updateMessage(currentId, () => ({ content: "" }));
             break;
           case "done": {
-            const { messageId: savedId, citations } = event.data;
+            const { messageId: savedId, citations, cards } = event.data;
             setMessages((all) => {
               const reply = all.find((m) => m.id === currentId);
               if (reply) setAnnouncement(`Saarthi: ${stripCitationMarkers(reply.content)}`);
               return all.map((m) =>
                 m.id === currentId
-                  ? { ...m, id: savedId, status: "ok", saved: true, citations: citations ?? [] }
+                  ? {
+                      ...m,
+                      id: savedId,
+                      status: "ok",
+                      saved: true,
+                      citations: citations ?? [],
+                      cards: cards ?? [],
+                    }
                   : m,
               );
             });
@@ -269,6 +280,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           feedback: m.feedback,
           saved: true,
           citations: m.citations ?? [],
+          cards: m.cards ?? [],
         })),
       );
     },

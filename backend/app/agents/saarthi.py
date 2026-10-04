@@ -7,11 +7,12 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from app.agents.graph import Retriever, saarthi_graph
+from app.agents.graph import Retriever, Toolbox, saarthi_graph
 from app.agents.llm import ChatModels
 from app.agents.tracing import trace_callbacks
 from app.models.enums import ChatRole, LlmOutcome
 from app.rag.retrieval import Passage
+from app.schemas.saarthi import SaarthiCard
 
 _MARKER = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 
@@ -26,6 +27,8 @@ class TurnResult:
     error_code: str | None
     passages: list[Passage] = field(default_factory=list)
     guide_found: bool = False
+    cards: list[SaarthiCard] = field(default_factory=list)
+    tool_log: list[dict[str, Any]] = field(default_factory=list)
 
 
 def citations_for(text: str, passages: list[Passage]) -> list[dict[str, Any]]:
@@ -66,6 +69,7 @@ def build_messages(
 async def stream_turn(
     models: ChatModels,
     retriever: Retriever,
+    toolbox: Toolbox,
     messages: list[BaseMessage],
     retrieval_query: str,
     trace_tags: dict[str, str],
@@ -73,7 +77,9 @@ async def stream_turn(
     """Yields ("status"|"delta"|"reset", payload) while streaming, then ("result", TurnResult)."""
     final: dict[str, Any] = {}
     config = {
-        "configurable": {"models": models, "retriever": retriever},
+        "configurable": {"models": models, "retriever": retriever, "toolbox": toolbox},
+        # Each tool round is two graph steps; keep headroom over the tool-round cap.
+        "recursion_limit": 25,
         "callbacks": trace_callbacks(),
         "run_name": "saarthi_chat",
         "metadata": trace_tags,
@@ -100,4 +106,6 @@ async def stream_turn(
         error_code=final["error_code"],
         passages=final.get("passages", []),
         guide_found=final.get("guide_found", False),
+        cards=final.get("cards", []),
+        tool_log=final.get("tool_log", []),
     )
