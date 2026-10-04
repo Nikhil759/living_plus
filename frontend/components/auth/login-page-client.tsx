@@ -1,8 +1,6 @@
 "use client";
 
-import LoginScene, { type SocietyMatch } from "@/components/login/LoginScene";
-import { PENDING_INVITE_KEY, writePendingInviteCode } from "@/lib/auth/pending-invite";
-import { lookupInviteCode } from "@/lib/api/lookup-invite";
+import LoginScene from "@/components/login/LoginScene";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export function LoginPageClient({ supabaseConfigured = true }: { supabaseConfigured?: boolean }) {
@@ -35,10 +33,6 @@ export function LoginPageClient({ supabaseConfigured = true }: { supabaseConfigu
           options: { redirectTo: googleRedirectTo() },
         });
         if (error) throw new Error("Google sign-in didn't start. Try again.");
-      }}
-      onLookupInvite={lookupInviteCode}
-      onInviteConfirmed={(code) => {
-        writePendingInviteCode(code);
       }}
     />
   );

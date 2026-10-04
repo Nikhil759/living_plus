@@ -21,9 +21,11 @@ export type SocietyMatch = {
   members?: number;
 };
 
+/** After Google sign-in, /join asks for the invite code. */
 export type JoinFlowConfig = {
   email: string;
-  initialCode?: string;
+  /** Look up an invite code. Return null when the code is unknown. */
+  onLookup: (code: string) => Promise<SocietyMatch | null>;
   onRedeem: (code: string) => Promise<void>;
   onSignOut: () => Promise<void>;
 };
@@ -31,15 +33,10 @@ export type JoinFlowConfig = {
 export type LoginSceneProps = {
   /** Start the Google OAuth redirect (the only way to sign in). Throw to show an error. */
   onGoogleSignIn: () => Promise<void>;
-  /** Look up an invite code. Return null when the code is unknown. */
-  onLookupInvite: (code: string) => Promise<SocietyMatch | null>;
-  /** User confirmed the society; parent stores the code so it can join after sign-in. */
-  onInviteConfirmed?: (code: string, society: SocietyMatch) => void;
-  /** Signed-in redeem flow (/join): same invite panel, completes membership instead of sign-in. */
+  /** Signed-in invite step (/join): shows the invite panel instead of sign-in. */
   joinFlow?: JoinFlowConfig;
 };
 
-type View = "main" | "invite";
 type IntroStage = "" | "start" | "fade" | "logo" | "reveal";
 
 const INTRO_KEY = "lp-login-intro-played";
@@ -50,15 +47,13 @@ function errorMessage(err: unknown, fallback: string) {
 
 export default function LoginScene({
   onGoogleSignIn,
-  onLookupInvite,
-  onInviteConfirmed,
   joinFlow,
 }: LoginSceneProps) {
   // Start hidden so returning visitors get a soft fade-in instead of a flash.
   const [intro, setIntro] = useState<IntroStage>("start");
   const timers = useRef<number[]>([]);
 
-  const [view, setView] = useState<View>(joinFlow ? "invite" : "main");
+  const view = joinFlow ? "invite" : "main";
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -66,34 +61,11 @@ export default function LoginScene({
   const [codeErr, setCodeErr] = useState("");
   const [inviteError, setInviteError] = useState<{ title: string; message: string } | null>(null);
   const [society, setSociety] = useState<SocietyMatch | null>(null);
-  const [joining, setJoining] = useState<SocietyMatch | null>(null);
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
   };
-
-  useEffect(() => {
-    if (!joinFlow?.initialCode) return;
-    const normalized = joinFlow.initialCode.trim().toUpperCase().replace(/\s/g, "");
-    setCode(normalized);
-    if (normalized.length < 4) return;
-    let cancelled = false;
-    void (async () => {
-      setBusy(true);
-      try {
-        const match = await onLookupInvite(normalized);
-        if (!cancelled && match) setSociety(match);
-      } catch {
-        /* user can tap Find my society again */
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [joinFlow?.initialCode, onLookupInvite]);
 
   // Intro: once per browser session, skipped for reduced motion.
   useEffect(() => {
@@ -126,11 +98,6 @@ export default function LoginScene({
     timers.current.push(window.setTimeout(() => setIntro(""), 700));
   }, [intro]);
 
-  const go = (next: View) => {
-    setFormError("");
-    setView(next);
-  };
-
   async function google() {
     setBusy(true);
     setFormError("");
@@ -144,8 +111,9 @@ export default function LoginScene({
 
   async function submitInvite(e: FormEvent) {
     e.preventDefault();
+    if (!joinFlow) return;
     const normalized = code.trim().toUpperCase().replace(/\s/g, "");
-    if (joinFlow && society) {
+    if (society) {
       setBusy(true);
       setFormError("");
       try {
@@ -159,12 +127,6 @@ export default function LoginScene({
       }
       return;
     }
-    if (society) {
-      onInviteConfirmed?.(normalized, society);
-      setJoining(society);
-      go("main");
-      return;
-    }
     if (normalized.length < 4) {
       setCodeErr("Enter the code from your committee, e.g. SECTOR50.");
       return;
@@ -173,7 +135,7 @@ export default function LoginScene({
     setFormError("");
     setInviteError(null);
     try {
-      const match = await onLookupInvite(normalized);
+      const match = await joinFlow.onLookup(normalized);
       if (match) {
         setSociety(match);
         setInviteError(null);
@@ -232,16 +194,11 @@ export default function LoginScene({
         </header>
 
         <section className={styles.panel} data-view={view} aria-live="polite">
-          {view === "main" && (
+          {!joinFlow && (
             <div className={styles.view} key="main">
               <h2 className={styles.title}>Welcome home</h2>
               <p className={styles.lead}>Sign in to your community.</p>
               <div className={styles.stack}>
-                {joining && (
-                  <p className={styles.notice}>
-                    Sign in to request to join <b>{joining.name}</b>.
-                  </p>
-                )}
                 {formError && <p className={styles.formError} role="alert">{formError}</p>}
                 <button type="button" className={`${styles.btn} ${styles.secondary}`} onClick={google} disabled={busy}>
                   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
@@ -253,45 +210,27 @@ export default function LoginScene({
                   Continue with Google
                 </button>
               </div>
-              <p className={styles.invite}>
-                Have an invite code?{" "}
-                <button type="button" className={styles.link} onClick={() => go("invite")}>
-                  Join your society
-                </button>
-              </p>
               <p className={styles.foot}>Private to your society · We never show ads</p>
             </div>
           )}
 
-          {view === "invite" && (
+          {joinFlow && (
             <form className={styles.view} key="invite" onSubmit={submitInvite} noValidate>
-              {joinFlow ? (
-                <button
-                  type="button"
-                  className={styles.back}
-                  disabled={busy}
-                  onClick={() => void joinFlow.onSignOut()}
-                >
-                  {backIcon}Sign out
-                </button>
-              ) : (
-                <button type="button" className={styles.back} onClick={() => go("main")}>
-                  {backIcon}Back
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.back}
+                disabled={busy}
+                onClick={() => void joinFlow.onSignOut()}
+              >
+                {backIcon}Sign out
+              </button>
               <h2 className={styles.title}>Find your home</h2>
-              <p className={styles.lead}>
-                {joinFlow
-                  ? "Enter your one-time code to join your society."
-                  : "Enter the code your committee shared."}
-              </p>
+              <p className={styles.lead}>Enter your one-time code to join your society.</p>
               <div className={styles.stack}>
-                {joinFlow && (
-                  <p className={styles.notice}>
-                    Signed in as <b>{joinFlow.email || "your Google account"}</b>. Guest demo codes work
-                    with any account; personal codes must match your email.
-                  </p>
-                )}
+                <p className={styles.notice}>
+                  Signed in as <b>{joinFlow.email || "your Google account"}</b>. Guest demo codes work
+                  with any account; personal codes must match your email.
+                </p>
                 {inviteError ? (
                   <div className={styles.codeAlert} role="alert">
                     <strong>{inviteError.title}</strong>
@@ -337,23 +276,18 @@ export default function LoginScene({
                   </div>
                 )}
                 <button type="submit" className={`${styles.btn} ${styles.primary}`} disabled={busy}>
-                  {joinFlow && society
+                  {society
                     ? busy
                       ? "Joining…"
                       : "Join society"
-                    : society
-                      ? "That's my home"
-                      : busy
-                        ? "Checking…"
-                        : "Find my society"}
+                    : busy
+                      ? "Checking…"
+                      : "Find my society"}
                 </button>
               </div>
-              {joinFlow ? (
-                <p className={styles.foot}>Codes are one-person, one-use · Private to your society</p>
-              ) : null}
+              <p className={styles.foot}>Codes are one-person, one-use · Private to your society</p>
             </form>
           )}
-
         </section>
       </div>
 
