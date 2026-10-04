@@ -2,9 +2,9 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Query, Response
 from fastapi.responses import StreamingResponse
 
 from app.agents.llm import ChatModelsDep
@@ -22,8 +22,9 @@ from app.schemas.saarthi import (
     FillOut,
     ProposeIn,
     TodayOut,
+    UsageOut,
 )
-from app.services import saarthi_actions, saarthi_chat, saarthi_fill, saarthi_today
+from app.services import llm_usage, saarthi_actions, saarthi_chat, saarthi_fill, saarthi_today
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/saarthi", tags=["saarthi"])
@@ -98,6 +99,14 @@ async def fill_form(
 async def today_summary(db: DbSession, member: CurrentMemberDep, models: ChatModelsDep) -> TodayOut:
     """Home "Today in your society". Cached per resident per day until the facts change."""
     return await saarthi_today.today(db, member, models)
+
+
+@router.get("/usage", response_model=UsageOut)
+async def ai_usage(
+    db: DbSession, member: CurrentMemberDep, days: Annotated[int, Query(ge=1, le=90)] = 14
+) -> UsageOut:
+    """Committee "AI usage": requests, tokens, cost, latency, feedback, unanswered questions."""
+    return await llm_usage.usage(db, member, days)
 
 
 @router.post("/actions/propose", response_model=ChatMessageOut, status_code=201)

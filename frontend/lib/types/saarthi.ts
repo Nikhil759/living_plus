@@ -141,3 +141,24 @@ export interface TodaySummary {
   generatedAt: string;
   cached: boolean;
 }
+
+export interface AiUsageDay {
+  date: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  costInr: number;
+  p50Ms: number;
+  p95Ms: number;
+  errors: number;
+}
+
+/** GET /v1/saarthi/usage (committee only). */
+export interface AiUsage {
+  days: AiUsageDay[];
+  today: AiUsageDay;
+  byPurpose: { purpose: string; requests: number; costInr: number }[];
+  feedback: { up: number; down: number; upRatio: number | null };
+  unanswered: { question: string; count: number; lastAsked: string }[];
+}

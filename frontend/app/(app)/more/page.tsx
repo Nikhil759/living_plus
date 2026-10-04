@@ -1,5 +1,6 @@
 import {
   Bell,
+  BarChart3,
   BookOpen,
   CalendarDays,
   Home,
@@ -15,6 +16,7 @@ import {
 import { AppPage } from "@/components/layout/app-page";
 import { GroupedList, ListRow } from "@/components/ui/grouped-list";
 import { IconTile } from "@/components/ui/icon-tile";
+import { loadResident } from "@/lib/data";
 
 const LINKS = [
   { href: "/events", label: "Events", detail: "Browse and host gatherings", icon: CalendarDays },
@@ -31,7 +33,9 @@ const LINKS = [
   { href: "/profile", label: "Profile", detail: "Your flat and roles", icon: User },
 ] as const;
 
-export default function MorePage() {
+export default async function MorePage() {
+  const resident = await loadResident();
+  const isCommittee = resident.roles.some((r) => /committee|admin/i.test(r));
   return (
     <AppPage title="More">
       <GroupedList>
@@ -49,6 +53,20 @@ export default function MorePage() {
           />
         ))}
       </GroupedList>
+      {isCommittee ? (
+        <GroupedList>
+          <ListRow
+            href="/committee/ai-usage"
+            title="AI usage"
+            detail="Saarthi requests, cost and answer quality"
+            leading={
+              <IconTile>
+                <BarChart3 />
+              </IconTile>
+            }
+          />
+        </GroupedList>
+      ) : null}
     </AppPage>
   );
 }

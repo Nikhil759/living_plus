@@ -39,6 +39,7 @@ import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog, CommunityGroupDetail } from "@/lib/types/community";
 import type { GuideDocument, GuideDocumentDetail } from "@/lib/types/guide";
 import type { SaarthiDraft } from "@/lib/saarthi/prefill";
+import type { AiUsage } from "@/lib/types/saarthi";
 import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
 import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
 import type { HelpDeskFeedback, HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
@@ -198,6 +199,12 @@ export async function loadCommunityGroup(id: string): Promise<CommunityGroupDeta
   }
   const group = (await loadCommunity()).groups.find((g) => g.id === id);
   return group ? { ...group, posts: [] } : undefined;
+}
+
+/** Committee "AI usage" (Saarthi); only the API records model calls. */
+export async function loadAiUsage(days = 14): Promise<AiUsage | undefined> {
+  if (!backendIsLive()) return undefined;
+  return apiGetAsUser<AiUsage>(`/v1/saarthi/usage?days=${days}`);
 }
 
 /** Writes that only exist in FastAPI (community, committee help desk tools). */

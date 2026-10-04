@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     SAARTHI_GUIDE_MIN_SCORE: float = 0.58
     # Same gate for keyword-only search when there are no embeddings yet.
     SAARTHI_GUIDE_KEYWORD_FLOOR: float = 3.0
+    # Rupee estimate on the committee AI usage page (model prices are in USD).
+    USD_TO_INR: float = 88.0
 
     # Optional Langfuse tracing; off unless both keys are set.
     LANGFUSE_PUBLIC_KEY: str = ""

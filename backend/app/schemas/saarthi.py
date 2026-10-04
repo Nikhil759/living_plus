@@ -135,3 +135,44 @@ class TodayOut(CamelModel):
     summary: str
     generated_at: str
     cached: bool
+
+
+class UsageDayOut(CamelModel):
+    date: str
+    requests: int
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    cost_inr: float
+    p50_ms: int
+    p95_ms: int
+    errors: int
+
+
+class UsagePurposeOut(CamelModel):
+    purpose: str
+    requests: int
+    cost_inr: float
+
+
+class UsageFeedbackOut(CamelModel):
+    up: int
+    down: int
+    # Share of thumbs up among rated answers; None when nothing was rated.
+    up_ratio: float | None
+
+
+class UnansweredOut(CamelModel):
+    question: str
+    count: int
+    last_asked: str
+
+
+class UsageOut(CamelModel):
+    """Committee "AI usage": Saarthi requests, cost and quality for the society."""
+
+    days: list[UsageDayOut]
+    today: UsageDayOut
+    by_purpose: list[UsagePurposeOut]
+    feedback: UsageFeedbackOut
+    unanswered: list[UnansweredOut]

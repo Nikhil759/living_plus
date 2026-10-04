@@ -43,9 +43,14 @@ export default async function HelpDeskCommitteePage() {
       <p className="text-caption text-ink-tertiary">
         Status changes, vendor assignment and merge tools connect to the API in a later phase. Open an issue to post committee updates via demo store comments.
       </p>
-      <Link href="/help-desk/directory" className="text-callout font-semibold text-primary">
-        Vendor directory
-      </Link>
+      <div className="flex flex-wrap gap-4">
+        <Link href="/help-desk/directory" className="text-callout font-semibold text-primary">
+          Vendor directory
+        </Link>
+        <Link href="/committee/ai-usage" className="text-callout font-semibold text-primary">
+          AI usage
+        </Link>
+      </div>
     </AppPage>
   );
 }
