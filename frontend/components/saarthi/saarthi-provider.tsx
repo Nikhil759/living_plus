@@ -190,11 +190,14 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
             break;
           case "done": {
             const { messageId: savedId, citations, cards, action } = event.data;
+            // React runs this updater later, after currentId has moved to savedId below,
+            // so it must use the id the streaming reply has right now.
+            const streamingId = currentId;
             setMessages((all) => {
-              const reply = all.find((m) => m.id === currentId);
+              const reply = all.find((m) => m.id === streamingId);
               if (reply) setAnnouncement(`Saarthi: ${stripCitationMarkers(reply.content)}`);
               return all.map((m) =>
-                m.id === currentId
+                m.id === streamingId
                   ? {
                       ...m,
                       id: savedId,
