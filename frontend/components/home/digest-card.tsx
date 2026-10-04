@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Droplets, Package, Sparkles } from "lucide-react";
+import { TodaySummary } from "@/components/home/today-summary";
 import { Card } from "@/components/ui/card";
 import { GroupedList, ListRow } from "@/components/ui/grouped-list";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -20,11 +21,7 @@ export function DigestCard({ digest }: { digest: Digest }) {
   return (
     <section className="space-y-4">
       <Card className="space-y-4">
-        <div className="flex items-center gap-2 text-caption text-ink-secondary">
-          <Sparkles className="h-4 w-4 text-ink-secondary" strokeWidth={1.5} aria-hidden="true" />
-          Summarised by Living+
-        </div>
-        {summary ? <p className="text-body text-ink">{summary}</p> : null}
+        <TodaySummary fallback={summary} />
       </Card>
 
       {items.length > 0 ? (

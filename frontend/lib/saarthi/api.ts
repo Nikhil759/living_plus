@@ -13,6 +13,7 @@ import type {
   FillForm,
   FillResult,
   SaarthiEvent,
+  TodaySummary,
 } from "@/lib/types/saarthi";
 
 /** Local dev without a Supabase session falls back to the backend's LOCAL_DEV_AUTH_EMAIL user. */
@@ -73,6 +74,11 @@ export async function getActionPayload(
   id: string,
 ): Promise<{ tool: string; payload: Record<string, unknown> }> {
   return apiGet(`/v1/saarthi/actions/${encodeURIComponent(id)}`, { headers: await authHeaders() });
+}
+
+/** Home "Today in your society", written by Saarthi (cached on the server for the day). */
+export async function getToday(): Promise<TodaySummary> {
+  return apiGet("/v1/saarthi/today", { headers: await authHeaders() });
 }
 
 /** Fill with Saarthi: one sentence in, form values out. Never submits anything. */

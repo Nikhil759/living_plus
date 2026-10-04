@@ -893,6 +893,8 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             "duration_h": 3,
             "price_paise": 0,
             "capacity": 24,
+            # Nearly full, so Home's Today summary has something filling up for football fans.
+            "attendees": 19,
             "tags": ["FIFA", "gaming"],
             "category": EventCategory.sports,
             "cover_url": "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80",
@@ -1028,7 +1030,7 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
         event.stall_categories = spec.get("stall_categories") or []
         event.stall_application_deadline = spec.get("stall_application_deadline")
 
-        for t_idx in range(3):
+        for t_idx in range(spec.get("attendees", 3)):
             attendee = users[f"resident.{t_idx}"]
             ticket_id = sid(f"ticket.{spec['slug']}.{t_idx}")
             if await session.get(EventTicket, ticket_id) is None:

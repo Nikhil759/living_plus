@@ -356,18 +356,19 @@ async def fill(
     context = await _context(db, member, body.form)
     prompt = fill_prompt(body.form, context=context, current=body.current, now=now)
     started = time.perf_counter()
-    result, named, outcome, error = await run_fill(models, body.form, prompt, body.text)
+    run = await run_fill(models, body.form, prompt, body.text)
+    result = run.value
     llm_usage.record_call(
         db,
         society_id=member.society_id,
         user_id=member.user.id,
         purpose=LlmPurpose.fill,
-        model=named.name,
-        input_tokens=0,
-        output_tokens=0,
+        model=run.model.name,
+        input_tokens=run.input_tokens,
+        output_tokens=run.output_tokens,
         latency_ms=int((time.perf_counter() - started) * 1000),
-        outcome=outcome,
-        error_code=error,
+        outcome=run.outcome,
+        error_code=run.error,
         detail={"form": body.form, "edit": body.current is not None},
     )
     if result is None:

@@ -21,8 +21,9 @@ from app.schemas.saarthi import (
     FillIn,
     FillOut,
     ProposeIn,
+    TodayOut,
 )
-from app.services import saarthi_actions, saarthi_chat, saarthi_fill
+from app.services import saarthi_actions, saarthi_chat, saarthi_fill, saarthi_today
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/saarthi", tags=["saarthi"])
@@ -91,6 +92,12 @@ async def fill_form(
 ) -> FillOut:
     """Fill with Saarthi: a sentence becomes form values. The resident still submits."""
     return await saarthi_fill.fill(db, member, body, models)
+
+
+@router.get("/today", response_model=TodayOut)
+async def today_summary(db: DbSession, member: CurrentMemberDep, models: ChatModelsDep) -> TodayOut:
+    """Home "Today in your society". Cached per resident per day until the facts change."""
+    return await saarthi_today.today(db, member, models)
 
 
 @router.post("/actions/propose", response_model=ChatMessageOut, status_code=201)

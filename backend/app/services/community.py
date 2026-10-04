@@ -85,7 +85,7 @@ async def _member_counts(db: AsyncSession, group_ids: list[uuid.UUID]) -> dict[u
     return dict(rows.all())
 
 
-async def _interests(db: AsyncSession, member: CurrentMember) -> set[str]:
+async def resident_interests(db: AsyncSession, member: CurrentMember) -> set[str]:
     profile = await db.get(Profile, member.user.id)
     return {i.lower() for i in (profile.interests if profile else [])}
 
@@ -96,7 +96,7 @@ async def _groups_out(
     roles = await _my_roles(db, member)
     requests = await _my_requests(db, member, JoinTargetType.group)
     counts = await _member_counts(db, [g.id for g in groups])
-    interests = await _interests(db, member)
+    interests = await resident_interests(db, member)
     return [
         GroupOut(
             id=g.id,

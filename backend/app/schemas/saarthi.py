@@ -127,3 +127,11 @@ class ActionDecisionOut(CamelModel):
 
 class ChatSessionDetailOut(ChatSessionOut):
     messages: list[ChatMessageOut]
+
+
+class TodayOut(CamelModel):
+    """Home "Today in your society", written by Saarthi from live data."""
+
+    summary: str
+    generated_at: str
+    cached: bool

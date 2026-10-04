@@ -7,6 +7,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
+from langchain_core.messages import AIMessage
 from sqlalchemy import select
 
 from app.agents.llm import ChatModels, NamedModel, get_chat_models
@@ -29,7 +30,7 @@ class FakeStructured:
         self.prompts: list[str] = []
         self.fail = False
 
-    def with_structured_output(self, schema: Any) -> "FakeStructured":
+    def with_structured_output(self, schema: Any, include_raw: bool = False) -> "FakeStructured":
         self.schema = schema
         return self
 
@@ -37,7 +38,10 @@ class FakeStructured:
         self.prompts.append("\n".join(str(m.content) for m in messages))
         if self.fail:
             raise RuntimeError("provider down")
-        return self.schema.model_validate(self.outputs.pop(0))
+        raw = AIMessage(
+            "", usage_metadata={"input_tokens": 900, "output_tokens": 60, "total_tokens": 960}
+        )
+        return {"parsed": self.schema.model_validate(self.outputs.pop(0)), "raw": raw}
 
 
 @pytest.fixture
@@ -96,6 +100,7 @@ async def test_event_fill_acceptance_example(client, people, act_as, fake, db_se
     assert "Today is" in fake.prompts[0] and "information only" in fake.prompts[0]
     call = await db_session.scalar(select(LlmCall).where(LlmCall.purpose == "fill"))
     assert call.detail == {"form": "event", "edit": False}
+    assert (call.input_tokens, call.output_tokens) == (900, 60) and call.cost_usd > 0
 
 
 async def test_past_times_move_to_next_week_and_bad_values_are_dropped(

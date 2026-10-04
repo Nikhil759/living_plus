@@ -134,3 +134,10 @@ export interface FillResult {
   question: string | null;
   hints: FillHint[];
 }
+
+/** GET /v1/saarthi/today: Home "Today in your society". */
+export interface TodaySummary {
+  summary: string;
+  generatedAt: string;
+  cached: boolean;
+}

@@ -6,9 +6,7 @@ are deliberately lenient (no ranges): one odd value must not sink the whole fill
 app/services/saarthi_fill.py cleans values against the forms' real limits instead.
 """
 
-import asyncio
 import json
-import logging
 from datetime import datetime
 from typing import Any, Literal
 
@@ -16,12 +14,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.agents.llm import ChatModels, NamedModel
+from app.agents.llm import ChatModels, NamedModel, QuickResult, fast_first
 from app.agents.prompts import IST
-from app.core.config import get_settings
-from app.models.enums import LlmOutcome
-
-logger = logging.getLogger(__name__)
 
 FormName = Literal["event", "listing", "business", "opening", "issue", "group", "post", "feedback"]
 
@@ -205,21 +199,14 @@ def fill_prompt(
     return "\n".join(lines)
 
 
-async def run_fill(
-    models: ChatModels, form: str, prompt: str, text: str
-) -> tuple[FillModel | None, NamedModel, LlmOutcome, str | None]:
-    """Fast model first (cheap and quick), then the main model; returns the parsed fill."""
+async def run_fill(models: ChatModels, form: str, prompt: str, text: str) -> QuickResult[FillModel]:
+    """Structured output on the fast model first; returns the parsed fill and token counts."""
     schema = FILL_MODELS[form]
     messages = [SystemMessage(prompt), HumanMessage(f"Resident's text:\n<<<\n{text}\n>>>")]
-    error = None
-    for named, outcome in ((models.fallback, LlmOutcome.ok), (models.primary, LlmOutcome.fallback)):
-        try:
-            async with asyncio.timeout(get_settings().SAARTHI_TIMEOUT_SECONDS):
-                result = await named.model.with_structured_output(schema).ainvoke(messages)
-            if isinstance(result, schema):
-                return result, named, outcome, None
-            error = "unparsed"
-        except Exception as exc:  # Provider or parsing failure: try the other model once.
-            error = type(exc).__name__
-            logger.warning("saarthi fill failed", extra={"model": named.name, "error": error})
-    return None, models.primary, LlmOutcome.error, error
+
+    async def call(named: NamedModel) -> tuple[FillModel | None, Any]:
+        out = await named.model.with_structured_output(schema, include_raw=True).ainvoke(messages)
+        parsed = out.get("parsed") if isinstance(out, dict) else None
+        return (parsed if isinstance(parsed, schema) else None), out.get("raw")
+
+    return await fast_first(models, call, "fill")
