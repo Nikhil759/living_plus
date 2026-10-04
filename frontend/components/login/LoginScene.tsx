@@ -29,12 +29,8 @@ export type JoinFlowConfig = {
 };
 
 export type LoginSceneProps = {
-  /** Resolve on success (parent redirects). Throw an Error with a user-facing message on failure. */
-  onEmailSignIn: (email: string, password: string) => Promise<void>;
-  /** Start the Google OAuth redirect. Throw to show an error. */
+  /** Start the Google OAuth redirect (the only way to sign in). Throw to show an error. */
   onGoogleSignIn: () => Promise<void>;
-  /** Send a reset email. Throw to show an error. */
-  onForgotPassword: (email: string) => Promise<void>;
   /** Look up an invite code. Return null when the code is unknown. */
   onLookupInvite: (code: string) => Promise<SocietyMatch | null>;
   /** User confirmed the society; parent stores the code so it can join after sign-in. */
@@ -43,7 +39,7 @@ export type LoginSceneProps = {
   joinFlow?: JoinFlowConfig;
 };
 
-type View = "main" | "email" | "invite" | "sent";
+type View = "main" | "invite";
 type IntroStage = "" | "start" | "fade" | "logo" | "reveal";
 
 const INTRO_KEY = "lp-login-intro-played";
@@ -53,9 +49,7 @@ function errorMessage(err: unknown, fallback: string) {
 }
 
 export default function LoginScene({
-  onEmailSignIn,
   onGoogleSignIn,
-  onForgotPassword,
   onLookupInvite,
   onInviteConfirmed,
   joinFlow,
@@ -67,11 +61,6 @@ export default function LoginScene({
   const [view, setView] = useState<View>(joinFlow ? "invite" : "main");
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailErr, setEmailErr] = useState("");
-  const [pwErr, setPwErr] = useState("");
 
   const [code, setCode] = useState("");
   const [codeErr, setCodeErr] = useState("");
@@ -142,29 +131,6 @@ export default function LoginScene({
     setView(next);
   };
 
-  async function submitEmail(e: FormEvent) {
-    e.preventDefault();
-    let ok = true;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailErr("Enter an email like name@example.com.");
-      ok = false;
-    }
-    if (password.length < 6) {
-      setPwErr("Enter your password (at least 6 characters).");
-      ok = false;
-    }
-    if (!ok) return;
-    setBusy(true);
-    setFormError("");
-    try {
-      await onEmailSignIn(email.trim(), password);
-    } catch (err) {
-      setFormError(errorMessage(err, "We couldn't sign you in. Check your email and password."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function google() {
     setBusy(true);
     setFormError("");
@@ -172,23 +138,6 @@ export default function LoginScene({
       await onGoogleSignIn();
     } catch (err) {
       setFormError(errorMessage(err, "Google sign-in didn't start. Try again."));
-      setBusy(false);
-    }
-  }
-
-  async function forgot() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailErr("Enter your email first, then tap Forgot password.");
-      return;
-    }
-    setBusy(true);
-    setFormError("");
-    try {
-      await onForgotPassword(email.trim());
-      go("sent");
-    } catch (err) {
-      setFormError(errorMessage(err, "We couldn't send the reset email. Try again."));
-    } finally {
       setBusy(false);
     }
   }
@@ -213,7 +162,7 @@ export default function LoginScene({
     if (society) {
       onInviteConfirmed?.(normalized, society);
       setJoining(society);
-      go("email");
+      go("main");
       return;
     }
     if (normalized.length < 4) {
@@ -288,14 +237,12 @@ export default function LoginScene({
               <h2 className={styles.title}>Welcome home</h2>
               <p className={styles.lead}>Sign in to your community.</p>
               <div className={styles.stack}>
+                {joining && (
+                  <p className={styles.notice}>
+                    Sign in to request to join <b>{joining.name}</b>.
+                  </p>
+                )}
                 {formError && <p className={styles.formError} role="alert">{formError}</p>}
-                <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => go("email")}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="3" y="5" width="18" height="14" rx="3" />
-                    <path d="m4 7 8 6 8-6" />
-                  </svg>
-                  Continue with email
-                </button>
                 <button type="button" className={`${styles.btn} ${styles.secondary}`} onClick={google} disabled={busy}>
                   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
                     <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
@@ -314,60 +261,6 @@ export default function LoginScene({
               </p>
               <p className={styles.foot}>Private to your society · We never show ads</p>
             </div>
-          )}
-
-          {view === "email" && (
-            <form className={styles.view} key="email" onSubmit={submitEmail} noValidate>
-              <button type="button" className={styles.back} onClick={() => go("main")}>
-                {backIcon}Back
-              </button>
-              <h2 className={styles.title}>Sign in with email</h2>
-              <div className={styles.stack}>
-                {joining && (
-                  <p className={styles.notice}>
-                    Sign in to request to join <b>{joining.name}</b>.
-                  </p>
-                )}
-                {formError && <p className={styles.formError} role="alert">{formError}</p>}
-                <div className={styles.field}>
-                  <label htmlFor="login-email">Email</label>
-                  <input
-                    id="login-email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    autoFocus
-                    aria-invalid={emailErr ? true : undefined}
-                    aria-describedby="login-email-err"
-                    onChange={(e) => { setEmail(e.target.value); setEmailErr(""); }}
-                  />
-                  <span id="login-email-err" className={styles.err}>{emailErr}</span>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="login-password">Password</label>
-                  <input
-                    id="login-password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Your password"
-                    value={password}
-                    aria-invalid={pwErr ? true : undefined}
-                    aria-describedby="login-password-err"
-                    onChange={(e) => { setPassword(e.target.value); setPwErr(""); }}
-                  />
-                  <span id="login-password-err" className={styles.err}>{pwErr}</span>
-                </div>
-                <div className={styles.rowEnd}>
-                  <button type="button" className={styles.link} onClick={forgot} disabled={busy}>
-                    Forgot password?
-                  </button>
-                </div>
-                <button type="submit" className={`${styles.btn} ${styles.primary}`} disabled={busy}>
-                  {busy ? "Signing in…" : "Sign in"}
-                </button>
-              </div>
-            </form>
           )}
 
           {view === "invite" && (
@@ -461,22 +354,6 @@ export default function LoginScene({
             </form>
           )}
 
-          {view === "sent" && (
-            <div className={styles.view} key="sent">
-              <div className={styles.doneIcon}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E8EF5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 5 5L20 7" />
-                </svg>
-              </div>
-              <h2 className={styles.title}>Check your inbox</h2>
-              <p className={styles.lead}>We sent a reset link to {email.trim()}.</p>
-              <div className={styles.stack}>
-                <button type="button" className={`${styles.btn} ${styles.secondary}`} onClick={() => go("email")}>
-                  Back to sign in
-                </button>
-              </div>
-            </div>
-          )}
         </section>
       </div>
 

@@ -180,6 +180,27 @@ RESIDENT_NAMES: list[tuple[str, str, list[str]]] = [
 ]
 
 
+# Background residents so the society feels lived in (420 homes, 260+ neighbours). Their profiles
+# are hidden and never list football, so the demo's people, lists and interest counts don't change.
+NEIGHBOUR_COUNT = 230
+NEIGHBOUR_FIRST = [
+    "Aarav", "Vihaan", "Aditya", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya", "Atharv",
+    "Ayaan", "Kabir", "Dhruv", "Nikhil", "Siddharth", "Varun", "Harsh", "Yash", "Gaurav",
+    "Manish", "Deepak", "Saanvi", "Aanya", "Aadhya", "Diya", "Pari", "Anika", "Myra", "Kavya",
+    "Riya", "Shreya", "Nisha", "Swati", "Anjali", "Ritu", "Komal", "Pallavi", "Radhika", "Sneha",
+    "Nandini", "Fatima",
+]
+NEIGHBOUR_LAST = [
+    "Agarwal", "Banerjee", "Bose", "Chatterjee", "Das", "Dutta", "Fernandes", "Ghosh", "Hegde",
+    "Jain", "Kulkarni", "Kumar", "Mishra", "Mukherjee", "Naidu", "Pandey", "Pillai", "Saxena",
+    "Sinha", "Srivastava", "Thakur", "Tiwari", "Varghese", "Yadav", "Qureshi",
+]
+NEIGHBOUR_INTERESTS = [
+    "walking", "yoga", "books", "cooking", "gardening", "music", "movies", "travel",
+    "photography", "chess", "badminton", "kids", "pets", "art", "meditation",
+]
+
+
 def sid(label: str) -> uuid.UUID:
     return uuid.uuid5(SEED_NS, label)
 
@@ -397,6 +418,60 @@ async def _upsert_invite(
             invite.consumed_by_user_id = None
     elif invite.status == MembershipInviteStatus.pending:
         invite.email = normalized_email
+
+
+async def seed_neighbours(session: AsyncSession, society: Society, flats: dict[str, Flat]) -> None:
+    """Background residents in empty flats, spread across towers and floors."""
+    taken = set(
+        await session.scalars(
+            select(Membership.flat_id).where(
+                Membership.society_id == society.id, Membership.flat_id.is_not(None)
+            )
+        )
+    )
+    # Floor by floor across all four towers, so every tower fills evenly.
+    free = sorted(
+        (key for key, flat in flats.items() if flat.id not in taken),
+        key=lambda k: (int(k.split("-")[1]) % 100, int(k.split("-")[1]) // 100, k[0]),
+    )
+    pick = random.Random(7)
+    for idx in range(NEIGHBOUR_COUNT):
+        membership_id = sid(f"membership.neighbour.{idx}")
+        if await session.get(Membership, membership_id) is not None:
+            continue
+        first = NEIGHBOUR_FIRST[idx % len(NEIGHBOUR_FIRST)]
+        last = NEIGHBOUR_LAST[(idx * 7) % len(NEIGHBOUR_LAST)]
+        email = f"{first}.{last}.{idx}@example.com".lower()
+        user = await get_or_create(
+            session,
+            User,
+            sid(f"user.neighbour.{idx}"),
+            supabase_uid=f"seed:{email}",
+            email=email,
+            name=f"{first} {last}",
+        )
+        flat = flats[free.pop(0)]
+        session.add(
+            Membership(
+                id=membership_id,
+                user_id=user.id,
+                society_id=society.id,
+                flat_id=flat.id,
+                role=MembershipRole.owner if idx % 3 else MembershipRole.tenant,
+                status=MembershipStatus.approved,
+            )
+        )
+        if await session.get(Profile, user.id) is None:
+            session.add(
+                Profile(
+                    user_id=user.id,
+                    society_id=society.id,
+                    interests=pick.sample(NEIGHBOUR_INTERESTS, k=1 + idx % 3),
+                    is_visible=False,
+                    show_flat=False,
+                )
+            )
+    await session.flush()
 
 
 async def seed_membership_invites(
@@ -1298,6 +1373,7 @@ async def run_seed() -> None:
             select(Society.id).where(Society.invite_code == INVITE_CODE)
         )
         society, users, flats = await seed_identity(session)
+        await seed_neighbours(session, society, flats)
         await seed_membership_invites(session, society, flats)
         await seed_amenities(session, society, users)
         await seed_community(session, society, users)

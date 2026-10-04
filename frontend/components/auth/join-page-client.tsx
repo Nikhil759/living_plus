@@ -28,13 +28,7 @@ export function JoinPageClient({ email }: { email: string }) {
 
   return (
     <LoginScene
-      onEmailSignIn={async () => {
-        throw new Error("Use sign out and return to login.");
-      }}
       onGoogleSignIn={async () => {
-        throw new Error("Use sign out and return to login.");
-      }}
-      onForgotPassword={async () => {
         throw new Error("Use sign out and return to login.");
       }}
       onLookupInvite={lookupInvite}

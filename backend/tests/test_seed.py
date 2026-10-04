@@ -14,7 +14,7 @@ from app.models import (
     TicketFollower,
     User,
 )
-from app.models.enums import MembershipRole, PostType
+from app.models.enums import MembershipRole, MembershipStatus, PostType
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import seed
@@ -41,6 +41,8 @@ async def test_seed_matches_the_society_guide_and_is_idempotent(db_session) -> N
         "Sunita Joshi",
         "Farhan Ali",
     }
+    approved = select(Membership.id).where(Membership.status == MembershipStatus.approved)
+    assert await _count(db_session, approved) >= 260
     football = [p for p in await db_session.scalars(select(Profile)) if "football" in p.interests]
     assert len(football) == 14
 

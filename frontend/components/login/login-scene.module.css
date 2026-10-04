@@ -309,7 +309,6 @@
   box-shadow: inset 0 0 0 2px var(--danger);
   background: rgba(255, 255, 255, 0.95);
 }
-.rowEnd { display: flex; justify-content: flex-end; }
 .result {
   display: flex;
   gap: 12px;
@@ -330,16 +329,6 @@
   font-size: 14px;
   color: var(--ink);
 }
-.doneIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(30, 142, 245, 0.12);
-  display: grid;
-  place-items: center;
-  margin-bottom: 16px;
-}
-
 /* ---------- intro (logo appears, glides up, page reveals) ---------- */
 .whiteout {
   position: absolute;
