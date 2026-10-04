@@ -387,7 +387,7 @@ export function HostEventForm({
                 setVenueOther(e.target.value);
                 setLocationInvalid(false);
               }}
-              placeholder="e.g. Sector 50 park, Tower B lobby"
+              placeholder="e.g. Central lawn, Tower B lobby"
             />
           ) : null}
         </div>

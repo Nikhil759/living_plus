@@ -58,7 +58,7 @@ Every table except `users` has `society_id`; every query filters on it.
 - `groups`, `group_members`
 - `whatsapp_groups` (invite_link only returned after approved join request)
 - `join_requests` (target_type group/whatsapp)
-- `posts` (group_id null = society feed), `comments`, `reactions`
+- `posts` (group_id null = society feed; post_type incl. committee-only `notice`, which feeds the Home digest; pinned), `comments`, `reactions`
 
 **Events and payments**
 - `events`: type (free/paid/society), host_id, amenity_id, starts_at, ends_at, capacity, price (paise), status (draft/pending_approval/published/cancelled/completed)
@@ -73,9 +73,10 @@ Every table except `users` has `society_id`; every query filters on it.
 - `amenity_status`: crowd_level, note
 
 **Help desk**
-- `tickets`: category, priority (filled by ops agent), status, duplicate_of, assigned_vendor_id
-- `ticket_updates`: actor_type user/agent/committee
-- `vendors`
+- `tickets`: per-society number (HD-1042), category, scope my_flat/common_area, tower, urgency, status, assigned_vendor_id, awaiting_confirmation. Common-area issues are visible society-wide; flat issues only to followers and the committee
+- `ticket_followers`: reporter plus every "Me too" (the reporter count)
+- `ticket_updates`: kind, actor_role resident/committee, message
+- `vendors`, `feedback` (anonymous feedback stores no user)
 
 **AI and system**
 - `documents`, `document_chunks` (embedding vector, HNSW index)

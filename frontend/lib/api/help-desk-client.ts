@@ -1,7 +1,19 @@
 "use client";
 
-import type { HelpDeskIssue } from "@/lib/types/help-desk";
+import { apiPatch, apiPost } from "@/lib/api/client";
+import { getBrowserAccessToken } from "@/lib/api/browser-auth";
+import { getDataSource } from "@/lib/data/source";
 import type { CreateIssueInput } from "@/lib/demo-store/help-desk-write";
+import type { HelpDeskIssue, HelpDeskIssueStatus } from "@/lib/types/help-desk";
+
+/** `api` mode talks to FastAPI; static/demo modes use the local demo store routes. */
+const live = () => getDataSource() === "api";
+
+async function backendPost<T>(path: string, body?: unknown): Promise<T> {
+  return apiPost<T>(path, body, {
+    headers: { Authorization: `Bearer ${await getBrowserAccessToken()}` },
+  });
+}
 
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -11,33 +23,38 @@ async function parseJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function createIssueApi(input: CreateIssueInput): Promise<HelpDeskIssue> {
-  const response = await fetch("/api/demo/help-desk/issues", {
+async function demoPost<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(input),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   return parseJson(response);
+}
+
+const issuePath = (issueId: string) => `/help-desk/issues/${encodeURIComponent(issueId)}`;
+
+export async function createIssueApi(
+  input: CreateIssueInput & { towerId?: string },
+): Promise<HelpDeskIssue> {
+  if (live()) {
+    const { tower: _tower, photoUrls: _photos, ...body } = input;
+    return backendPost("/v1/help-desk/issues", {
+      ...body,
+      areaLabel: body.areaLabel?.trim() || undefined,
+    });
+  }
+  return demoPost("/api/demo/help-desk/issues", input);
 }
 
 export async function joinIssueApi(issueId: string): Promise<HelpDeskIssue> {
-  const response = await fetch(`/api/demo/help-desk/issues/${encodeURIComponent(issueId)}/me-too`, {
-    method: "POST",
-    headers: { Accept: "application/json" },
-  });
-  return parseJson(response);
+  if (live()) return backendPost(`/v1${issuePath(issueId)}/me-too`);
+  return demoPost(`/api/demo${issuePath(issueId)}/me-too`);
 }
 
 export async function commentIssueApi(issueId: string, message: string): Promise<HelpDeskIssue> {
-  const response = await fetch(
-    `/api/demo/help-desk/issues/${encodeURIComponent(issueId)}/comments`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ message }),
-    },
-  );
-  return parseJson(response);
+  if (live()) return backendPost(`/v1${issuePath(issueId)}/comments`, { message });
+  return demoPost(`/api/demo${issuePath(issueId)}/comments`, { message });
 }
 
 export async function confirmIssueFixedApi(
@@ -45,15 +62,21 @@ export async function confirmIssueFixedApi(
   fixed: boolean,
   note?: string,
 ): Promise<HelpDeskIssue> {
-  const response = await fetch(
-    `/api/demo/help-desk/issues/${encodeURIComponent(issueId)}/confirmation`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ fixed, note }),
-    },
+  const body = { fixed, note: note?.trim() || undefined };
+  if (live()) return backendPost(`/v1${issuePath(issueId)}/confirmation`, body);
+  return demoPost(`/api/demo${issuePath(issueId)}/confirmation`, body);
+}
+
+/** Committee only (API mode). */
+export async function updateIssueStatusApi(
+  issueId: string,
+  body: { status: HelpDeskIssueStatus; note?: string; vendorId?: string },
+): Promise<HelpDeskIssue> {
+  return apiPatch(
+    `/v1${issuePath(issueId)}/status`,
+    { ...body, note: body.note?.trim() || undefined, vendorId: body.vendorId || undefined },
+    { headers: { Authorization: `Bearer ${await getBrowserAccessToken()}` } },
   );
-  return parseJson(response);
 }
 
 export async function submitFeedbackApi(body: {
@@ -61,10 +84,9 @@ export async function submitFeedbackApi(body: {
   message: string;
   anonymous: boolean;
 }): Promise<void> {
-  const response = await fetch("/api/demo/help-desk/feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-  });
-  await parseJson(response);
+  if (live()) {
+    await backendPost("/v1/help-desk/feedback", body);
+    return;
+  }
+  await demoPost("/api/demo/help-desk/feedback", body);
 }

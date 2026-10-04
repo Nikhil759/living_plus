@@ -1,7 +1,7 @@
 import type { HelpDeskIssue } from "@/lib/types/help-desk";
 import type { Resident } from "@/lib/types/home";
 
-function isCommittee(resident: Resident): boolean {
+export function isCommittee(resident: Resident): boolean {
   return resident.roles.some((r) => /committee|admin|rep/i.test(r));
 }
 
@@ -27,9 +27,8 @@ export function residentCanSeeIssue(
   if (issue.scope === "my_flat") {
     return residentFollowsIssue(issue, resident, email);
   }
-  if (issue.scope === "common_area") {
-    return issue.tower === resident.tower || residentFollowsIssue(issue, resident, email);
-  }
+  // Common areas are shared by every resident, so their issues are visible society-wide.
+  if (issue.scope === "common_area") return true;
   return false;
 }
 

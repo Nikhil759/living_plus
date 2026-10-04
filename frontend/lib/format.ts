@@ -1,6 +1,6 @@
 const TIME_ZONE = "Asia/Kolkata";
 
-/** "Friday, 2 October · Sector 50 Residency" */
+/** "Friday, 2 October · Prestige Meridian Park" */
 export function formatHomeCaption(society: string, now: Date = new Date()): string {
   const date = new Intl.DateTimeFormat("en-IN", {
     weekday: "long",

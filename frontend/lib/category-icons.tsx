@@ -17,6 +17,7 @@ const VENDOR_ICONS: Record<VendorCategory, LucideIcon> = {
   carpentry: Hammer,
   pest_control: Bug,
   appliance: ArrowUpDown,
+  security: Shield,
   other: Wrench,
 };
 

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Bike, Gamepad2, MessageCircle, Users } from "lucide-react";
+import { JoinRequestQueue } from "@/components/community/join-request-queue";
+import { WhatsappAction } from "@/components/community/whatsapp-action";
 import { FeedPostItem } from "@/components/home/feed-post-item";
 import { SectionHeader } from "@/components/home/section-header";
 import { Avatar } from "@/components/ui/avatar";
@@ -29,10 +31,13 @@ export function CommunityBrowser({
   catalog,
   feedPosts,
   resident,
+  writeEnabled = false,
 }: {
   catalog: CommunityCatalog;
   feedPosts: FeedPost[];
   resident: Resident;
+  /** Live backend: requests, invites and admin approvals work. */
+  writeEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<CommunityTab>("feed");
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("all");
@@ -83,6 +88,7 @@ export function CommunityBrowser({
 
   return (
     <div className="space-y-6">
+      {writeEnabled ? <JoinRequestQueue /> : null}
       <nav className="flex gap-2 overflow-x-auto no-scrollbar" aria-label="Community sections">
         {(
           [
@@ -109,7 +115,7 @@ export function CommunityBrowser({
       {tab === "feed" ? (
         <div className="space-y-5">
           <Link
-            href="/community/new"
+            href="/community/post"
             className="block rounded-card border border-dashed border-outline-variant/50 bg-card p-4 text-callout text-ink-secondary shadow-card"
           >
             Create post — share with neighbours or a group
@@ -210,7 +216,9 @@ export function CommunityBrowser({
                 </IconTile>
               }
               trailing={
-                entry.inviteLink ? (
+                writeEnabled ? (
+                  <WhatsappAction entry={entry} />
+                ) : entry.inviteLink ? (
                   <span className="text-caption text-primary">View invite</span>
                 ) : (
                   <span className="text-caption text-ink-secondary">Request to join</span>

@@ -36,10 +36,11 @@ import { resolveAmenityImageSrc } from "@/lib/amenities/image-url";
 import { getDataSource } from "@/lib/data/source";
 import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
-import type { CommunityCatalog } from "@/lib/types/community";
+import type { CommunityCatalog, CommunityGroupDetail } from "@/lib/types/community";
 import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
 import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
 import type { HelpDeskFeedback, HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
+import { issueToListRow } from "@/lib/help-desk/format";
 import type { RentDashboard } from "@/lib/types/rent";
 import type { MarketplaceCard, MarketplaceListing } from "@/lib/types/marketplace";
 import type {
@@ -168,9 +169,38 @@ export async function loadAnnouncements(): Promise<DigestItem[]> {
   return staticData.getStaticAnnouncements();
 }
 
+/** Help desk and community read and write through FastAPI in `api` mode. */
+function backendIsLive(): boolean {
+  return !useDemoStore() && getDataSource() === "api";
+}
+
+/** 404/422 from the API mean "not visible to you" or a malformed id: show the not-found page. */
+async function apiGetOrUndefined<T>(path: string): Promise<T | undefined> {
+  try {
+    return await apiGetAsUser<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 422)) return undefined;
+    throw error;
+  }
+}
+
 export async function loadCommunity(): Promise<CommunityCatalog> {
   if (useDemoStore()) return demoGetCommunity();
+  if (backendIsLive()) return apiGetAsUser<CommunityCatalog>("/v1/community/catalog");
   return staticData.getStaticCommunity();
+}
+
+export async function loadCommunityGroup(id: string): Promise<CommunityGroupDetail | undefined> {
+  if (backendIsLive()) {
+    return apiGetOrUndefined<CommunityGroupDetail>(`/v1/community/groups/${encodeURIComponent(id)}`);
+  }
+  const group = (await loadCommunity()).groups.find((g) => g.id === id);
+  return group ? { ...group, posts: [] } : undefined;
+}
+
+/** Writes that only exist in FastAPI (community, committee help desk tools). */
+export function liveBackendEnabled(): boolean {
+  return backendIsLive();
 }
 
 /** Browse, create and edit need the FastAPI backend; the other sources only feed read-only previews. */
@@ -215,6 +245,7 @@ export async function loadLocalBusinessById(id: string): Promise<BusinessDetail 
 
 export async function loadFeedPosts(): Promise<FeedPost[]> {
   if (useDemoStore()) return demoGetFeedPosts();
+  if (backendIsLive()) return apiGetAsUser<FeedPost[]>("/v1/community/feed");
   return staticData.getStaticFeedPosts();
 }
 
@@ -236,21 +267,31 @@ export async function loadFlatOpeningById(id: string): Promise<FlatOpeningDetail
 
 export async function loadHelpDeskVendors(): Promise<HelpDeskVendor[]> {
   if (useDemoStore()) return demoGetHelpDeskVendors();
+  if (backendIsLive()) return apiGetAsUser<HelpDeskVendor[]>("/v1/help-desk/vendors");
   return staticData.getStaticHelpDeskVendors();
 }
 
 export async function loadHelpDeskTickets(): Promise<HelpDeskTicket[]> {
   if (useDemoStore()) return demoGetHelpDeskTickets();
+  if (backendIsLive()) {
+    // Home shows the resident's own requests; the API returns every issue they can see.
+    const [issues, resident] = await Promise.all([loadHelpDeskIssues(), loadResident()]);
+    return issues.filter((i) => i.followerIds.includes(resident.id)).map(issueToListRow);
+  }
   return staticData.getStaticHelpDeskTickets();
 }
 
 export async function loadHelpDeskIssues(): Promise<HelpDeskIssue[]> {
   if (useDemoStore()) return demoGetHelpDeskIssues();
+  if (backendIsLive()) return apiGetAsUser<HelpDeskIssue[]>("/v1/help-desk/issues");
   return staticData.getStaticHelpDeskIssues();
 }
 
 export async function loadHelpDeskIssueById(id: string): Promise<HelpDeskIssue | undefined> {
   if (useDemoStore()) return demoGetHelpDeskIssueById(id);
+  if (backendIsLive()) {
+    return apiGetOrUndefined<HelpDeskIssue>(`/v1/help-desk/issues/${encodeURIComponent(id)}`);
+  }
   return staticData.getStaticHelpDeskIssueById(id);
 }
 
@@ -259,8 +300,14 @@ export async function loadHelpDeskFeedback(): Promise<HelpDeskFeedback[]> {
   return staticData.getStaticHelpDeskFeedback();
 }
 
+/** API mode only; other modes keep the free-text tower field. */
+export async function loadTowers(): Promise<{ id: string; name: string }[] | undefined> {
+  if (!backendIsLive()) return undefined;
+  return apiGetAsUser<{ id: string; name: string }[]>("/v1/help-desk/towers");
+}
+
 export function helpDeskWriteEnabled(): boolean {
-  return useDemoStore();
+  return useDemoStore() || backendIsLive();
 }
 
 export async function loadRentDashboard(): Promise<RentDashboard> {

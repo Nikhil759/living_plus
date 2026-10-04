@@ -6,6 +6,7 @@ export const FEED_POST_TYPE_LABEL: Record<FeedPostType, string> = {
   alert: "Alert",
   lost_found: "Lost & found",
   recommendation: "Recommendation",
+  notice: "Notice",
 };
 
 export type FeedFilter = "all" | "my_groups" | "question" | "lost_found" | "recommendation";

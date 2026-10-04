@@ -294,3 +294,73 @@ class LlmOutcome(StrEnum):
     ok = "ok"
     fallback = "fallback"
     error = "error"
+
+
+class VendorCategory(StrEnum):
+    housekeeping = "housekeeping"
+    electrical = "electrical"
+    plumbing = "plumbing"
+    carpentry = "carpentry"
+    pest_control = "pest_control"
+    appliance = "appliance"
+    security = "security"
+    other = "other"
+
+
+class TicketCategory(StrEnum):
+    lift = "lift"
+    water = "water"
+    electricity = "electricity"
+    plumbing = "plumbing"
+    security = "security"
+    cleanliness = "cleanliness"
+    parking = "parking"
+    amenity = "amenity"
+    noise = "noise"
+    other = "other"
+
+
+class TicketScope(StrEnum):
+    my_flat = "my_flat"
+    common_area = "common_area"
+
+
+class TicketUrgency(StrEnum):
+    normal = "normal"
+    urgent = "urgent"
+
+
+class TicketStatus(StrEnum):
+    open = "open"
+    in_progress = "in_progress"
+    resolved = "resolved"
+    closed = "closed"
+
+
+class TicketUpdateKind(StrEnum):
+    created = "created"
+    status = "status"
+    vendor = "vendor"
+    committee_note = "committee_note"
+    comment = "comment"
+
+
+class ActorRole(StrEnum):
+    resident = "resident"
+    committee = "committee"
+
+
+class FeedbackTopic(StrEnum):
+    committee = "committee"
+    app = "app"
+    suggestion = "suggestion"
+
+
+class PostType(StrEnum):
+    general = "general"
+    question = "question"
+    alert = "alert"
+    lost_found = "lost_found"
+    recommendation = "recommendation"
+    # Committee announcements; the only posts shown in the Home digest.
+    notice = "notice"

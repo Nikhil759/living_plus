@@ -16,10 +16,13 @@ export function ReportIssueForm({
   issues,
   resident,
   writeEnabled,
+  towers,
 }: {
   issues: HelpDeskIssue[];
   resident: Resident;
   writeEnabled: boolean;
+  /** API mode: the society's towers, so the issue is filed against a real tower. */
+  towers?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [category, setCategory] = useState<HelpDeskCategory>("lift");
@@ -48,6 +51,7 @@ export function ReportIssueForm({
         category,
         scope,
         tower,
+        towerId: towers?.find((t) => t.name === tower)?.id,
         areaLabel: scope === "common_area" ? areaLabel : `${resident.flat}`,
         title,
         description,
@@ -141,12 +145,27 @@ export function ReportIssueForm({
 
         <label className="block space-y-1">
           <span className="text-callout font-medium text-ink">Tower</span>
-          <input
-            className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
-            value={tower}
-            onChange={(e) => setTower(e.target.value)}
-            required
-          />
+          {towers?.length ? (
+            <select
+              className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
+              value={tower}
+              onChange={(e) => setTower(e.target.value)}
+              required
+            >
+              {towers.map((t) => (
+                <option key={t.id} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
+              value={tower}
+              onChange={(e) => setTower(e.target.value)}
+              required
+            />
+          )}
         </label>
 
         <label className="block space-y-1">

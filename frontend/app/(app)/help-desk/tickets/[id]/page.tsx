@@ -3,6 +3,7 @@ import { IssueDetailClient } from "@/components/help-desk/issue-detail-client";
 import { AppPage } from "@/components/layout/app-page";
 import { residentCanSeeIssue } from "@/lib/help-desk/access";
 import {
+  liveBackendEnabled,
   helpDeskWriteEnabled,
   loadHelpDeskIssueById,
   loadHelpDeskVendors,
@@ -29,18 +30,15 @@ export default async function HelpDeskTicketPage({ params }: TicketPageProps) {
 
   if (!residentCanSeeIssue(issue, resident, email)) notFound();
 
-  const vendor = issue.assignedVendorId
-    ? vendors.find((v) => v.id === issue.assignedVendorId)
-    : undefined;
-
   return (
     <AppPage title="Issue" backHref="/help-desk" backLabel="Help desk">
       <IssueDetailClient
         issue={issue}
         resident={resident}
         viewerEmail={email}
-        vendor={vendor}
+        vendors={vendors}
         writeEnabled={helpDeskWriteEnabled()}
+        committeeTools={liveBackendEnabled()}
       />
     </AppPage>
   );

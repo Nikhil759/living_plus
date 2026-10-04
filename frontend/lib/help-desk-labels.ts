@@ -13,6 +13,7 @@ export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
   carpentry: "Carpenters",
   pest_control: "Pest control",
   appliance: "Appliance repair",
+  security: "Security",
   other: "Others",
 };
 
@@ -23,6 +24,7 @@ export const VENDOR_CATEGORY_ORDER: VendorCategory[] = [
   "carpentry",
   "pest_control",
   "appliance",
+  "security",
   "other",
 ];
 

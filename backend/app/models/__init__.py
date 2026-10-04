@@ -53,6 +53,7 @@ from app.models.enums import (
 from app.models.event import Event, EventTicket, EventWaitlist, StallApplication
 from app.models.flat import Flat
 from app.models.flat_opening import FlatOpening
+from app.models.help_desk import Feedback, Ticket, TicketFollower, TicketUpdate, Vendor
 from app.models.local_business import (
     BusinessFollow,
     BusinessRecommendation,
@@ -98,6 +99,7 @@ __all__ = [
     "EventTicketStatus",
     "EventType",
     "EventWaitlist",
+    "Feedback",
     "Flat",
     "FlatOpening",
     "Group",
@@ -139,8 +141,12 @@ __all__ = [
     "SocietyPlan",
     "StallApplication",
     "StallApplicationStatus",
+    "Ticket",
+    "TicketFollower",
+    "TicketUpdate",
     "Tower",
     "User",
+    "Vendor",
     "Weekday",
     "WhatsappGroup",
 ]

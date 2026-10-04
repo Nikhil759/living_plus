@@ -20,7 +20,7 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import CrowdLevel, EventStatus
+from app.models.enums import CrowdLevel, EventStatus, PostType
 
 
 @pytest.fixture
@@ -82,6 +82,8 @@ async def demo_member(db_session) -> User:
             society_id=society.id,
             author_id=user.id,
             body="**Water maintenance:** Tower B paused today.",
+            post_type=PostType.notice,
+            pinned=True,
         )
     )
     starts = datetime.now(UTC) + timedelta(days=2)

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_sessionmaker
 from business_seed_data import BUSINESSES, DEMO_FOLLOWS, DEMO_RECOMMENDS, SeedBusiness
 from opening_seed_data import OPENINGS
+from community_seed_data import ISSUES, NOTICES, SOCIETY_POSTS, VENDORS
 from app.models import (
     FlatOpening,
     OpeningStatus,
@@ -65,10 +66,15 @@ from app.models import (
     SocietyPlan,
     StallApplication,
     StallApplicationStatus,
+    Ticket,
+    TicketFollower,
+    TicketUpdate,
     Tower,
     User,
+    Vendor,
     WhatsappGroup,
 )
+from app.models.enums import ActorRole, PostType, TicketUpdateKind
 
 SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 INVITE_CODE = "AANGAN50"
@@ -120,6 +126,22 @@ def crowd_pattern(busy: list[tuple[int, int]], moderate: list[tuple[int, int]]) 
         levels[start:end] = [2] * (end - start)
     return levels
 
+
+# 420 flats: Towers A and B have 10 floors, C and D have 11, with 10 flats a floor.
+TOWER_FLOORS = {"A": 10, "B": 10, "C": 11, "D": 11}
+FLATS_PER_FLOOR = 10
+
+# Managing Committee 2026–2028 (Handbook §1.2): key, name, email, role, flat.
+COMMITTEE: list[tuple[str, str, str, str, str]] = [
+    ("committee", "Meera Sharma", "committee@aangan.app", "Secretary", "A-1001"),
+    ("committee.anil", "Anil Khanna", "anil.khanna@example.com", "President", "A-1002"),
+    ("committee.vikram", "Vikram Rao", "vikram.rao@example.com", "Treasurer", "D-1001"),
+    ("committee.sunita", "Sunita Joshi", "sunita.joshi@example.com", "Facilities", "B-1001"),
+    ("committee.farhan", "Farhan Ali", "farhan.ali@example.com", "Events", "C-1001"),
+]
+
+# Resident indexes who also like football; with the demo user that makes 14.
+FOOTBALL_FANS = {0, 3, 4, 6, 7, 9, 11, 13, 14, 15, 17, 18, 19}
 
 COURT_RULES: dict[str, Any] = {"advance_days": 7, "max_hours_per_day": 2, "slot_minutes": 60}
 
@@ -201,28 +223,18 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
             name=f"Tower {letter}",
         )
         towers[letter] = tower
-        for n in range(101, 111):
-            flat_no = str(n) if letter != "C" or n != 110 else "702"
-            key = f"{letter}-{flat_no}"
-            flat = await get_or_create(
-                session,
-                Flat,
-                sid(f"flat.{key}"),
-                society_id=society.id,
-                tower_id=tower.id,
-                flat_no=flat_no,
-            )
-            flats[key] = flat
-
-    if "C-702" not in flats:
-        flats["C-702"] = await get_or_create(
-            session,
-            Flat,
-            sid("flat.C-702"),
-            society_id=society.id,
-            tower_id=towers["C"].id,
-            flat_no="702",
-        )
+        for floor in range(1, TOWER_FLOORS[letter] + 1):
+            for unit in range(1, FLATS_PER_FLOOR + 1):
+                flat_no = f"{floor}{unit:02d}"
+                key = f"{letter}-{flat_no}"
+                flats[key] = await get_or_create(
+                    session,
+                    Flat,
+                    sid(f"flat.{key}"),
+                    society_id=society.id,
+                    tower_id=tower.id,
+                    flat_no=flat_no,
+                )
 
     users: dict[str, User] = {}
 
@@ -243,9 +255,15 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
         sid("user.committee"),
         supabase_uid="seed:committee@aangan.app",
         email="committee@aangan.app",
-        name="Committee Desk",
+        name="Meera Sharma",
     )
+    committee.name = "Meera Sharma"
     users["committee"] = committee
+
+    for key, name, email, _title, _flat in COMMITTEE[1:]:
+        users[key] = await get_or_create(
+            session, User, sid(f"user.{key}"), supabase_uid=f"seed:{email}", email=email, name=name
+        )
 
     for idx, (name, email, interests) in enumerate(RESIDENT_NAMES):
         key = f"resident.{idx}"
@@ -278,18 +296,14 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
                 )
             )
 
+        interests = [*interests, "football"] if idx in FOOTBALL_FANS else interests
         profile = await session.get(Profile, user.id)
         if profile is None:
-            session.add(
-                Profile(
-                    user_id=user.id,
-                    society_id=society.id,
-                    bio=f"Resident at {SOCIETY_DISPLAY_NAME} · loves {', '.join(interests[:2])}.",
-                    interests=interests,
-                    is_visible=idx % 2 == 0,
-                    show_flat=False,
-                )
-            )
+            profile = Profile(user_id=user.id, society_id=society.id, show_flat=False)
+            session.add(profile)
+        profile.bio = f"Resident at {SOCIETY_DISPLAY_NAME} · loves {', '.join(interests[:2])}."
+        profile.interests = interests
+        profile.is_visible = idx % 2 == 0
 
     await _ensure_membership(
         session,
@@ -299,14 +313,20 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
         flats["C-702"].id,
         MembershipRole.owner,
     )
-    await _ensure_membership(
-        session,
-        sid("membership.committee"),
-        committee.id,
-        society.id,
-        None,
-        MembershipRole.committee,
-    )
+    for key, _name, _email, _title, flat_key in COMMITTEE:
+        await _ensure_membership(
+            session,
+            sid(f"membership.{key}"),
+            users[key].id,
+            society.id,
+            flats[flat_key].id,
+            MembershipRole.committee,
+        )
+        membership = await session.get(Membership, sid(f"membership.{key}"))
+        if membership is not None and membership.flat_id is None:
+            membership.flat_id = flats[flat_key].id
+        if await session.get(Profile, users[key].id) is None:
+            session.add(Profile(user_id=users[key].id, society_id=society.id, is_visible=False))
 
     demo_profile = await session.get(Profile, demo.id)
     if demo_profile is None:
@@ -315,11 +335,13 @@ async def seed_identity(session: AsyncSession) -> tuple[Society, dict[str, User]
                 user_id=demo.id,
                 society_id=society.id,
                 bio=f"Tower C rep · FIFA weekends · {SOCIETY_DISPLAY_NAME}.",
-                interests=["FIFA", "running", "cricket", "tech"],
+                interests=["FIFA", "running", "cricket", "tech", "football"],
                 is_visible=True,
                 show_flat=False,
             )
         )
+    elif "football" not in demo_profile.interests:
+        demo_profile.interests = [*demo_profile.interests, "football"]
 
     return society, users, flats
 
@@ -518,7 +540,7 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
             "Gym",
             AmenityType.gym,
             30,
-            hours("06:00", "22:00"),
+            hours("05:30", "22:00"),
             {
                 "crowd": {
                     "weekday": crowd_pattern([(6, 8), (19, 21)], [(8, 10), (17, 19), (21, 22)]),
@@ -531,8 +553,11 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
             "Pool",
             AmenityType.pool,
             20,
-            hours("06:00", "21:00"),
+            # Handbook §11.2: 6–9 AM and 4–9 PM, closed Mondays for cleaning.
+            {**hours("06:00", "21:00"), "mon": {"closed": True}},
             {
+                "blocks": [{"label": "Break", "days": [1, 2, 3, 4, 5, 6], "start": "09:00",
+                            "end": "16:00"}],
                 "crowd": {
                     "weekday": crowd_pattern([], [(6, 8), (17, 19)]),
                     "weekend": crowd_pattern([(7, 10), (17, 19)], [(10, 12), (16, 17), (19, 20)]),
@@ -557,7 +582,8 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
             "Community Hall",
             AmenityType.hall,
             120,
-            hours("08:00", "22:00"),
+            # Events must end by 10:30 PM (Handbook §11.7).
+            hours("08:00", "22:30"),
             {"requires_approval": True},
         ),
         (
@@ -565,8 +591,21 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
             "Amphitheatre",
             AmenityType.amphitheatre,
             200,
-            hours("08:00", "22:00"),
+            hours("16:00", "22:00"),
             {"requires_approval": True},
+        ),
+        (
+            "am-terrace",
+            "Clubhouse Terrace",
+            AmenityType.other,
+            20,
+            hours("06:00", "21:00"),
+            {
+                "crowd": {
+                    "weekday": crowd_pattern([(6, 8)], [(17, 20)]),
+                    "weekend": crowd_pattern([(6, 9)], [(17, 20)]),
+                }
+            },
         ),
     ]
     courts: list[tuple[str, Amenity]] = []
@@ -599,20 +638,17 @@ async def seed_amenities(session: AsyncSession, society: Society, users: dict[st
 
 async def seed_community(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
     group_specs = [
-        ("FIFA & Game Night", "Weekend console tournaments", ["FIFA", "gaming"], False),
-        (
-            "Resident Cyclists",
-            "Early-morning rides on the expressway",
-            ["cycling", "running"],
-            False,
-        ),
-        ("Yoga Circle", "Sunrise flows on the terrace", ["yoga", "wellness"], False),
-        ("Salsa Saturdays", "Community Hall workshops", ["dance", "salsa"], False),
-        ("Book Club", "Tower-wise reading circles", ["books"], True),
-        ("Dog Parents", "Park walks & vet referrals", ["dogs"], False),
+        ("FIFA & Game Night", "🎮", "Weekend console tournaments", ["FIFA", "gaming", "football"],
+         False),
+        ("Resident Cyclists", "🚴", "Early-morning rides on the expressway",
+         ["cycling", "running"], False),
+        ("Yoga Circle", "🧘", "Sunrise flows on the terrace", ["yoga", "wellness"], False),
+        ("Salsa Saturdays", "💃", "Community Hall workshops", ["dance", "salsa"], False),
+        ("Book Club", "📚", "Tower-wise reading circles", ["books"], True),
+        ("Dog Parents", "🐶", "Park walks & vet referrals", ["dogs"], False),
     ]
     groups: list[Group] = []
-    for idx, (name, desc, tags, private) in enumerate(group_specs):
+    for idx, (name, emoji, desc, tags, private) in enumerate(group_specs):
         group = await get_or_create(
             session,
             Group,
@@ -624,11 +660,13 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
             is_private=private,
             tags=tags,
         )
+        group.emoji, group.tags = emoji, tags
         groups.append(group)
         if await session.get(GroupMember, sid(f"group_member.{idx}.demo")) is None:
             session.add(
                 GroupMember(
                     id=sid(f"group_member.{idx}.demo"),
+                    society_id=society.id,
                     group_id=group.id,
                     user_id=users["demo"].id,
                     role=GroupMemberRole.admin if idx == 0 else GroupMemberRole.member,
@@ -641,7 +679,7 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
         ("Society Marketplace", f"Buy/sell within {SOCIETY_DISPLAY_NAME}", 256),
     ]
     for idx, (name, topic, count) in enumerate(wa_specs):
-        await get_or_create(
+        chat = await get_or_create(
             session,
             WhatsappGroup,
             sid(f"whatsapp.{idx}"),
@@ -649,28 +687,38 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
             name=name,
             topic=topic,
             member_count=count,
-            invite_link=f"https://chat.whatsapp.com/demo-sector50-{idx}",
+            invite_link=f"https://chat.whatsapp.com/demo-pmp-{idx}",
             admin_user_id=users["committee"].id,
         )
+        chat.invite_link = f"https://chat.whatsapp.com/demo-pmp-{idx}"
 
-    announcements = [
-        "**Water maintenance:** Tower B supply paused 2:00 PM – 4:00 PM today for motor replacement.",
-        "**Diwali Mela 2024:** Food & handcraft stall slots close this Friday at 6:00 PM.",
-        "**Central Mailroom:** 2 packages arrived for C-702 at Security Gate 1 desk.",
-        "**Visitor parking:** Basement B2 slots 12–18 reserved for Diwali Mela setup this weekend.",
-    ]
-    for idx, body in enumerate(announcements):
-        post_id = sid(f"post.announcement.{idx}")
-        if await session.get(Post, post_id) is None:
-            session.add(
-                Post(
-                    id=post_id,
-                    society_id=society.id,
-                    group_id=None,
-                    author_id=users["committee"].id,
-                    body=body,
-                )
-            )
+    # Committee notices mirror society-guide/notices; bodies and dates are rewritten each run
+    # because older seeds used the same ids for different notices.
+    notice_ids = [sid(f"post.announcement.{idx}") for idx in range(len(NOTICES))]
+    for post_id, notice in zip(notice_ids, NOTICES, strict=True):
+        post = await get_or_create(
+            session,
+            Post,
+            post_id,
+            society_id=society.id,
+            author_id=users["committee"].id,
+            body="",
+        )
+        post.group_id = None
+        post.body = f"**{notice.lead}:** {notice.body}"
+        post.post_type, post.pinned = PostType.notice, True
+        post.created_at = ist(notice.posted)
+
+    for idx, item in enumerate(SOCIETY_POSTS):
+        post = await get_or_create(
+            session,
+            Post,
+            sid(f"post.society.{idx}"),
+            society_id=society.id,
+            author_id=users[item.author].id,
+            body=item.body,
+        )
+        post.post_type, post.created_at = item.post_type, ist(item.posted)
 
     feed_posts = [
         (0, "Who's in for FIFA tonight? Bring your own controller 🎮"),
@@ -691,6 +739,7 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
             session.add(
                 Comment(
                     id=sid(f"comment.{idx}"),
+                    society_id=society.id,
                     post_id=post.id,
                     author_id=users["demo"].id,
                     body="Count me in!",
@@ -699,9 +748,81 @@ async def seed_community(session: AsyncSession, society: Society, users: dict[st
             session.add(
                 Reaction(
                     id=sid(f"reaction.{idx}"),
+                    society_id=society.id,
                     post_id=post.id,
                     user_id=users["resident.1"].id,
                     reaction_type=ReactionType.celebrate,
+                )
+            )
+
+
+def ist(value: str) -> datetime:
+    """'2026-10-03T09:00' IST wall clock to an aware UTC datetime."""
+    return datetime.fromisoformat(value).replace(tzinfo=IST).astimezone(UTC)
+
+
+async def seed_help_desk(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
+    towers = {
+        t.name[-1]: t
+        for t in await session.scalars(select(Tower).where(Tower.society_id == society.id))
+    }
+    vendors: dict[str, Vendor] = {}
+    for item in VENDORS:
+        vendor = await get_or_create(
+            session, Vendor, sid(f"vendor.{item.key}"), society_id=society.id, name=item.name,
+            category=item.category,
+        )
+        vendor.name, vendor.category, vendor.emoji = item.name, item.category, item.emoji
+        vendor.phone, vendor.whatsapp, vendor.note = item.phone, item.whatsapp, item.note
+        vendor.hours_label, vendor.society_approved = item.hours_label, True
+        vendors[item.key] = vendor
+    await session.flush()
+
+    for item in ISSUES:
+        ticket_id = sid(f"ticket.{item.number}")
+        if await session.get(Ticket, ticket_id) is not None:
+            continue  # Residents may have moved it on (Me too, comments); leave live state alone.
+        ticket = Ticket(
+            id=ticket_id,
+            society_id=society.id,
+            number=item.number,
+            title=item.title,
+            description=item.description,
+            category=item.category,
+            scope=item.scope,
+            tower_id=towers[item.tower].id,
+            area_label=item.area_label,
+            urgency=item.urgency,
+            status=item.status,
+            reporter_id=users[item.reporter].id,
+            assigned_vendor_id=vendors[item.vendor].id if item.vendor else None,
+            awaiting_confirmation=item.awaiting_confirmation,
+            created_at=ist(item.created_at),
+        )
+        session.add(ticket)
+        await session.flush()
+        for key in [item.reporter, *item.followers]:
+            session.add(
+                TicketFollower(
+                    id=sid(f"ticket.{item.number}.follower.{key}"),
+                    society_id=society.id,
+                    ticket_id=ticket.id,
+                    user_id=users[key].id,
+                    created_at=ticket.created_at,
+                )
+            )
+        for idx, entry in enumerate(item.timeline):
+            by_committee = entry.by == "committee"
+            session.add(
+                TicketUpdate(
+                    id=sid(f"ticket.{item.number}.update.{idx}"),
+                    society_id=society.id,
+                    ticket_id=ticket.id,
+                    kind=TicketUpdateKind(entry.kind),
+                    actor_id=users[entry.by].id,
+                    actor_role=ActorRole.committee if by_committee else ActorRole.resident,
+                    message=entry.message,
+                    created_at=ist(entry.at),
                 )
             )
 
@@ -1118,6 +1239,7 @@ async def run_seed() -> None:
         await seed_membership_invites(session, society, flats)
         await seed_amenities(session, society, users)
         await seed_community(session, society, users)
+        await seed_help_desk(session, society, users)
         await seed_events(session, society, users)
         await seed_marketplace(session, society, users)
         await seed_local_businesses(session, society, users, flats)

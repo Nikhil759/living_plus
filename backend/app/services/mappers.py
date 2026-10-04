@@ -20,7 +20,7 @@ from app.models import (
     Tower,
     User,
 )
-from app.models.enums import EventRecurrence, EventStatus
+from app.models.enums import EventRecurrence, EventStatus, PostType
 from app.schemas.event import (
     EventAttendeeFullOut,
     EventDetailOut,
@@ -479,7 +479,7 @@ async def map_digest(
         (
             await db.execute(
                 select(Post)
-                .where(Post.society_id == society_id, Post.group_id.is_(None))
+                .where(Post.society_id == society_id, Post.post_type == PostType.notice)
                 .order_by(Post.created_at.desc())
                 .limit(5)
             )
@@ -503,7 +503,7 @@ async def map_digest(
     total = await db.scalar(
         select(func.count())
         .select_from(Post)
-        .where(Post.society_id == society_id, Post.group_id.is_(None))
+        .where(Post.society_id == society_id, Post.post_type == PostType.notice)
     )
     return DigestOut(
         title="Society Digest",

@@ -1,6 +1,6 @@
 import { CommunityBrowser } from "@/components/community/community-browser";
 import { AppPage } from "@/components/layout/app-page";
-import { loadCommunity, loadFeedPosts, loadResident } from "@/lib/data";
+import { liveBackendEnabled, loadCommunity, loadFeedPosts, loadResident } from "@/lib/data";
 
 export default async function CommunityPage() {
   const [catalog, feedPosts, resident] = await Promise.all([
@@ -11,7 +11,12 @@ export default async function CommunityPage() {
 
   return (
     <AppPage title="Community">
-      <CommunityBrowser catalog={catalog} feedPosts={feedPosts} resident={resident} />
+      <CommunityBrowser
+        catalog={catalog}
+        feedPosts={feedPosts}
+        resident={resident}
+        writeEnabled={liveBackendEnabled()}
+      />
     </AppPage>
   );
 }

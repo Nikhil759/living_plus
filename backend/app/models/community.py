@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdTimestampMixin
@@ -8,6 +8,7 @@ from app.models.enums import (
     GroupMemberRole,
     JoinRequestStatus,
     JoinTargetType,
+    PostType,
     ReactionType,
 )
 from app.models.types import JsonList, enum_column
@@ -20,6 +21,7 @@ class Group(Base, IdTimestampMixin):
         Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String(120))
+    emoji: Mapped[str] = mapped_column(String(8), default="👥")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
@@ -36,6 +38,9 @@ class GroupMember(Base, IdTimestampMixin):
     __tablename__ = "group_members"
     __table_args__ = (UniqueConstraint("group_id", "user_id", name="uq_group_members_group_user"),)
 
+    society_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
+    )
     group_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("groups.id", ondelete="CASCADE"), index=True
     )
@@ -96,6 +101,10 @@ class Post(Base, IdTimestampMixin):
     )
     body: Mapped[str] = mapped_column(Text)
     media_urls: Mapped[list[str]] = mapped_column(JsonList(), default=list)
+    post_type: Mapped[PostType] = mapped_column(
+        enum_column(PostType, "post_type"), default=PostType.general
+    )
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False)
 
     group: Mapped["Group | None"] = relationship(back_populates="posts")
     comments: Mapped[list["Comment"]] = relationship(back_populates="post")
@@ -105,6 +114,9 @@ class Post(Base, IdTimestampMixin):
 class Comment(Base, IdTimestampMixin):
     __tablename__ = "comments"
 
+    society_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
+    )
     post_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), index=True
     )
@@ -122,6 +134,9 @@ class Reaction(Base, IdTimestampMixin):
         UniqueConstraint("post_id", "user_id", "reaction_type", name="uq_reactions_post_user_type"),
     )
 
+    society_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
+    )
     post_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), index=True
     )

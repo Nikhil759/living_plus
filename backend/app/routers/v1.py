@@ -3,9 +3,11 @@ from fastapi import APIRouter
 from app.routers import (
     amenities,
     announcements,
+    community,
     events,
     flat_openings,
     health,
+    help_desk,
     home,
     invites,
     local_businesses,
@@ -31,4 +33,6 @@ api_router.include_router(marketplace.router)
 api_router.include_router(notifications.router)
 api_router.include_router(announcements.router)
 api_router.include_router(uploads.router)
+api_router.include_router(help_desk.router)
+api_router.include_router(community.router)
 api_router.include_router(saarthi.router)

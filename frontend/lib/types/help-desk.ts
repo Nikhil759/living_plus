@@ -5,6 +5,7 @@ export type VendorCategory =
   | "carpentry"
   | "pest_control"
   | "appliance"
+  | "security"
   | "other";
 
 export interface HelpDeskVendor {
@@ -62,6 +63,8 @@ export interface HelpDeskIssue {
   category: HelpDeskCategory;
   scope: HelpDeskIssueScope;
   tower: string;
+  /** API mode only. */
+  towerId?: string;
   areaLabel?: string;
   urgency: HelpDeskUrgency;
   status: HelpDeskIssueStatus;

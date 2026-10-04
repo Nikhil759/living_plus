@@ -10,7 +10,8 @@ import {
   confirmIssueFixedApi,
   joinIssueApi,
 } from "@/lib/api/help-desk-client";
-import { reporterCount, residentFollowsIssue } from "@/lib/help-desk/access";
+import { IssueCommitteeControls } from "@/components/help-desk/issue-committee-controls";
+import { isCommittee, reporterCount, residentFollowsIssue } from "@/lib/help-desk/access";
 import { issueAgeLabel, issueLocationLabel } from "@/lib/help-desk/format";
 import { TICKET_CATEGORY_LABEL, TICKET_STATUS_LABEL } from "@/lib/help-desk-labels";
 import type { HelpDeskIssue, HelpDeskVendor } from "@/lib/types/help-desk";
@@ -20,14 +21,17 @@ export function IssueDetailClient({
   issue: initial,
   resident,
   viewerEmail,
-  vendor,
+  vendors,
   writeEnabled,
+  committeeTools,
 }: {
   issue: HelpDeskIssue;
   resident: Resident;
   viewerEmail?: string | null;
-  vendor?: HelpDeskVendor;
+  vendors: HelpDeskVendor[];
   writeEnabled: boolean;
+  /** Status changes need the API; the demo store has no committee flow. */
+  committeeTools: boolean;
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initial);
@@ -37,6 +41,8 @@ export function IssueDetailClient({
   const [error, setError] = useState<string | null>(null);
   const write = writeEnabled;
   const following = residentFollowsIssue(issue, resident, viewerEmail);
+  const committee = isCommittee(resident);
+  const vendor = vendors.find((v) => v.id === issue.assignedVendorId);
 
   async function meToo() {
     if (!write) return;
@@ -111,7 +117,18 @@ export function IssueDetailClient({
         </Button>
       ) : null}
 
-      {issue.awaitingConfirmation ? (
+      {committee && committeeTools ? (
+        <IssueCommitteeControls
+          issue={issue}
+          vendors={vendors}
+          onUpdated={(updated) => {
+            setIssue(updated);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {issue.awaitingConfirmation && following ? (
         <Card className="space-y-3 p-4">
           <p className="text-headline text-ink">Was this fixed?</p>
           <div className="flex flex-wrap gap-2">
@@ -152,7 +169,7 @@ export function IssueDetailClient({
         </ul>
       </section>
 
-      {following && write && issue.status !== "closed" ? (
+      {(following || committee) && write && issue.status !== "closed" ? (
         <Card className="space-y-3 p-4">
           <label className="text-callout font-medium text-ink" htmlFor="issue-comment">
             Add a comment
@@ -173,7 +190,7 @@ export function IssueDetailClient({
       {error ? <p className="text-callout text-destructive">{error}</p> : null}
       {!write ? (
         <p className="text-caption text-ink-tertiary">
-          Updates and Me too need the local demo store (see frontend/.env.example).
+          Updates and Me too need the live backend or the local demo store.
         </p>
       ) : null}
     </div>

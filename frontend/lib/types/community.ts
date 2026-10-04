@@ -1,3 +1,5 @@
+import type { FeedPost } from "@/lib/types/home";
+
 export type GroupVisibility = "public" | "private";
 
 export interface CommunityGroup {
@@ -9,6 +11,24 @@ export interface CommunityGroup {
   visibility?: GroupVisibility;
   joined?: boolean;
   suggested?: boolean;
+  /** API mode only. */
+  tags?: string[];
+  isAdmin?: boolean;
+  /** Private group: the resident's join request is waiting for an admin. */
+  pending?: boolean;
+}
+
+export interface CommunityGroupDetail extends CommunityGroup {
+  posts: FeedPost[];
+}
+
+export interface JoinRequest {
+  id: string;
+  targetType: "group" | "whatsapp";
+  targetId: string;
+  targetName: string;
+  requesterName: string;
+  createdAt: string;
 }
 
 export interface WhatsappGroupEntry {
@@ -19,6 +39,7 @@ export interface WhatsappGroupEntry {
   /** Invite link shown only after admin approval. */
   inviteLink?: string;
   pendingApproval?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface VisibleNeighbour {

@@ -181,7 +181,8 @@ export type FeedPostType =
   | "question"
   | "alert"
   | "lost_found"
-  | "recommendation";
+  | "recommendation"
+  | "notice";
 
 /** Resident or group post shown in the society feed. */
 export interface FeedPost {
@@ -192,6 +193,7 @@ export interface FeedPost {
   authorMeta: string;
   /** When set, post is surfaced in a group context. */
   groupName?: string;
+  groupId?: string;
   postType?: FeedPostType;
   pinned?: boolean;
   body: string;

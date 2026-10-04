@@ -2,6 +2,7 @@
 
 Wall-clock times are IST; the database stores UTC. Per-amenity config lives in the existing
 `open_hours` and `rules` JSON columns:
+  open_hours = {mon: {open: "05:30", close: "22:00"} | {closed: true}, ...}
   rules = {advance_days, max_hours_per_day, blocks: [{label, days, start, end}],
            crowd: {weekday: [24 levels], weekend: [24 levels]}}
 Crowd levels are 0 quiet, 1 moderate, 2 busy. Weekdays follow Python (Mon=0).
@@ -62,29 +63,30 @@ _AMENITY_EMOJI: dict[str, str] = {
 }
 
 _RULE_LINES: dict[AmenityType, list[str]] = {
+    # Kept in line with the society guide (Handbook §11).
     AmenityType.court: [
         "Book up to 7 days ahead, 2 hours a day at most.",
         "Non-marking shoes only.",
         "Cancel early if your plans change.",
     ],
     AmenityType.gym: [
-        "Wipe equipment after use.",
-        "Footwear and a towel are required.",
-        "Re-rack your weights.",
+        "Ages 16+; 14 to 16 only with a parent.",
+        "Clean indoor sports shoes only.",
+        "Wipe equipment and re-rack your weights.",
     ],
     AmenityType.pool: [
+        "Closed every Monday for cleaning.",
         "Shower before you swim.",
-        "Swim caps are required.",
         "Children under 12 need an adult.",
     ],
     AmenityType.hall: [
         "Hosted through an event, so committee approval applies.",
+        "Events end by 10:30 PM; music low after 10 PM.",
         "Leave the hall clean.",
-        "Music off by 10 PM.",
     ],
     AmenityType.amphitheatre: [
         "Hosted through an event, so committee approval applies.",
-        "No amplified sound after 9 PM.",
+        "Amplified sound must stop at 10 PM.",
         "Clear the stage and seating afterwards.",
     ],
     AmenityType.other: [
@@ -157,18 +159,46 @@ def _hour_of(value: object, fallback: int) -> int:
     return fallback
 
 
-def hours_for(amenity: Amenity, day: date) -> tuple[int, int]:
+def _minutes_of(value: object, fallback_hour: int) -> int:
+    if isinstance(value, str) and re.match(r"^\d{1,2}:\d{2}$", value):
+        hour, minute = value.split(":")
+        return int(hour) * 60 + int(minute)
+    return fallback_hour * 60
+
+
+def span_for(amenity: Amenity, day: date) -> tuple[int, int]:
+    """Opening and closing time in minutes after midnight; (0, 0) on a closed day."""
     entry = (amenity.open_hours or {}).get(_WEEKDAY_KEYS[day.weekday()])
     if not isinstance(entry, dict):
-        return DEFAULT_OPEN_HOUR, DEFAULT_CLOSE_HOUR
+        return DEFAULT_OPEN_HOUR * 60, DEFAULT_CLOSE_HOUR * 60
+    if entry.get("closed"):
+        return 0, 0
     return (
-        _hour_of(entry.get("open"), DEFAULT_OPEN_HOUR),
-        _hour_of(entry.get("close"), DEFAULT_CLOSE_HOUR),
+        _minutes_of(entry.get("open"), DEFAULT_OPEN_HOUR),
+        _minutes_of(entry.get("close"), DEFAULT_CLOSE_HOUR),
     )
+
+
+def hours_for(amenity: Amenity, day: date) -> tuple[int, int]:
+    """Whole hours for hourly slots: first full hour after opening, last before closing."""
+    opens, closes = span_for(amenity, day)
+    return -(-opens // 60), closes // 60
 
 
 def _fmt_hour(hour: int) -> str:
     return f"{(hour % 24) % 12 or 12} {'AM' if hour % 24 < 12 else 'PM'}"
+
+
+def _fmt_minutes(minutes: int) -> str:
+    hour, minute = divmod(minutes, 60)
+    if not minute:
+        return _fmt_hour(hour)
+    return f"{(hour % 24) % 12 or 12}:{minute:02d} {'AM' if hour % 24 < 12 else 'PM'}"
+
+
+def _span_label(span: tuple[int, int]) -> str:
+    opens, closes = span
+    return "closed" if opens == closes else f"{_fmt_minutes(opens)} {_EN} {_fmt_minutes(closes)}"
 
 
 def _slot_label(hour: int) -> str:
@@ -182,18 +212,17 @@ def hours_label(amenity: Amenity) -> str:
     monday = date(2024, 1, 1)
     groups: list[list[Any]] = []
     for index in range(7):
-        span = hours_for(amenity, monday + timedelta(days=index))
+        span = span_for(amenity, monday + timedelta(days=index))
         if groups and groups[-1][2] == span:
             groups[-1][1] = index
         else:
             groups.append([index, index, span])
     if len(groups) == 1:
-        opens, closes = groups[0][2]
-        return f"{_fmt_hour(opens)} {_EN} {_fmt_hour(closes)} daily"
+        return f"{_span_label(groups[0][2])} daily"
     parts = []
-    for first, last, (opens, closes) in groups:
+    for first, last, span in groups:
         days = _DAY_NAMES[first] if first == last else f"{_DAY_NAMES[first]}{_EN}{_DAY_NAMES[last]}"
-        parts.append(f"{days} {_fmt_hour(opens)} {_EN} {_fmt_hour(closes)}")
+        parts.append(f"{days} {_span_label(span)}")
     return " · ".join(parts)
 
 
@@ -269,11 +298,16 @@ async def confirmed_bookings(
     return list(rows)
 
 
-def _closed_line(amenity: Amenity, local: datetime, opens: int) -> str:
-    if local.hour < opens:
-        return f"Closed · opens {_fmt_hour(opens)}"
-    tomorrow_opens, _ = hours_for(amenity, local.date() + timedelta(days=1))
-    return f"Closed · opens tomorrow at {_fmt_hour(tomorrow_opens)}"
+def _closed_line(amenity: Amenity, local: datetime, opens: int, closes: int) -> str:
+    if opens != closes and local.hour * 60 + local.minute < opens:
+        return f"Closed · opens {_fmt_minutes(opens)}"
+    for ahead in range(1, 8):
+        day = local.date() + timedelta(days=ahead)
+        next_opens, next_closes = span_for(amenity, day)
+        if next_opens != next_closes:
+            when = "tomorrow" if ahead == 1 else _DAY_NAMES[day.weekday()]
+            return f"Closed · opens {when} at {_fmt_minutes(next_opens)}"
+    return "Closed"
 
 
 def _bookable_live(occupied: dict[int, Occupied], hour: int, closes: int) -> tuple[Level, str]:
@@ -291,7 +325,7 @@ def _walk_in_live(amenity: Amenity, local: datetime, closes: int) -> tuple[Level
     if amenity.amenity_type in (AmenityType.gym, AmenityType.pool):
         people = max(1, round(amenity.capacity * _PEOPLE_SHARE[level]))
         return level, f"{people} people in now"
-    return level, f"Open till {_fmt_hour(closes)}"
+    return level, f"Open till {_fmt_minutes(closes)}"
 
 
 def _card(
@@ -302,20 +336,24 @@ def _card(
 ) -> AmenityOut:
     kind = kind_of(amenity)
     local = now.astimezone(IST)
-    opens, closes = hours_for(amenity, local.date())
+    opens, closes = span_for(amenity, local.date())
     closure = closure_note(status)
+    # Walk-in places close during their blocks (pool cleaning, break); courts show them as taken.
+    block = None if kind == "bookable" else blocked_hours(amenity, local.date()).get(local.hour)
     level: Level
     if closure is not None:
         level, line = "closed", closure
-    elif not opens <= local.hour < closes:
-        level, line = "closed", _closed_line(amenity, local, opens)
+    elif not opens <= local.hour * 60 + local.minute < closes:
+        level, line = "closed", _closed_line(amenity, local, opens, closes)
+    elif block is not None:
+        level, line = "closed", f"Closed · {block}"
     elif kind == "bookable":
         occupied = _occupancy(amenity, local.date(), today_bookings)
-        level, line = _bookable_live(occupied, local.hour, closes)
+        level, line = _bookable_live(occupied, local.hour, closes // 60)
     elif kind == "walk_in":
         level, line = _walk_in_live(amenity, local, closes)
     else:
-        level, line = "quiet", f"Open till {_fmt_hour(closes)} · seats {amenity.capacity}"
+        level, line = "quiet", f"Open till {_fmt_minutes(closes)} · seats {amenity.capacity}"
 
     action, action_label = {
         "bookable": ("book", "Book"),

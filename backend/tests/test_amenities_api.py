@@ -593,3 +593,67 @@ async def test_closure_wrong_society_is_not_found(
     _enable_local_dev_auth(monkeypatch)
     response = await client.patch(f"/v1/amenities/{foreign.id}/status", json={"closed": True})
     assert response.status_code == 404
+
+
+def _daily(open_at: str, close_at: str) -> dict:
+    days = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+    return {day: {"open": open_at, "close": close_at} for day in days}
+
+
+async def test_half_hour_opening_times(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    world.gym.open_hours = _daily("05:30", "22:00")
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+
+    gym = (await client.get(f"/v1/amenities/{world.gym.id}")).json()
+    assert gym["hoursLabel"] == f"5:30 AM {EN} 10 PM daily"
+
+    early = datetime(2030, 1, 1, 5, 0, tzinfo=IST).astimezone(UTC)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: early)
+    cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
+    assert cards["Gym"]["detail"] == "Closed · opens 5:30 AM"
+
+    just_open = datetime(2030, 1, 1, 5, 45, tzinfo=IST).astimezone(UTC)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: just_open)
+    cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
+    assert cards["Gym"]["statusLabel"] != "Closed"
+
+
+async def test_pool_closed_on_mondays_and_during_break(
+    client: AsyncClient, world: World, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pool = Amenity(
+        id=uuid.uuid4(),
+        society_id=world.society.id,
+        name="Pool",
+        amenity_type=AmenityType.pool,
+        capacity=20,
+        open_hours={**_daily("06:00", "21:00"), "mon": {"closed": True}},
+        rules={
+            "blocks": [
+                {"label": "Break", "days": [1, 2, 3, 4, 5, 6], "start": "09:00", "end": "16:00"}
+            ]
+        },
+    )
+    db_session.add(pool)
+    await db_session.flush()
+    _enable_local_dev_auth(monkeypatch)
+
+    detail = (await client.get(f"/v1/amenities/{pool.id}")).json()
+    assert detail["hoursLabel"] == f"Mon closed · Tue{EN}Sun 6 AM {EN} 9 PM"
+
+    # NOW is Tuesday 10:30 AM, inside the 9 AM to 4 PM break.
+    cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
+    assert (cards["Pool"]["statusLabel"], cards["Pool"]["detail"]) == ("Closed", "Closed · Break")
+
+    monday = datetime(2029, 12, 31, 18, 0, tzinfo=IST).astimezone(UTC)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: monday)
+    cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
+    assert cards["Pool"]["detail"] == "Closed · opens tomorrow at 6 AM"
+
+    tuesday_evening = datetime(2030, 1, 1, 17, 0, tzinfo=IST).astimezone(UTC)
+    monkeypatch.setattr("app.services.amenities.current_time", lambda: tuesday_evening)
+    cards = {c["name"]: c for c in (await client.get("/v1/amenities")).json()}
+    assert cards["Pool"]["statusLabel"] != "Closed"
