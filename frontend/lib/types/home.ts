@@ -228,6 +228,8 @@ export interface NeighbourMatch {
   totalCount: number;
   activeSummary: string;
   actionLabel: string;
+  /** Where the action goes: start a group, or add interests when nothing matches yet. */
+  actionHref?: string;
 }
 
 export interface AanganPrompt {

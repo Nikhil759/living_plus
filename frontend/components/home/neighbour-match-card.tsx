@@ -13,10 +13,10 @@ export function NeighbourMatchCard({ match }: { match: NeighbourMatch }) {
         <p className="mt-1 text-body text-ink-secondary">{match.description}</p>
       </div>
       <Link
-        href="/community/new"
+        href={match.actionHref ?? "/community/new"}
         className={buttonVariants({ variant: "secondary", size: "md", className: "w-full" })}
       >
-        Start a group
+        {match.actionLabel || "Start a group"}
       </Link>
     </Card>
   );

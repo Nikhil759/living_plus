@@ -81,6 +81,7 @@ class NeighbourMatchOut(CamelModel):
     total_count: int
     active_summary: str
     action_label: str
+    action_href: str = "/community/new"
 
 
 class AanganPromptOut(CamelModel):

@@ -137,3 +137,35 @@ async def test_home_returns_seeded_shape(
     assert "tower b" in body["digest"]["summary"].lower()
 
     get_settings.cache_clear()
+
+
+async def _neighbour(db_session, society_id: uuid.UUID, name: str, interests: list[str]) -> None:
+    person = User(
+        id=uuid.uuid4(), supabase_uid=f"seed:{name}", email=f"{name}@example.com", name=name
+    )
+    db_session.add(person)
+    await db_session.flush()
+    db_session.add(
+        Profile(user_id=person.id, society_id=society_id, interests=interests, is_visible=True)
+    )
+    await db_session.flush()
+
+
+async def test_match_card_finds_shared_interests_or_invites_adding_them(
+    client: AsyncClient, demo_member: User, db_session, act_as
+) -> None:
+    profile = await db_session.get(Profile, demo_member.id)
+    await _neighbour(db_session, profile.society_id, "Rohan", ["fifa", "cricket"])
+    await _neighbour(db_session, profile.society_id, "Sana", ["books"])
+    act_as(demo_member)
+
+    match = (await client.get("/v1/home")).json()["match"]
+    assert match["title"] == "Neighbours like you" and match["totalCount"] == 1
+    assert match["actionHref"] == "/community/new"
+
+    # No interests (e.g. a new Google sign-in): the card stays, asking for them.
+    profile.interests = []
+    await db_session.flush()
+    match = (await client.get("/v1/home")).json()["match"]
+    assert match["title"] == "Find people like you" and match["totalCount"] == 2
+    assert match["actionLabel"] == "Add your interests" and match["actionHref"] == "/profile"

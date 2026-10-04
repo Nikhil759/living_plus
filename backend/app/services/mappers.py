@@ -1,8 +1,9 @@
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -546,6 +547,27 @@ def map_resident(
     )
 
 
+def _discover_neighbours(profiles: Sequence[Row[tuple[Profile, User]]]) -> NeighbourMatchOut | None:
+    """No shared interests yet: invite the resident to add theirs instead of hiding the card."""
+    sharing = [person for profile, person in profiles if profile.interests]
+    if not sharing:
+        return None
+    return NeighbourMatchOut(
+        label="Find people like you",
+        title="Find people like you",
+        description=f"{len(sharing)} neighbours have shared their interests. "
+        "Add yours to meet the ones you have in common.",
+        people=[
+            PersonOut(id=str(p.id), name=p.name or "Neighbour", avatar_url=p.avatar_url)
+            for p in sharing[:3]
+        ],
+        total_count=len(sharing),
+        active_summary="",
+        action_label="Add your interests",
+        action_href="/profile",
+    )
+
+
 async def map_neighbour_match(
     db: AsyncSession,
     *,
@@ -553,8 +575,6 @@ async def map_neighbour_match(
     user_id: uuid.UUID,
     interests: list[str],
 ) -> NeighbourMatchOut | None:
-    if not interests:
-        return None
     profiles = (
         await db.execute(
             select(Profile, User)
@@ -573,7 +593,7 @@ async def map_neighbour_match(
         if overlap:
             scored.append((len(overlap), profile, person))
     if not scored:
-        return None
+        return _discover_neighbours(profiles)
     scored.sort(key=lambda row: row[0], reverse=True)
     top = scored[:3]
     total = len(scored)

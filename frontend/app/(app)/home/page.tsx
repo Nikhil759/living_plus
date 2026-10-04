@@ -74,11 +74,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <DigestCard digest={digest} />
               </div>
             ) : null}
-            <EventsSection events={events} />
-            <AmenitiesSection amenities={amenities} />
+            {/* Phones and tablets: rent right after the notices (desktop has it in the side column). */}
             <div className="xl:hidden">
               <RentSummaryCard current={rent.current} recurring={rent.recurring} />
             </div>
+            <EventsSection events={events} />
+            <AmenitiesSection amenities={amenities} />
             {posts.length > 0 ? (
               <section className="space-y-5">
                 <SectionHeader title="From your neighbours" action={{ label: "See all", href: "/community" }} />
