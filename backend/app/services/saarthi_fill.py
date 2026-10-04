@@ -218,9 +218,11 @@ def _clean_feedback(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _context(db: AsyncSession, member: CurrentMember, form: str) -> dict[str, Any]:
-    tower, _ = await home_service.load_tower_flat(db, member.membership_id)
+    tower, flat = await home_service.load_tower_flat(db, member.membership_id)
     context: dict[str, Any] = {"resident_tower": tower}
     if form == "event":
+        # Matches the form's "My flat" option (frontend myFlatLabel).
+        context["resident_flat_location"] = f"{tower}, Flat {flat}"
         cards = await amenity_service.list_amenities(db, member.society_id)
         context["society_spaces"] = [c.name for c in cards if c.kind == "space"] + [
             c.name for c in cards if c.name == "Clubhouse Terrace"

@@ -341,3 +341,22 @@ async def test_edit_hints_use_current_values_and_skip_the_item_itself(
     out = response.json()
     assert out["values"] == {"endsAt": starts.strftime("%Y-%m-%dT22:30")}
     assert [h["kind"] for h in out["hints"]] == ["rule"]
+
+
+async def test_event_fill_knows_the_residents_flat_and_fills_alongside_a_question(
+    client, people, act_as, fake
+) -> None:
+    act_as(people["nikhil"])
+    fake.outputs = [
+        {
+            "title": "FIFA Night",
+            "locationLabel": "Tower C, Flat 702",
+            "category": "sports",
+            "question": "Which day?",
+        }
+    ]
+    out = await fill(client, "event", "a fifa night at my flat")
+    assert out["values"]["locationLabel"] == "Tower C, Flat 702"
+    assert out["question"] == "Which day?"
+    assert '"resident_flat_location": "Tower C, Flat 702"' in fake.prompts[0]
+    assert "even when something is missing" in fake.prompts[0]
