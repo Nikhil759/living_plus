@@ -14,8 +14,14 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { getDataSource } from "@/lib/data/source";
 import * as saarthiApi from "@/lib/saarthi/api";
+import { stripCitationMarkers } from "@/lib/saarthi/citations";
 import type { SaarthiState } from "@/components/saarthi/saarthi-avatar";
-import type { ChatFeedback, ChatSessionSummary, SaarthiEvent } from "@/lib/types/saarthi";
+import type {
+  ChatFeedback,
+  ChatSessionSummary,
+  Citation,
+  SaarthiEvent,
+} from "@/lib/types/saarthi";
 
 export const FRIENDLY_ERROR = "I couldn't reach the server just now. Try again?";
 
@@ -27,6 +33,7 @@ export interface UiMessage {
   status: "streaming" | "ok" | "error";
   feedback: ChatFeedback | null;
   saved: boolean;
+  citations: Citation[];
 }
 
 interface SaarthiContextValue {
@@ -100,8 +107,24 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       const replyId = localId();
       setMessages((all) => [
         ...all,
-        { id: localId(), role: "user", content: text, status: "ok", feedback: null, saved: true },
-        { id: replyId, role: "assistant", content: "", status: "streaming", feedback: null, saved: false },
+        {
+          id: localId(),
+          role: "user",
+          content: text,
+          status: "ok",
+          feedback: null,
+          saved: true,
+          citations: [],
+        },
+        {
+          id: replyId,
+          role: "assistant",
+          content: "",
+          status: "streaming",
+          feedback: null,
+          saved: false,
+          citations: [],
+        },
       ]);
       setBusy(true);
       setAvatarState("thinking");
@@ -141,12 +164,14 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
             updateMessage(currentId, () => ({ content: "" }));
             break;
           case "done": {
-            const savedId = event.data.messageId;
+            const { messageId: savedId, citations } = event.data;
             setMessages((all) => {
               const reply = all.find((m) => m.id === currentId);
-              if (reply) setAnnouncement(`Saarthi: ${reply.content}`);
+              if (reply) setAnnouncement(`Saarthi: ${stripCitationMarkers(reply.content)}`);
               return all.map((m) =>
-                m.id === currentId ? { ...m, id: savedId, status: "ok", saved: true } : m,
+                m.id === currentId
+                  ? { ...m, id: savedId, status: "ok", saved: true, citations: citations ?? [] }
+                  : m,
               );
             });
             currentId = savedId;
@@ -243,6 +268,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           status: m.status,
           feedback: m.feedback,
           saved: true,
+          citations: m.citations ?? [],
         })),
       );
     },

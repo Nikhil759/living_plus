@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { BookOpen, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { SaarthiAvatar, type SaarthiState } from "@/components/saarthi/saarthi-avatar";
 import { SaarthiText } from "@/components/saarthi/saarthi-text";
 import { useSaarthi, type UiMessage } from "@/components/saarthi/saarthi-provider";
+import { stripCitationMarkers } from "@/lib/saarthi/citations";
+import type { Citation } from "@/lib/types/saarthi";
 import { cn } from "@/lib/utils";
 
 const iconButton =
@@ -69,6 +72,24 @@ function Feedback({ message }: { message: UiMessage }) {
   );
 }
 
+function CitationChips({ citations }: { citations: Citation[] }) {
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Sources from the society guide">
+      {citations.map((c) => (
+        <li key={`${c.documentId}#${c.anchor}`}>
+          <Link
+            href={`/guide/${c.documentId}#${c.anchor}`}
+            className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary-tint px-2.5 py-1 text-caption font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{c.label}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function SaarthiMessage({
   message,
   isLast,
@@ -104,9 +125,10 @@ export function SaarthiMessage({
               message.status === "error" ? "text-ink-secondary" : "text-ink",
             )}
           >
-            <SaarthiText text={message.content} />
+            <SaarthiText text={stripCitationMarkers(message.content)} />
           </p>
         )}
+        {message.citations.length > 0 ? <CitationChips citations={message.citations} /> : null}
         {message.status === "error" && isLast && !busy ? (
           <button
             type="button"

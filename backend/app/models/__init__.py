@@ -53,6 +53,7 @@ from app.models.enums import (
 from app.models.event import Event, EventTicket, EventWaitlist, StallApplication
 from app.models.flat import Flat
 from app.models.flat_opening import FlatOpening
+from app.models.guide import Document, DocumentChunk
 from app.models.help_desk import Feedback, Ticket, TicketFollower, TicketUpdate, Vendor
 from app.models.local_business import (
     BusinessFollow,
@@ -89,6 +90,8 @@ __all__ = [
     "ChatSession",
     "Comment",
     "CrowdLevel",
+    "Document",
+    "DocumentChunk",
     "Event",
     "EventAudience",
     "EventCategory",

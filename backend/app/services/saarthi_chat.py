@@ -1,5 +1,6 @@
 """Saarthi conversations: private to one resident, always scoped to their society."""
 
+import hashlib
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -14,14 +15,18 @@ from app.agents.llm import ChatModels
 from app.agents.prompts import system_prompt
 from app.auth.deps import CurrentMember
 from app.core import rate_limit
+from app.core.cache import get_cache
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.models import ChatMessage, ChatSession, Society
 from app.models.enums import ChatMessageStatus, ChatRole, LlmOutcome, LlmPurpose
+from app.rag import embeddings, retrieval
 from app.schemas.saarthi import ChatIn, ChatMessageOut, ChatSessionDetailOut, FeedbackIn
-from app.services import llm_usage
+from app.services import guide, llm_usage
 
 RECENT_SESSIONS = 30
+ANSWER_CACHE_SECONDS = 3600
+NOT_FOUND_PHRASE = "couldn't find that in the society guide"
 TITLE_CHARS = 80
 FRIENDLY_ERROR = "I couldn't reach the server just now. Try again?"
 
@@ -152,26 +157,52 @@ async def stream_reply(
 ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
     """Yields SSE events; saves Saarthi's reply (or a friendly error) and the model call."""
     yield "session", {"sessionId": str(session.id), "title": session.title}
-    society = await db.get(Society, member.society_id)
-    system = system_prompt(
-        first_name=(member.user.name or "there").split()[0],
-        society_name=society.name if society else "your society",
-        page=body.page,
-        now=datetime.now(UTC),
-    )
-    messages = saarthi.build_messages(system, history, body.message)
+    first_name = (member.user.name or "there").split()[0]
+    cache_key = None if history else await _answer_cache_key(db, member, first_name, body.message)
+    cached = await get_cache().get(cache_key) if cache_key else None
     started = time.perf_counter()
-    result: saarthi.TurnResult | None = None
-    async for kind, payload in saarthi.stream_turn(
-        models, messages, {"session_id": str(session.id), "society_id": str(member.society_id)}
-    ):
-        if kind == "result":
-            result = payload
-        elif kind == "reset":
-            yield "reset", {}
-        else:
-            yield kind, {"text": payload}
-    assert result is not None
+
+    if cached:
+        yield "delta", {"text": cached["text"]}
+        result = saarthi.TurnResult(
+            text=cached["text"],
+            model="cache",
+            outcome=LlmOutcome.ok,
+            input_tokens=0,
+            output_tokens=0,
+            error_code=None,
+            guide_found=True,
+        )
+        citations: list[dict[str, Any]] = cached["citations"]
+    else:
+        society = await db.get(Society, member.society_id)
+        system = system_prompt(
+            first_name=first_name,
+            society_name=society.name if society else "your society",
+            page=body.page,
+            now=datetime.now(UTC),
+        )
+
+        async def retriever(query: str) -> retrieval.SearchResult:
+            return await retrieval.search(db, member.society_id, query, embeddings.get_embedder())
+
+        found: saarthi.TurnResult | None = None
+        async for kind, payload in saarthi.stream_turn(
+            models,
+            retriever,
+            saarthi.build_messages(system, history, body.message),
+            _retrieval_query(history, body.message),
+            {"session_id": str(session.id), "society_id": str(member.society_id)},
+        ):
+            if kind == "result":
+                found = payload
+            elif kind == "reset":
+                yield "reset", {}
+            else:
+                yield kind, {"text": payload}
+        assert found is not None
+        result = found
+        citations = saarthi.citations_for(result.text, result.passages)
     failed = result.outcome == LlmOutcome.error
 
     reply = ChatMessage(
@@ -179,6 +210,7 @@ async def stream_reply(
         session_id=session.id,
         role=ChatRole.assistant,
         content=FRIENDLY_ERROR if failed else result.text,
+        citations=[] if failed else citations,
         status=ChatMessageStatus.error if failed else ChatMessageStatus.ok,
         created_at=datetime.now(UTC),
     )
@@ -198,10 +230,50 @@ async def stream_reply(
         latency_ms=int((time.perf_counter() - started) * 1000),
         outcome=result.outcome,
         error_code=result.error_code,
-        detail={"page": body.page, "history_messages": len(history)},
+        detail={
+            "page": body.page,
+            "history_messages": len(history),
+            "cached": bool(cached),
+            "guide_found": result.guide_found,
+            "cited": len(citations),
+            # Questions the guide couldn't answer feed "top unanswered questions" (AI usage page).
+            "unanswered": NOT_FOUND_PHRASE in result.text.lower(),
+            "question": body.message[:300],
+            "retrieved": [
+                {
+                    "chunk": str(p.chunk_id),
+                    "label": p.label,
+                    "cosine": p.cosine,
+                    "keyword": round(p.keyword, 3),
+                }
+                for p in result.passages
+            ],
+        },
     )
     await db.commit()
     if failed:
         yield "error", {"code": "saarthi_failed", "message": FRIENDLY_ERROR}
-    else:
-        yield "done", {"messageId": str(reply.id)}
+        return
+    if cache_key and not cached and result.guide_found and citations:
+        await get_cache().set(
+            cache_key, {"text": result.text, "citations": citations}, ANSWER_CACHE_SECONDS
+        )
+    yield "done", {"messageId": str(reply.id), "citations": citations}
+
+
+def _retrieval_query(history: list[tuple[ChatRole, str]], message: str) -> str:
+    """Follow-ups ("what about Sunday?") search together with the previous question."""
+    previous = next((text for role, text in reversed(history) if role == ChatRole.user), None)
+    return f"{previous}\n{message}" if previous else message
+
+
+async def _answer_cache_key(
+    db: AsyncSession, member: CurrentMember, first_name: str, message: str
+) -> str:
+    """Identical first questions share a guide answer for an hour, until the guide changes.
+
+    The first name is part of the key because Saarthi sometimes addresses the resident by it.
+    """
+    version = await guide.guide_version(db, member.society_id)
+    question = hashlib.sha256(" ".join(message.lower().split()).encode()).hexdigest()
+    return f"saarthi:guide:{member.society_id}:{version}:{first_name.lower()}:{question}"

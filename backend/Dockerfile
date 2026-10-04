@@ -11,6 +11,7 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
 COPY scripts ./scripts
+COPY seed_data ./seed_data
 
 ENV PATH="/app/.venv/bin:$PATH"
 

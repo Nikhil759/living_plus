@@ -3,7 +3,17 @@ from pathlib import Path
 
 from sqlalchemy import func, select
 
-from app.models import Flat, Membership, Post, Profile, Ticket, TicketFollower, User
+from app.models import (
+    Document,
+    DocumentChunk,
+    Flat,
+    Membership,
+    Post,
+    Profile,
+    Ticket,
+    TicketFollower,
+    User,
+)
 from app.models.enums import MembershipRole, PostType
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
@@ -49,3 +59,9 @@ async def test_seed_matches_the_society_guide_and_is_idempotent(db_session) -> N
     assert len(notices) == 6
     assert any("Tue 6 Oct, 2:00\u20134:00 PM" in body for body in notices)
     assert not any("2024" in body or "C-702" in body for body in notices)
+
+    # The society guide is seeded and indexed (keyword search only: no Gemini key in tests).
+    assert await _count(db_session, select(Document.id)) == 8
+    labels = set(await db_session.scalars(select(DocumentChunk.label)))
+    assert "Handbook §11.2 Swimming pool" in labels
+    assert await _count(db_session, select(DocumentChunk.id)) == 51

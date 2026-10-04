@@ -20,6 +20,7 @@ dependencies = [
     "redis>=8.1.0",
     "langfuse>=4.16.0",
     "langchain>=1.4.3",
+    "pypdf>=6.19.0",
 ]
 
 [dependency-groups]

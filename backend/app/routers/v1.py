@@ -6,6 +6,7 @@ from app.routers import (
     community,
     events,
     flat_openings,
+    guide,
     health,
     help_desk,
     home,
@@ -35,4 +36,5 @@ api_router.include_router(announcements.router)
 api_router.include_router(uploads.router)
 api_router.include_router(help_desk.router)
 api_router.include_router(community.router)
+api_router.include_router(guide.router)
 api_router.include_router(saarthi.router)

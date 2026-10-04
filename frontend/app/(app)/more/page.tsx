@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookOpen,
   CalendarDays,
   Home,
   IndianRupee,
@@ -20,6 +21,7 @@ const LINKS = [
   { href: "/community", label: "Community", detail: "Groups and neighbours", icon: Users },
   { href: "/amenities", label: "Amenities", detail: "Gym, pool, courts", icon: Waves },
   { href: "/announcements", label: "Notices", detail: "Society announcements", icon: Megaphone },
+  { href: "/guide", label: "Society guide", detail: "Rules, minutes and notices", icon: BookOpen },
   { href: "/marketplace", label: "Marketplace", detail: "Second-hand from neighbours", icon: ShoppingBag },
   { href: "/local-businesses", label: "Local businesses", detail: "Run by your neighbours", icon: Store },
   { href: "/flat-openings", label: "Flat openings", detail: "Rooms, flatmates, full flats", icon: Home },

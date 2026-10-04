@@ -5,7 +5,7 @@
 |---|---|---|
 | Frontend | Next.js (App Router, TypeScript), Tailwind, shadcn/ui | Deployed on Vercel |
 | API | FastAPI + Pydantic v2 | Validation and structured errors built in |
-| Database | SQLite (aiosqlite) | One file for app data; guide embeddings stored as blobs with FTS5 keyword search (a society's guide is a few hundred chunks, so cosine scoring in Python is fast enough) |
+| Database | SQLite (aiosqlite) | One file for app data; guide embeddings stored as float32 blobs; hybrid search (cosine + BM25, rank-fused) runs in Python because a society's guide is a few hundred chunks |
 | ORM / migrations | SQLAlchemy 2.0 async + Alembic | Migrations required by the brief |
 | Auth | Supabase Auth (email/password + Google); FastAPI verifies the JWT | Social login; authorisation stays in our API |
 | Cache / rate limits | Redis (Upstash) when reachable, in-process fallback | Rate limits, repeated LLM answers |
@@ -79,7 +79,7 @@ Every table except `users` has `society_id`; every query filters on it.
 - `vendors`, `feedback` (anonymous feedback stores no user)
 
 **AI and system**
-- `documents`, `document_chunks` (embedding vector, HNSW index)
+- `documents` (handbook, minutes, notices; committee notices link to a Home notice post), `document_chunks` (section label for citations, anchor, 768-d Gemini embedding)
 - `chat_sessions` (per resident, soft delete), `chat_messages` (citations, cards, feedback)
 - `agent_runs`, `approvals` (action_type, payload, status)
 - `notifications` (priority critical/normal, channel)

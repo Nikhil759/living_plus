@@ -7,10 +7,19 @@ export interface ChatSessionSummary {
   lastMessageAt: string;
 }
 
+/** A society guide section Saarthi's reply relied on. */
+export interface Citation {
+  label: string;
+  documentId: string;
+  anchor: string;
+  date: string | null;
+}
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
+  citations: Citation[];
   status: "ok" | "error";
   feedback: ChatFeedback | null;
   createdAt: string;
@@ -26,5 +35,5 @@ export type SaarthiEvent =
   | { event: "status"; data: { text: string } }
   | { event: "delta"; data: { text: string } }
   | { event: "reset"; data: Record<string, never> }
-  | { event: "done"; data: { messageId: string } }
+  | { event: "done"; data: { messageId: string; citations: Citation[] } }
   | { event: "error"; data: { code: string; message: string } };

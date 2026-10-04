@@ -1,0 +1,66 @@
+# Saarthi evaluation cases. Extend freely; the runner in Phase 6 scores every category.
+# guide: must_contain = facts the answer needs (any spelling the model picks is matched
+#        case-insensitively, so keep them short); cite = expected citation label prefixes
+#        (any one matching counts); cite: [] means the guide should NOT answer it.
+guide:
+  - question: What time can I shift luggage / furniture?
+    must_contain: ["9", "6", "Sunday", "48 hours", "2,000"]
+    cite: ["Handbook §3 "]
+  - question: Saturday ko shifting kar sakte hain?
+    must_contain: ["9", "6"]
+    cite: ["Handbook §3 "]
+    language: hinglish
+  - question: Can my guests use the swimming pool?
+    must_contain: ["2 guests", "100"]
+    cite: ["Handbook §11.2"]
+  - question: Is the pool open on Monday?
+    must_contain: ["Monday", "cleaning"]
+    cite: ["Handbook §11.2"]
+  - question: When is the pool closed this month?
+    must_contain: ["12", "14", "15"]
+    cite: ["Notice: Swimming pool closed"]
+  - question: Till what time can we play music at a party?
+    must_contain: ["10", "10:30"]
+    cite: ["Handbook §15", "AGM minutes 24 Aug 2026 §4"]
+  - question: Can I do renovation work on Sunday?
+    must_contain: ["Sunday"]
+    cite: ["Handbook §13"]
+  - question: What are drilling hours?
+    must_contain: ["10", "1", "3", "6"]
+    cite: ["Handbook §13"]
+  - question: How much does it cost to book the community hall for a birthday?
+    must_contain: ["3,000", "5,000"]
+    cite: ["Handbook §11.7"]
+  - question: Can we use the hall until midnight?
+    must_contain: ["10:30"]
+    cite: ["Handbook §11.7", "AGM minutes 24 Aug 2026 §4"]
+  - question: When is maintenance due and what's the late fee?
+    must_contain: ["10th", "1.5%", "15th"]
+    cite: ["Handbook §2 "]
+  - question: What is the maintenance rate now?
+    must_contain: ["4.50", "500"]
+    cite: ["AGM minutes 24 Aug 2026 §2", "Handbook §2 "]
+  - question: Where can I charge my EV?
+    must_contain: ["B1", "15"]
+    cite: ["Handbook §9 ", "AGM minutes 24 Aug 2026 §5"]
+  - question: How long can a visitor park?
+    must_contain: ["4 hours", "Gate 1"]
+    cite: ["Handbook §5 "]
+  - question: Can my dog use the lift?
+    must_contain: ["leash"]
+    cite: ["Handbook §14"]
+  - question: When does the pet park open?
+    must_contain: ["6", "10", "5", "9", "Tower D"]
+    cite: ["Handbook §11.9"]
+  - question: What's the gym age limit?
+    must_contain: ["16", "14"]
+    cite: ["Handbook §11.1"]
+  - question: When do Diwali Mela stall applications close and what's the fee?
+    must_contain: ["23 Oct", "6", "1,500", "800"]
+    cite: ["Notice: Diwali Mela"]
+  - question: When is water off in Tower B?
+    must_contain: ["6 Oct", "2", "4"]
+    cite: ["Notice: Water supply shutdown"]
+  - question: Is there a rule about solar panels on balconies?
+    must_contain: ["couldn't find"]
+    cite: []

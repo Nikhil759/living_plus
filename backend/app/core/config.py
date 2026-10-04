@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     SAARTHI_MAX_MESSAGE_CHARS: int = 2000
     SAARTHI_CHAT_PER_10MIN: int = 30
     SAARTHI_CHAT_PER_DAY: int = 200
+    # Below this best cosine score no passages are passed at all. Scores of answerable and
+    # unanswerable questions overlap (see evals/guide_retrieval.py), so this only drops clearly
+    # unrelated questions; the model decides coverage from the passages it gets.
+    SAARTHI_GUIDE_MIN_SCORE: float = 0.58
+    # Same gate for keyword-only search when there are no embeddings yet.
+    SAARTHI_GUIDE_KEYWORD_FLOOR: float = 3.0
 
     # Optional Langfuse tracing; off unless both keys are set.
     LANGFUSE_PUBLIC_KEY: str = ""

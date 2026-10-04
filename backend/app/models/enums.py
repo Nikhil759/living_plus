@@ -288,6 +288,7 @@ class LlmPurpose(StrEnum):
     summary = "summary"
     fill = "fill"
     route = "route"
+    embed = "embed"
 
 
 class LlmOutcome(StrEnum):
@@ -364,3 +365,21 @@ class PostType(StrEnum):
     recommendation = "recommendation"
     # Committee announcements; the only posts shown in the Home digest.
     notice = "notice"
+
+
+class DocumentType(StrEnum):
+    bylaws = "bylaws"
+    minutes = "minutes"
+    notice = "notice"
+    other = "other"
+
+
+class DocumentSource(StrEnum):
+    seed = "seed"
+    committee = "committee"
+
+
+class DocumentStatus(StrEnum):
+    indexing = "indexing"
+    ready = "ready"
+    failed = "failed"

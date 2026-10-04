@@ -12,10 +12,11 @@ from __future__ import annotations
 import asyncio
 import random
 import uuid
-from datetime import UTC, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_sessionmaker
@@ -74,7 +75,17 @@ from app.models import (
     Vendor,
     WhatsappGroup,
 )
-from app.models.enums import ActorRole, PostType, TicketUpdateKind
+from app.models import Document, DocumentChunk
+from app.models.enums import (
+    ActorRole,
+    DocumentSource,
+    DocumentType,
+    PostType,
+    TicketUpdateKind,
+)
+from app.rag import embeddings
+from app.rag.chunking import split_front_matter
+from app.services.guide import content_hash, index_document
 
 SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 INVITE_CODE = "AANGAN50"
@@ -761,6 +772,44 @@ def ist(value: str) -> datetime:
     return datetime.fromisoformat(value).replace(tzinfo=IST).astimezone(UTC)
 
 
+GUIDE_DIR = Path(__file__).resolve().parent.parent / "seed_data" / "society-guide"
+
+
+async def seed_guide(session: AsyncSession, society: Society) -> None:
+    """Society guide documents for Saarthi; re-indexed only when their text changed.
+
+    Missing embeddings (no GEMINI_API_KEY on an earlier run) are filled in once a key exists.
+    """
+    embedder = embeddings.get_embedder()
+    for path in sorted(GUIDE_DIR.rglob("*.md")):
+        meta, body = split_front_matter(path.read_text(encoding="utf-8"))
+        when = meta.get("date") or meta.get("effective_from")
+        relative = path.relative_to(GUIDE_DIR).as_posix()
+        document = await get_or_create(
+            session,
+            Document,
+            sid(f"guide.{relative}"),
+            society_id=society.id,
+            title=str(meta["title"]),
+            doc_type=DocumentType(meta["doc_type"]),
+            source=DocumentSource.seed,
+            body_markdown=body,
+        )
+        document.title, document.doc_type = str(meta["title"]), DocumentType(meta["doc_type"])
+        document.effective_date = when if isinstance(when, date) else None
+        document.issued_by = meta.get("issued_by")
+        document.body_markdown = body
+        await session.flush()
+        unembedded = await session.scalar(
+            select(func.count(DocumentChunk.id)).where(
+                DocumentChunk.document_id == document.id, DocumentChunk.embedding.is_(None)
+            )
+        )
+        changed = document.content_hash != content_hash(document.title, body)
+        if changed or (embedder is not None and unembedded):
+            await index_document(session, document, embedder)
+
+
 async def seed_help_desk(session: AsyncSession, society: Society, users: dict[str, User]) -> None:
     towers = {
         t.name[-1]: t
@@ -1240,6 +1289,7 @@ async def run_seed() -> None:
         await seed_amenities(session, society, users)
         await seed_community(session, society, users)
         await seed_help_desk(session, society, users)
+        await seed_guide(session, society)
         await seed_events(session, society, users)
         await seed_marketplace(session, society, users)
         await seed_local_businesses(session, society, users, flats)
