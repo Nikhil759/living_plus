@@ -489,7 +489,11 @@ async def seed_court_bookings(
             per_user: dict[uuid.UUID, int] = {}
             for hour in range(6, 22):
                 is_demo_slot = key == "am-badminton-2" and offset == 1 and hour == 7
-                if not is_demo_slot and (hour in blocked or (offset == 0 and hour <= now_ist.hour)):
+                # Keep Saturday 7-8 PM on Badminton 2 open for the Saarthi booking demo.
+                saarthi_demo_slot = key == "am-badminton-2" and day.weekday() == 5 and hour == 19
+                if saarthi_demo_slot or (
+                    not is_demo_slot and (hour in blocked or (offset == 0 and hour <= now_ist.hour))
+                ):
                     continue
                 rng = random.Random(f"{key}:{day}:{hour}")
                 if is_demo_slot:
@@ -944,29 +948,33 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
         },
         {
             "slug": "evt-diwali-mela",
-            "title": "Diwali Mela 2024",
+            # Matches society-guide/notices/2026-10-01-diwali-mela-2026.md.
+            "title": "Diwali Mela 2026",
             "type": EventType.society,
             "host": "committee",
-            "location": "Amphitheatre & Central Lawn",
-            "starts": datetime.now(UTC) + timedelta(days=21),
-            "duration_h": 6,
+            "location": "Central Lawn & Amphitheatre",
+            "starts": datetime(2026, 11, 7, 17, 0, tzinfo=IST).astimezone(UTC),
+            "fixed_dates": True,
+            "duration_h": 5,
             "price_paise": 0,
             "capacity": 500,
             "tags": ["society", "diwali"],
             "status": EventStatus.published,
             "category": EventCategory.social,
             "cover_url": "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=1200&q=80",
-            "description": "Prestige Meridian Park's annual Diwali Mela takes over the amphitheatre and central lawn with food stalls, handicrafts, and games for the kids. Come in festive wear, stay for the lamps, and apply early if you want a stall.",
+            "description": "Prestige Meridian Park's Diwali Mela on the central lawn and amphitheatre: food and craft stalls by residents, a kids' corner, music and a rangoli competition. Stall fee: ₹1,500 for a food stall, ₹800 for a craft or other stall, paid in the app after approval. At most 3 stalls of the same food type are approved.",
             "stalls_enabled": True,
-            "stall_count": 10,
-            "stall_fee_paise": 250000,
+            "stall_count": 30,
+            "stall_fee_paise": 150000,
             "stall_categories": [
-                {"name": "Chaat", "limit": 2},
-                {"name": "Food stall", "limit": 4},
-                {"name": "Handicraft", "limit": 3},
-                {"name": "Games", "limit": 2},
+                {"name": "Chaat", "limit": 3},
+                {"name": "Momos", "limit": 3},
+                {"name": "Desserts", "limit": 3},
+                {"name": "Other food", "limit": 9},
+                {"name": "Handicraft", "limit": 8},
+                {"name": "Games", "limit": 4},
             ],
-            "stall_application_deadline": datetime.now(UTC) + timedelta(days=14),
+            "stall_application_deadline": datetime(2026, 10, 23, 18, 0, tzinfo=IST).astimezone(UTC),
         },
     ]
 
@@ -1010,6 +1018,9 @@ async def seed_events(session: AsyncSession, society: Society, users: dict[str, 
             event.what_to_bring = spec.get("what_to_bring")
             if spec.get("description"):
                 event.description = spec["description"]
+            if spec.get("fixed_dates"):
+                event.starts_at = starts
+                event.ends_at = starts + timedelta(hours=spec["duration_h"])
 
         event.stalls_enabled = spec.get("stalls_enabled", False)
         event.stall_count = spec.get("stall_count")

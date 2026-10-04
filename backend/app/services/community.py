@@ -514,22 +514,35 @@ async def _neighbours(db: AsyncSession, member: CurrentMember) -> list[Neighbour
     ]
 
 
-async def interest_count(db: AsyncSession, member: CurrentMember, interest: str) -> int:
-    """Other approved residents who list this interest. A count only: hidden profiles are
-    included, but no names or details ever leave this function."""
+async def residents_with_interest(
+    db: AsyncSession, society_id: uuid.UUID, interest: str, *, exclude: uuid.UUID | None = None
+) -> list[uuid.UUID]:
+    """Approved residents who list this interest. Ids only: used for counts and invites,
+    so hidden profiles are included but no names or details ever leave this function."""
     wanted = interest.strip().lower()
     rows = await db.execute(
         select(Profile.user_id, Profile.interests)
         .join(Membership, Membership.user_id == Profile.user_id)
         .where(
-            Profile.society_id == member.society_id,
-            Membership.society_id == member.society_id,
+            Profile.society_id == society_id,
+            Membership.society_id == society_id,
             Membership.status == MembershipStatus.approved,
-            Profile.user_id != member.user.id,
         )
         .distinct()
     )
-    return sum(1 for _, interests in rows if wanted in {i.lower() for i in interests})
+    return [
+        user_id
+        for user_id, interests in rows
+        if user_id != exclude and wanted in {i.lower() for i in interests}
+    ]
+
+
+async def interest_count(db: AsyncSession, member: CurrentMember, interest: str) -> int:
+    """Other residents with this interest (a number only, hidden profiles included)."""
+    found = await residents_with_interest(
+        db, member.society_id, interest, exclude=member.user.id
+    )
+    return len(found)
 
 
 async def catalog(db: AsyncSession, member: CurrentMember) -> CatalogOut:

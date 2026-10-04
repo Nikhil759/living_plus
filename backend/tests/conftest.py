@@ -91,3 +91,30 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
         yield http
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def act_as():
+    """Switch the signed-in user for API calls: `act_as(user)`."""
+    from app.auth import get_current_user
+
+    def switch(user) -> None:
+        async def override():
+            return user
+
+        app.dependency_overrides[get_current_user] = override
+
+    yield switch
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture(autouse=True)
+def fresh_limits_and_cache() -> None:
+    """Rate-limit counters and cached answers never leak between tests."""
+    from app.core.cache import MemoryCache, get_cache
+    from app.core.rate_limit import MemoryCounter, get_counter
+
+    counter, cache = get_counter(), get_cache()
+    assert isinstance(counter, MemoryCounter) and isinstance(cache, MemoryCache)
+    counter.reset()
+    cache.clear()

@@ -84,6 +84,7 @@ Every table except `users` has `society_id`; every query filters on it.
 - `agent_runs`, `approvals` (action_type, payload, status)
 - `notifications` (priority critical/normal, channel)
 - `llm_calls` (purpose, model, tokens, cost, latency, outcome, trace_id, detail)
+- `saarthi_actions`: every change Saarthi proposes (tool, service-ready payload, card, status proposed/executed/pending_approval/cancelled/failed/expired). Nothing runs until the resident confirms; the row is also the audit trail
 - `listings`, `audit_log`
 
 **Key indexes:** society_id everywhere; (society_id, starts_at) on events; HNSW on chunk embeddings; exclusion constraint on bookings; unique Razorpay and webhook ids.

@@ -7,7 +7,14 @@ from sqlalchemy import ForeignKey, Index, Integer, Numeric, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, IdTimestampMixin
-from app.models.enums import ChatFeedback, ChatMessageStatus, ChatRole, LlmOutcome, LlmPurpose
+from app.models.enums import (
+    ActionStatus,
+    ChatFeedback,
+    ChatMessageStatus,
+    ChatRole,
+    LlmOutcome,
+    LlmPurpose,
+)
 from app.models.types import JsonDict, JsonList, UTCDateTime, enum_column
 
 
@@ -52,6 +59,42 @@ class ChatMessage(Base, IdTimestampMixin):
         enum_column(ChatFeedback, "chat_feedback"), nullable=True
     )
     feedback_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # The confirmation card shown under this reply, if any.
+    action_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("saarthi_actions.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class SaarthiAction(Base, IdTimestampMixin):
+    """A change Saarthi proposed. Nothing happens until the resident confirms it.
+
+    Doubles as the audit trail of every action taken through Saarthi.
+    """
+
+    __tablename__ = "saarthi_actions"
+    __table_args__ = (Index("ix_saarthi_actions_user", "society_id", "user_id", "created_at"),)
+
+    society_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("societies.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE")
+    )
+    tool: Mapped[str] = mapped_column(String(60))
+    # Service-ready arguments (ids resolved), replayed on confirm.
+    payload: Mapped[dict[str, Any]] = mapped_column(JsonDict(), default=dict)
+    # What the resident saw on the card.
+    card: Mapped[dict[str, Any]] = mapped_column(JsonDict(), default=dict)
+    status: Mapped[ActionStatus] = mapped_column(
+        enum_column(ActionStatus, "action_status"), default=ActionStatus.proposed
+    )
+    result: Mapped[dict[str, Any]] = mapped_column(JsonDict(), default=dict)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class LlmCall(Base, IdTimestampMixin):

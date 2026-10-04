@@ -167,7 +167,7 @@ class EventArgs(BaseModel):
     event: str = Field(description="The event id from another tool, or its title")
 
 
-async def _resolve_event(ctx: ToolContext, query: str) -> str:
+async def resolve_event(ctx: ToolContext, query: str) -> str:
     seen: dict[str, str] = {}
     for tab in (EventListTab.upcoming, EventListTab.going, EventListTab.hosting):
         for e in await events.list_events(ctx.db, ctx.member, tab=tab):
@@ -182,7 +182,7 @@ async def _resolve_event(ctx: ToolContext, query: str) -> str:
 
 async def event_details(ctx: ToolContext, args: EventArgs) -> ToolResult:
     detail = await events.get_event_detail(
-        ctx.db, ctx.member, await _resolve_event(ctx, args.event)
+        ctx.db, ctx.member, await resolve_event(ctx, args.event)
     )
     row = _event_row(detail) | {
         "description": detail.description,
@@ -199,13 +199,13 @@ async def event_details(ctx: ToolContext, args: EventArgs) -> ToolResult:
 # --- amenities -------------------------------------------------------------------------------
 
 
-async def _amenity_options(ctx: ToolContext) -> dict[str, str]:
+async def amenity_options(ctx: ToolContext) -> dict[str, str]:
     cards = await amenity_service.list_amenities(ctx.db, ctx.member.society_id, now=ctx.now)
     return {c.id: c.name for c in cards}
 
 
-async def _resolve_amenity(ctx: ToolContext, query: str) -> tuple[str, str]:
-    options = await _amenity_options(ctx)
+async def resolve_amenity(ctx: ToolContext, query: str) -> tuple[str, str]:
+    options = await amenity_options(ctx)
     found = match_name(query, options)
     if found is None:
         raise ToolInputError(
@@ -256,7 +256,7 @@ def _minutes(value: str) -> int:
 
 
 async def free_slots(ctx: ToolContext, args: SlotArgs) -> ToolResult:
-    amenity_id, name = await _resolve_amenity(ctx, args.amenity)
+    amenity_id, name = await resolve_amenity(ctx, args.amenity)
     try:
         slots = await amenity_service.get_slots(
             ctx.db, ctx.member, amenity_id, parse_day(args.date, ctx)
@@ -295,7 +295,7 @@ async def free_slots(ctx: ToolContext, args: SlotArgs) -> ToolResult:
 
 
 async def busy_hours(ctx: ToolContext, args: AmenityDayArgs) -> ToolResult:
-    amenity_id, name = await _resolve_amenity(ctx, args.amenity)
+    amenity_id, name = await resolve_amenity(ctx, args.amenity)
     try:
         crowd = await amenity_service.get_crowd(
             ctx.db, ctx.member, amenity_id, parse_day(args.date, ctx)
@@ -327,7 +327,7 @@ class SpaceDayArgs(BaseModel):
 
 async def space_schedule(ctx: ToolContext, args: SpaceDayArgs) -> ToolResult:
     """Spaces are used by hosting events, so their schedule is the events booked there."""
-    amenity_id, name = await _resolve_amenity(ctx, args.space)
+    amenity_id, name = await resolve_amenity(ctx, args.space)
     day = parse_day(args.date, ctx)
     detail = await amenity_service.get_amenity(ctx.db, ctx.member, amenity_id)
     taken = []

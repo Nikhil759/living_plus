@@ -179,6 +179,7 @@ def event_to_list_item(
         amenity_id=str(event.amenity_id) if event.amenity_id else None,
         change_summary=event.change_summary,
         cancel_reason=event.cancel_reason,
+        invite_interest=event.invite_interest,
         series_id=str(event.series_id) if event.series_id else None,
         recurrence=event.recurrence,
     )

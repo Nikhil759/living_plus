@@ -11,13 +11,15 @@ from app.agents.llm import ChatModelsDep
 from app.auth import CurrentMemberDep
 from app.core.db import DbSession
 from app.schemas.saarthi import (
+    ActionDecisionOut,
+    ActionOut,
     ChatIn,
     ChatMessageOut,
     ChatSessionDetailOut,
     ChatSessionOut,
     FeedbackIn,
 )
-from app.services import saarthi_chat
+from app.services import saarthi_actions, saarthi_chat
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/saarthi", tags=["saarthi"])
@@ -78,3 +80,23 @@ async def feedback(
     message_id: uuid.UUID, body: FeedbackIn, db: DbSession, member: CurrentMemberDep
 ) -> ChatMessageOut:
     return await saarthi_chat.set_feedback(db, member, message_id, body)
+
+
+@router.get("/actions/{action_id}", response_model=ActionOut)
+async def get_action(action_id: uuid.UUID, db: DbSession, member: CurrentMemberDep) -> ActionOut:
+    return await saarthi_actions.get_action(db, member, action_id)
+
+
+# Nothing Saarthi proposes changes anything until the resident confirms it here.
+@router.post("/actions/{action_id}/confirm", response_model=ActionDecisionOut)
+async def confirm_action(
+    action_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> ActionDecisionOut:
+    return await saarthi_actions.confirm(db, member, action_id)
+
+
+@router.post("/actions/{action_id}/cancel", response_model=ActionDecisionOut)
+async def cancel_action(
+    action_id: uuid.UUID, db: DbSession, member: CurrentMemberDep
+) -> ActionDecisionOut:
+    return await saarthi_actions.cancel(db, member, action_id)

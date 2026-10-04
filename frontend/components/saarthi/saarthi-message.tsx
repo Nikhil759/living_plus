@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { SaarthiAvatar, type SaarthiState } from "@/components/saarthi/saarthi-avatar";
+import { SaarthiActionCard } from "@/components/saarthi/saarthi-action-card";
 import { SaarthiCards } from "@/components/saarthi/saarthi-cards";
 import { SaarthiText } from "@/components/saarthi/saarthi-text";
 import { useSaarthi, type UiMessage } from "@/components/saarthi/saarthi-provider";
@@ -130,6 +131,7 @@ export function SaarthiMessage({
           </p>
         )}
         {message.cards.length > 0 ? <SaarthiCards cards={message.cards} /> : null}
+        {message.action ? <SaarthiActionCard action={message.action} /> : null}
         {message.citations.length > 0 ? <CitationChips citations={message.citations} /> : null}
         {message.status === "error" && isLast && !busy ? (
           <button

@@ -41,12 +41,44 @@ export interface SaarthiCard {
   chips: { label: string; href?: string | null }[];
 }
 
+export type ActionStatus =
+  | "proposed"
+  | "executed"
+  | "pending_approval"
+  | "cancelled"
+  | "failed"
+  | "expired";
+
+/** A change Saarthi proposed; nothing happens until the resident confirms. */
+export interface SaarthiAction {
+  id: string;
+  tool: string;
+  title: string;
+  lines: { label: string; value: string }[];
+  warning: string | null;
+  /** Who approves after confirming, e.g. "the Managing Committee". */
+  approval: string | null;
+  editHref: string | null;
+  /** Only "Edit in form" is possible (e.g. a photo is needed). */
+  draftOnly: boolean;
+  confirmLabel: string;
+  status: ActionStatus;
+  result: { message: string; href: string | null } | null;
+  error: string | null;
+}
+
+export interface ActionDecision {
+  action: SaarthiAction;
+  message: ChatMessage;
+}
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
   citations: Citation[];
   cards: SaarthiCard[];
+  action: SaarthiAction | null;
   status: "ok" | "error";
   feedback: ChatFeedback | null;
   createdAt: string;
@@ -62,5 +94,13 @@ export type SaarthiEvent =
   | { event: "status"; data: { text: string } }
   | { event: "delta"; data: { text: string } }
   | { event: "reset"; data: Record<string, never> }
-  | { event: "done"; data: { messageId: string; citations: Citation[]; cards: SaarthiCard[] } }
+  | {
+      event: "done";
+      data: {
+        messageId: string;
+        citations: Citation[];
+        cards: SaarthiCard[];
+        action: SaarthiAction | null;
+      };
+    }
   | { event: "error"; data: { code: string; message: string } };

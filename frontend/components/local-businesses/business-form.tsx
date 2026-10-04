@@ -61,14 +61,17 @@ const SERVES_OPTIONS = (Object.keys(SERVES_LABEL) as BusinessServes[]).map((id) 
 export function BusinessForm({
   profile,
   business,
+  prefill,
 }: {
   /** The viewer, from the Marketplace seller profile: first name, tower and whether a phone is saved. */
   profile: SellerProfile;
   business?: BusinessDetail;
+  /** Values from a Saarthi card (new businesses only). */
+  prefill?: Partial<BusinessFormValues>;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<BusinessFormValues>(
-    business ? businessFormFrom(business) : emptyBusinessForm(),
+    business ? businessFormFrom(business) : { ...emptyBusinessForm(), ...prefill },
   );
   const [errors, setErrors] = useState<BusinessFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);

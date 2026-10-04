@@ -383,3 +383,12 @@ class DocumentStatus(StrEnum):
     indexing = "indexing"
     ready = "ready"
     failed = "failed"
+
+
+class ActionStatus(StrEnum):
+    proposed = "proposed"
+    executed = "executed"
+    pending_approval = "pending_approval"
+    cancelled = "cancelled"
+    failed = "failed"
+    expired = "expired"

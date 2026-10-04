@@ -67,6 +67,22 @@ class ChatMessageOut(CamelModel):
     status: ChatMessageStatus
     feedback: ChatFeedback | None
     created_at: datetime
+    # The confirmation card under this reply, with its current status.
+    action: dict[str, Any] | None = None
+
+
+class ActionOut(CamelModel):
+    """A proposal for Edit-prefill: the card plus the service-ready payload."""
+
+    card: dict[str, Any]
+    tool: str
+    payload: dict[str, Any]
+
+
+class ActionDecisionOut(CamelModel):
+    action: dict[str, Any]
+    # Saarthi's follow-up message appended to the chat.
+    message: "ChatMessageOut"
 
 
 class ChatSessionDetailOut(ChatSessionOut):

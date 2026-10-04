@@ -66,7 +66,7 @@ from app.models.membership import Membership
 from app.models.membership_invite import MembershipInvite
 from app.models.notification import Notification
 from app.models.profile import Profile
-from app.models.saarthi import ChatMessage, ChatSession, LlmCall
+from app.models.saarthi import ChatMessage, ChatSession, LlmCall, SaarthiAction
 from app.models.society import Society
 from app.models.tower import Tower
 from app.models.user import User
@@ -140,6 +140,7 @@ __all__ = [
     "Profile",
     "Reaction",
     "ReactionType",
+    "SaarthiAction",
     "Society",
     "SocietyPlan",
     "StallApplication",

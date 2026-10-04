@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     SAARTHI_MAX_MESSAGE_CHARS: int = 2000
     SAARTHI_CHAT_PER_10MIN: int = 30
     SAARTHI_CHAT_PER_DAY: int = 200
+    # Confirmed Saarthi actions per resident per hour.
+    SAARTHI_ACTIONS_PER_HOUR: int = 30
     # Below this best cosine score no passages are passed at all. Scores of answerable and
     # unanswerable questions overlap (see evals/guide_retrieval.py), so this only drops clearly
     # unrelated questions; the model decides coverage from the passages it gets.

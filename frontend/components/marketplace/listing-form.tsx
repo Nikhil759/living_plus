@@ -113,9 +113,20 @@ function previewCard(values: ListingFormValues, profile: SellerProfile): Marketp
   };
 }
 
-export function ListingForm({ profile, listing }: { profile: SellerProfile; listing?: MarketplaceListing }) {
+export function ListingForm({
+  profile,
+  listing,
+  prefill,
+}: {
+  profile: SellerProfile;
+  listing?: MarketplaceListing;
+  /** Values from a Saarthi card (new listings only). */
+  prefill?: Partial<ListingFormValues>;
+}) {
   const router = useRouter();
-  const [values, setValues] = useState<ListingFormValues>(listing ? listingFormFrom(listing) : emptyListingForm());
+  const [values, setValues] = useState<ListingFormValues>(
+    listing ? listingFormFrom(listing) : { ...emptyListingForm(), ...prefill },
+  );
   const [errors, setErrors] = useState<ListingFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

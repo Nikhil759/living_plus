@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -19,7 +19,9 @@ import type { SaarthiState } from "@/components/saarthi/saarthi-avatar";
 import type {
   ChatFeedback,
   ChatSessionSummary,
+  ChatMessage,
   Citation,
+  SaarthiAction,
   SaarthiCard,
   SaarthiEvent,
 } from "@/lib/types/saarthi";
@@ -36,6 +38,7 @@ export interface UiMessage {
   saved: boolean;
   citations: Citation[];
   cards: SaarthiCard[];
+  action: SaarthiAction | null;
 }
 
 interface SaarthiContextValue {
@@ -54,6 +57,7 @@ interface SaarthiContextValue {
   retry: () => void;
   newChat: () => void;
   rate: (messageId: string, rating: ChatFeedback, reason?: string) => Promise<void>;
+  decide: (actionId: string, choice: "confirm" | "cancel") => Promise<void>;
   sessions: ChatSessionSummary[] | null;
   sessionId: string | null;
   loadSessions: () => Promise<void>;
@@ -80,8 +84,23 @@ function errorMessage(error: unknown): string {
   return FRIENDLY_ERROR;
 }
 
+function toUiMessage(m: ChatMessage): UiMessage {
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    status: m.status,
+    feedback: m.feedback,
+    saved: true,
+    citations: m.citations ?? [],
+    cards: m.cards ?? [],
+    action: m.action ?? null,
+  };
+}
+
 export function SaarthiProvider({ residentName, children }: { residentName: string; children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const enabled = getDataSource() === "api";
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<UiMessage[]>([]);
@@ -118,6 +137,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           saved: true,
           citations: [],
           cards: [],
+          action: null,
         },
         {
           id: replyId,
@@ -128,6 +148,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
           saved: false,
           citations: [],
           cards: [],
+          action: null,
         },
       ]);
       setBusy(true);
@@ -168,7 +189,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
             updateMessage(currentId, () => ({ content: "" }));
             break;
           case "done": {
-            const { messageId: savedId, citations, cards } = event.data;
+            const { messageId: savedId, citations, cards, action } = event.data;
             setMessages((all) => {
               const reply = all.find((m) => m.id === currentId);
               if (reply) setAnnouncement(`Saarthi: ${stripCitationMarkers(reply.content)}`);
@@ -181,6 +202,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
                       saved: true,
                       citations: citations ?? [],
                       cards: cards ?? [],
+                      action: action ?? null,
                     }
                   : m,
               );
@@ -256,6 +278,50 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
     [messages, updateMessage],
   );
 
+  /** Confirm or cancel a card. Only Confirm changes anything, through the app's own services. */
+  const decide = useCallback(
+    async (actionId: string, choice: "confirm" | "cancel") => {
+      let decision;
+      try {
+        decision =
+          choice === "confirm"
+            ? await saarthiApi.confirmAction(actionId)
+            : await saarthiApi.cancelAction(actionId);
+      } catch (error) {
+        const message = error instanceof ApiError ? error.message : FRIENDLY_ERROR;
+        setAnnouncement(message);
+        setMessages((all) => [
+          ...all,
+          {
+            id: localId(),
+            role: "assistant",
+            content: message,
+            status: "error",
+            feedback: null,
+            saved: false,
+            citations: [],
+            cards: [],
+            action: null,
+          },
+        ]);
+        return;
+      }
+      setMessages((all) => [
+        ...all.map((m) => (m.action?.id === actionId ? { ...m, action: decision.action } : m)),
+        toUiMessage(decision.message),
+      ]);
+      setAnnouncement(`Saarthi: ${decision.message.content}`);
+      const succeeded = ["executed", "pending_approval"].includes(decision.action.status);
+      if (succeeded) {
+        setAvatarState("happy");
+        setTimeout(() => setAvatarState((state) => (state === "happy" ? "idle" : state)), 3000);
+        // The rest of the app reflects the change straight away.
+        router.refresh();
+      }
+    },
+    [router],
+  );
+
   const loadSessions = useCallback(async () => {
     if (!enabled) return;
     try {
@@ -272,16 +338,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       sessionRef.current = detail.id;
       setSessionId(detail.id);
       setMessages(
-        detail.messages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          status: m.status,
-          feedback: m.feedback,
-          saved: true,
-          citations: m.citations ?? [],
-          cards: m.cards ?? [],
-        })),
+        detail.messages.map(toUiMessage),
       );
     },
     [reset],
@@ -337,6 +394,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       retry,
       newChat: reset,
       rate,
+      decide,
       sessions,
       sessionId,
       loadSessions,
@@ -357,6 +415,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       retry,
       reset,
       rate,
+      decide,
       sessions,
       sessionId,
       loadSessions,

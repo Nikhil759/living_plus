@@ -5,6 +5,7 @@ import { getBrowserAccessToken } from "@/lib/api/browser-auth";
 import { resolveApiUrl } from "@/lib/api/config";
 import { createSseParser } from "@/lib/saarthi/sse";
 import type {
+  ActionDecision,
   ChatFeedback,
   ChatMessage,
   ChatSessionDetail,
@@ -43,6 +44,25 @@ export async function sendFeedback(
     { rating, reason: reason?.trim() || undefined },
     { headers: await authHeaders() },
   );
+}
+
+export async function confirmAction(id: string): Promise<ActionDecision> {
+  return apiPost(`/v1/saarthi/actions/${encodeURIComponent(id)}/confirm`, undefined, {
+    headers: await authHeaders(),
+  });
+}
+
+export async function cancelAction(id: string): Promise<ActionDecision> {
+  return apiPost(`/v1/saarthi/actions/${encodeURIComponent(id)}/cancel`, undefined, {
+    headers: await authHeaders(),
+  });
+}
+
+/** The stored proposal behind a card, for prefilling a form ("Edit"). */
+export async function getActionPayload(
+  id: string,
+): Promise<{ tool: string; payload: Record<string, unknown> }> {
+  return apiGet(`/v1/saarthi/actions/${encodeURIComponent(id)}`, { headers: await authHeaders() });
 }
 
 export interface StreamChatInput {

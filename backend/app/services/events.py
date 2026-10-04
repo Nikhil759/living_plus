@@ -1,6 +1,7 @@
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import String, and_, cast, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +32,7 @@ from app.schemas.event import (
 )
 from app.schemas.home import HomeEventOut
 from app.services import amenities as amenity_service
-from app.services import event_series, mappers
+from app.services import community, event_series, mappers, notifications
 
 _COMMITTEE_ROLES = {MembershipRole.committee.value, MembershipRole.admin.value}
 _HOST_ONLY_STATUSES = {
@@ -42,6 +43,9 @@ _HOST_ONLY_STATUSES = {
 _PAST_STATUSES = {EventStatus.published, EventStatus.cancelled, EventStatus.completed}
 _LOCKED_STATUSES = {EventStatus.cancelled, EventStatus.completed}
 _APPROVAL_TYPES = {EventType.paid, EventType.society}
+# Messaging more than this many residents at once needs committee approval (PRODUCT.md).
+INVITE_APPROVAL_LIMIT = 10
+_IST = ZoneInfo("Asia/Kolkata")
 # Demo unlocks paid hosting for every member. Flip off to enforce Plus.
 _PLUS_UNLOCKED = True
 
@@ -463,12 +467,27 @@ async def create_event(
             403,
         )
 
+    space_needs_approval = False
     if body.amenity_id is not None:
         # 404s for anything outside the member's own society.
-        await amenity_service.load_amenity(db, member, body.amenity_id)
+        amenity, _ = await amenity_service.load_amenity(db, member, body.amenity_id)
+        # Hall and amphitheatre events need the committee (Handbook §12).
+        space_needs_approval = bool((amenity.rules or {}).get("requires_approval"))
+    invitees = (
+        await community.residents_with_interest(
+            db, member.society_id, body.invite_interest, exclude=member.user.id
+        )
+        if body.invite_interest
+        else []
+    )
 
     starts, ends = _event_window(body.starts_at, body.ends_at)
-    status = EventStatus.draft if body.save_as_draft else _submit_status(body.event_type)
+    if body.save_as_draft:
+        status = EventStatus.draft
+    elif space_needs_approval or len(invitees) > INVITE_APPROVAL_LIMIT:
+        status = EventStatus.pending_approval
+    else:
+        status = _submit_status(body.event_type)
     slug = await _unique_slug(db, member.society_id, _slugify(body.title))
     stalls = _stall_config(
         body.event_type,
@@ -490,6 +509,7 @@ async def create_event(
         host_id=member.user.id,
         amenity_id=body.amenity_id,
         location_label=body.location_label.strip(),
+        invite_interest=body.invite_interest,
         starts_at=starts,
         ends_at=ends,
         capacity=body.capacity,
@@ -508,6 +528,7 @@ async def create_event(
     await db.flush()
     if status == EventStatus.published:
         await _expand_series(db, event)
+        await _send_invites(db, event)
     await db.commit()
     await db.refresh(event)
     return await get_event_detail(db, member, slug)
@@ -682,6 +703,38 @@ async def cancel_event(
     return await get_event_detail(db, member, slug)
 
 
+def _notify_host(db: AsyncSession, event: Event, outcome: str, body: str) -> None:
+    notifications.add_notifications(
+        db,
+        event.society_id,
+        [event.host_id],
+        kind="event_review",
+        title=f"{event.title}: {outcome}",
+        body=body,
+        href=f"/events/{event.public_slug}",
+    )
+
+
+async def _send_invites(db: AsyncSession, event: Event) -> None:
+    """Invites residents who share the event's interest once it is published."""
+    if not event.invite_interest:
+        return
+    invitees = await community.residents_with_interest(
+        db, event.society_id, event.invite_interest, exclude=event.host_id
+    )
+    local = event.starts_at.astimezone(_IST)
+    when = f"{local:%a} {local.day} {local:%b}, {local:%I:%M %p}".replace(" 0", " ")
+    notifications.add_notifications(
+        db,
+        event.society_id,
+        invitees,
+        kind="event_invite",
+        title=f"You're invited: {event.title}",
+        body=f"{when} · {event.location_label}. For residents who like {event.invite_interest}.",
+        href=f"/events/{event.public_slug}",
+    )
+
+
 async def approve_event(
     db: AsyncSession,
     member: CurrentMember,
@@ -694,6 +747,8 @@ async def approve_event(
     event.status = EventStatus.published
     event.rejection_reason = None
     await _expand_series(db, event)
+    _notify_host(db, event, "approved", "It's published and residents can RSVP now.")
+    await _send_invites(db, event)
     await db.commit()
     return await get_event_detail(db, member, slug)
 
@@ -710,6 +765,7 @@ async def reject_event(
         raise AppError("validation_error", "Only pending events can be rejected.", 422)
     event.status = EventStatus.rejected
     event.rejection_reason = body.reason
+    _notify_host(db, event, "not approved", f"Reason: {body.reason}")
     await db.commit()
     return await get_event_detail(db, member, slug)
 

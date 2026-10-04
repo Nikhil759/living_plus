@@ -39,6 +39,8 @@ class Event(Base, IdTimestampMixin):
         Uuid(as_uuid=True), ForeignKey("amenities.id", ondelete="SET NULL"), nullable=True
     )
     location_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Residents with this interest are invited when the event is published.
+    invite_interest: Mapped[str | None] = mapped_column(String(40), nullable=True)
     starts_at: Mapped[datetime] = mapped_column(UTCDateTime)
     ends_at: Mapped[datetime] = mapped_column(UTCDateTime)
     capacity: Mapped[int] = mapped_column(default=50)

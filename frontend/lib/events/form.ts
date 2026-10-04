@@ -22,6 +22,8 @@ export interface EventFormValues {
   stallFeeInr: number;
   stallCategoriesText: string;
   stallDeadline: string;
+  /** New events only: residents with this interest are invited once it's published. */
+  inviteInterest: string;
 }
 
 export function parseStallCategories(value: string): StallCategory[] {
@@ -101,6 +103,7 @@ export function eventFormDefaults(event?: HomeEvent): EventFormValues {
     stallFeeInr: event?.stallFeeInr && event.stallFeeInr > 0 ? event.stallFeeInr : 0,
     stallCategoriesText: formatStallCategories(event?.stallCategories),
     stallDeadline: event?.stallApplicationDeadline ? toLocalInput(event.stallApplicationDeadline) : "",
+    inviteInterest: "",
   };
 }
 
@@ -132,6 +135,7 @@ export function eventFormPayload(values: EventFormValues, extra: { saveAsDraft?:
       values.eventType === "society" && values.stallsEnabled && values.stallDeadline
         ? new Date(values.stallDeadline).toISOString()
         : undefined,
+    inviteInterest: values.inviteInterest.trim() || undefined,
     ...extra,
   };
 }

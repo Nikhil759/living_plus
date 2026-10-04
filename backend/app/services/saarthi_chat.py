@@ -13,9 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents import saarthi
 from app.agents.graph import Toolbox
 from app.agents.llm import ChatModels
-from app.agents.prompts import system_prompt
+from app.agents.prompts import prompt_version, system_prompt
 from app.agents.tools.base import ToolContext
+from app.agents.tools.committee import COMMITTEE_READS, COMMITTEE_WRITES
 from app.agents.tools.read import READ_TOOLS
+from app.agents.tools.write import RESIDENT_WRITES
 from app.auth.deps import CurrentMember
 from app.core import rate_limit
 from app.core.cache import get_cache
@@ -25,7 +27,8 @@ from app.models import ChatMessage, ChatSession, Society
 from app.models.enums import ChatMessageStatus, ChatRole, LlmOutcome, LlmPurpose
 from app.rag import embeddings, retrieval
 from app.schemas.saarthi import ChatIn, ChatMessageOut, ChatSessionDetailOut, FeedbackIn
-from app.services import guide, llm_usage
+from app.services import guide, llm_usage, saarthi_actions
+from app.services.marketplace import is_committee
 
 RECENT_SESSIONS = 30
 ANSWER_CACHE_SECONDS = 3600
@@ -73,7 +76,14 @@ async def get_session_detail(
     db: AsyncSession, member: CurrentMember, session_id: uuid.UUID
 ) -> ChatSessionDetailOut:
     session = await get_session(db, member, session_id)
-    messages = [ChatMessageOut.model_validate(m) for m in await _messages(db, session)]
+    rows = await _messages(db, session)
+    actions = await saarthi_actions.cards_by_id(db, [m.action_id for m in rows if m.action_id])
+    messages = [
+        ChatMessageOut.model_validate(m).model_copy(update={"action": actions.get(m.action_id)})
+        if m.action_id
+        else ChatMessageOut.model_validate(m)
+        for m in rows
+    ]
     return ChatSessionDetailOut(
         id=session.id,
         title=session.title,
@@ -178,6 +188,7 @@ async def stream_reply(
         )
         citations: list[dict[str, Any]] = cached["citations"]
         cards: list[dict[str, Any]] = []
+        action: dict[str, Any] | None = None
     else:
         society = await db.get(Society, member.society_id)
         system = system_prompt(
@@ -194,9 +205,7 @@ async def stream_reply(
         async for kind, payload in saarthi.stream_turn(
             models,
             retriever,
-            Toolbox(
-                ctx=ToolContext(db=db, member=member, now=datetime.now(UTC)), tools=READ_TOOLS
-            ),
+            _toolbox(db, member, session),
             saarthi.build_messages(system, history, body.message),
             _retrieval_query(history, body.message),
             {"session_id": str(session.id), "society_id": str(member.society_id)},
@@ -211,6 +220,7 @@ async def stream_reply(
         result = found
         citations = saarthi.citations_for(result.text, result.passages)
         cards = [card.model_dump(by_alias=True) for card in result.cards]
+        action = result.action
     failed = result.outcome == LlmOutcome.error
 
     reply = ChatMessage(
@@ -220,6 +230,7 @@ async def stream_reply(
         content=FRIENDLY_ERROR if failed else result.text,
         citations=[] if failed else citations,
         cards=[] if failed else cards,
+        action_id=uuid.UUID(action["id"]) if action and not failed else None,
         status=ChatMessageStatus.error if failed else ChatMessageStatus.ok,
         created_at=datetime.now(UTC),
     )
@@ -269,7 +280,26 @@ async def stream_reply(
         await get_cache().set(
             cache_key, {"text": result.text, "citations": citations}, ANSWER_CACHE_SECONDS
         )
-    yield "done", {"messageId": str(reply.id), "citations": citations, "cards": cards}
+    yield (
+        "done",
+        {
+            "messageId": str(reply.id),
+            "citations": citations,
+            "cards": cards,
+            "action": action,
+        },
+    )
+
+
+def _toolbox(db: AsyncSession, member: CurrentMember, session: ChatSession) -> Toolbox:
+    """The tools this resident may use; committee tools only for the committee."""
+    committee = is_committee(member)
+    return Toolbox(
+        ctx=ToolContext(db=db, member=member, now=datetime.now(UTC)),
+        tools=[*READ_TOOLS, *(COMMITTEE_READS if committee else [])],
+        writes=[*RESIDENT_WRITES, *(COMMITTEE_WRITES if committee else [])],
+        record=saarthi_actions.recorder(db, member, session),
+    )
 
 
 def _retrieval_query(history: list[tuple[ChatRole, str]], message: str) -> str:
@@ -287,4 +317,5 @@ async def _answer_cache_key(
     """
     version = await guide.guide_version(db, member.society_id)
     question = hashlib.sha256(" ".join(message.lower().split()).encode()).hexdigest()
-    return f"saarthi:guide:{member.society_id}:{version}:{first_name.lower()}:{question}"
+    prompt = prompt_version()
+    return f"saarthi:guide:{member.society_id}:{version}:{prompt}:{first_name.lower()}:{question}"

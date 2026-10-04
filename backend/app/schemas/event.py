@@ -134,6 +134,13 @@ class EventCreate(CamelModel):
     stall_application_deadline: datetime | None = None
     # Set when the event is hosted at a society space such as the Community Hall.
     amenity_id: uuid.UUID | None = None
+    # Invite residents with this interest (e.g. "football") once the event is published.
+    invite_interest: str | None = Field(default=None, min_length=2, max_length=40)
+
+    @field_validator("invite_interest")
+    @classmethod
+    def normalize_interest(cls, value: str | None) -> str | None:
+        return value.strip().lower() if value and value.strip() else None
 
     @field_validator("tags")
     @classmethod
@@ -249,6 +256,7 @@ class EventListItemOut(HomeEventOut):
     amenity_id: str | None = None
     change_summary: str | None = None
     cancel_reason: str | None = None
+    invite_interest: str | None = None
     series_id: str | None = None
     recurrence: EventRecurrence = EventRecurrence.none
 

@@ -17,7 +17,6 @@ from sqlalchemy import select
 from app.agents.llm import ChatModels, NamedModel, get_chat_models
 from app.auth import get_current_user
 from app.core.config import get_settings
-from app.core.rate_limit import MemoryCounter, get_counter
 from app.main import app
 from app.models import (
     ChatMessage,
@@ -52,7 +51,8 @@ class FakeGemini(BaseChatModel):
     """Streams `reply` word by word with usage on the last chunk, or fails if `fail` is set.
 
     `script` queues turns first: a dict {"tool": name, "args": {...}} asks for a tool call
-    (optionally after some "text"), a string is streamed as the reply.
+    (optionally after some "text"; {"calls": [...]} asks for several at once), a string is
+    streamed as the reply.
     """
 
     reply: str = "Hello Nikhil, happy to help."
@@ -96,16 +96,18 @@ class FakeGemini(BaseChatModel):
         if isinstance(turn, dict):
             if turn.get("text"):
                 yield ChatGenerationChunk(message=AIMessageChunk(content=turn["text"]))
+            calls = turn.get("calls") or [{"tool": turn["tool"], "args": turn.get("args", {})}]
             yield ChatGenerationChunk(
                 message=AIMessageChunk(
                     content="",
                     tool_call_chunks=[
                         {
-                            "name": turn["tool"],
-                            "args": json.dumps(turn.get("args", {})),
-                            "id": f"call-{len(self.seen)}",
-                            "index": 0,
+                            "name": call["tool"],
+                            "args": json.dumps(call.get("args", {})),
+                            "id": f"call-{len(self.seen)}-{index}",
+                            "index": index,
                         }
+                        for index, call in enumerate(calls)
                     ],
                     usage_metadata={"input_tokens": 50, "output_tokens": 5, "total_tokens": 55},
                 )
@@ -202,13 +204,6 @@ def models() -> Iterator[ChatModels]:
     app.dependency_overrides[get_chat_models] = lambda: chat_models
     yield chat_models
     app.dependency_overrides.pop(get_chat_models, None)
-
-
-@pytest.fixture(autouse=True)
-def fresh_limits() -> None:
-    counter = get_counter()
-    assert isinstance(counter, MemoryCounter)
-    counter.reset()
 
 
 def parse_sse(text: str) -> list[tuple[str, dict[str, Any]]]:

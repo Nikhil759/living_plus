@@ -38,6 +38,7 @@ import { loadResident } from "@/lib/data/load-resident";
 import * as staticData from "@/lib/data/static";
 import type { CommunityCatalog, CommunityGroupDetail } from "@/lib/types/community";
 import type { GuideDocument, GuideDocumentDetail } from "@/lib/types/guide";
+import type { SaarthiDraft } from "@/lib/saarthi/prefill";
 import type { BusinessCard, BusinessDetail } from "@/lib/types/local-business";
 import type { FlatOpeningCard, FlatOpeningDetail } from "@/lib/types/flat-opening";
 import type { HelpDeskFeedback, HelpDeskIssue, HelpDeskTicket, HelpDeskVendor } from "@/lib/types/help-desk";
@@ -310,6 +311,12 @@ export async function loadGuideDocuments(): Promise<GuideDocument[]> {
 export async function loadGuideDocument(id: string): Promise<GuideDocumentDetail | undefined> {
   if (!backendIsLive()) return undefined;
   return apiGetOrUndefined<GuideDocumentDetail>(`/v1/guide/documents/${encodeURIComponent(id)}`);
+}
+
+/** A Saarthi proposal behind a card's Edit button (API mode only). */
+export async function loadSaarthiDraft(id: string | undefined): Promise<SaarthiDraft | undefined> {
+  if (!id || !backendIsLive()) return undefined;
+  return apiGetOrUndefined<SaarthiDraft>(`/v1/saarthi/actions/${encodeURIComponent(id)}`);
 }
 
 /** API mode only; other modes keep the free-text tower field. */

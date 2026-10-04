@@ -20,6 +20,7 @@ import {
   eventFormDefaults,
   eventFormPayload,
   parseTagList,
+  type EventFormValues,
 } from "@/lib/events/form";
 import {
   VENUE_OTHER,
@@ -64,6 +65,8 @@ interface HostEventFormProps {
   venueOptions?: VenueOption[];
   /** Venue name from a "Host an event here" link. */
   presetVenue?: string;
+  /** Values from a Saarthi card's Edit (new events only). */
+  prefill?: Partial<EventFormValues>;
 }
 
 export function HostEventForm({
@@ -72,12 +75,14 @@ export function HostEventForm({
   isCommittee = false,
   venueOptions = DEFAULT_VENUE_OPTIONS,
   presetVenue,
+  prefill,
 }: HostEventFormProps) {
   const router = useRouter();
-  const initial = eventFormDefaults(event);
-  const initialVenue = event
-    ? resolveVenue(initial.locationLabel, venueOptions)
-    : presetVenueSelection(presetVenue, venueOptions);
+  const initial = { ...eventFormDefaults(event), ...prefill };
+  const initialVenue =
+    event || prefill?.locationLabel
+      ? resolveVenue(initial.locationLabel, venueOptions)
+      : presetVenueSelection(presetVenue, venueOptions);
   const [venueKey, setVenueKey] = useState(initialVenue.key);
   const [venueOther, setVenueOther] = useState(initialVenue.other);
   const [locationInvalid, setLocationInvalid] = useState(false);
@@ -98,6 +103,7 @@ export function HostEventForm({
   const [capacity, setCapacity] = useState(String(initial.capacity));
   const [guestLimit, setGuestLimit] = useState(String(initial.guestLimit));
   const [whatToBring, setWhatToBring] = useState(initial.whatToBring);
+  const [inviteInterest, setInviteInterest] = useState(initial.inviteInterest);
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>();
   const [uploading, setUploading] = useState(false);
@@ -167,6 +173,7 @@ export function HostEventForm({
       capacity: Math.max(1, Number(capacity) || 50),
       guestLimit: Math.min(10, Math.max(0, Number(guestLimit) || 0)),
       whatToBring,
+      inviteInterest: event ? "" : inviteInterest,
       coverUrl,
       tags: parseTagList(tagsText),
       eventType,
@@ -503,6 +510,24 @@ export function HostEventForm({
             placeholder="A mat and water"
           />
         </label>
+        {!event ? (
+          <label className="block space-y-1.5">
+            <span className="text-caption font-medium text-ink-secondary">
+              Invite residents interested in (optional)
+            </span>
+            <input
+              className={inputClassName}
+              maxLength={40}
+              value={inviteInterest}
+              onChange={(e) => setInviteInterest(e.target.value)}
+              placeholder="football"
+            />
+            <span className="block text-caption text-ink-tertiary">
+              They get an invite once the event is published. Inviting more than 10 residents
+              needs committee approval.
+            </span>
+          </label>
+        ) : null}
         <div className="space-y-2">
           <span className="text-caption font-medium text-ink-secondary">Cover photo</span>
           <div className="overflow-hidden rounded-card">

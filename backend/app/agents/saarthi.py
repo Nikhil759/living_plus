@@ -29,6 +29,7 @@ class TurnResult:
     guide_found: bool = False
     cards: list[SaarthiCard] = field(default_factory=list)
     tool_log: list[dict[str, Any]] = field(default_factory=list)
+    action: dict[str, Any] | None = None
 
 
 def citations_for(text: str, passages: list[Passage]) -> list[dict[str, Any]]:
@@ -108,4 +109,5 @@ async def stream_turn(
         guide_found=final.get("guide_found", False),
         cards=final.get("cards", []),
         tool_log=final.get("tool_log", []),
+        action=final.get("action"),
     )
