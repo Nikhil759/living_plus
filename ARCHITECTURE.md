@@ -5,7 +5,7 @@
 |---|---|---|
 | Frontend | Next.js (App Router, TypeScript), Tailwind, shadcn/ui | Deployed on Vercel |
 | API | FastAPI + Pydantic v2 | Validation and structured errors built in |
-| Database | SQLite (aiosqlite) | One file for app data; guide embeddings stored as float32 blobs; hybrid search (cosine + BM25, rank-fused) runs in Python because a society's guide is a few hundred chunks |
+| Database | **SQLite (aiosqlite) for demo/local** → **PostgreSQL at scale** | Today: one file (`backend/.demo/aangan.db`) for zero-setup clones. Production plan: Postgres (e.g. Supabase) with `asyncpg`, same Alembic migrations and service layer. Guide vectors today: float32 blobs in SQLite; hybrid search (cosine + BM25, rank-fused) in Python. At scale: **pgvector** + HNSW (or equivalent) instead of in-process scoring |
 | ORM / migrations | SQLAlchemy 2.0 async + Alembic | Migrations required by the brief |
 | Auth | Supabase Auth (email/password + Google); FastAPI verifies the JWT | Social login; authorisation stays in our API |
 | Cache / rate limits | Redis (Upstash) when reachable, in-process fallback | Rate limits, repeated LLM answers |
@@ -15,6 +15,34 @@
 | Integrations | Razorpay (+ webhooks), Resend, Twilio WhatsApp sandbox | 2+ integrations with retries and webhooks |
 | Deploy | Railway/Render (API + worker), Vercel (frontend), GitHub Actions CI | |
 
+## System diagram
+
+```mermaid
+flowchart LR
+  subgraph next["Next.js"]
+    P[Pages / components]
+    SB[Supabase session]
+  end
+  subgraph fastapi["FastAPI"]
+    RT[routers]
+    SV[services]
+    LG[agents/graph LangGraph]
+    RG[rag retrieval + embeddings]
+  end
+  DB[(SQLite demo DB)]
+  GEM[Gemini API]
+  P --> RT
+  SB -->|Bearer JWT| RT
+  RT --> SV
+  RT --> LG
+  LG --> RG
+  LG --> SV
+  SV --> DB
+  RG --> DB
+  LG --> GEM
+  RG --> GEM
+```
+
 ## Request flow
 1. App sends request with Supabase access token.
 2. FastAPI verifies the token, loads the user's approved membership (society_id, role).
@@ -22,6 +50,13 @@
 4. Typed response, or `{code, message}` error.
 
 Saarthi requests follow the same path into LangGraph. **Agent tools wrap the same services**, run with the calling user's permissions, and never use raw SQL.
+
+## SQLite → Postgres migration (same architecture)
+
+- **Why SQLite now:** judges and contributors run `uv sync`, `alembic upgrade`, and `seed.py` without provisioning Postgres. The frontend can also run on static JSON or `frontend/.demo/demo.db`.
+- **What moves unchanged:** routers, services, Pydantic schemas, LangGraph graph, tool specs, and society_id scoping.
+- **What changes with Postgres:** `DATABASE_URL` dialect, array/JSON column types in `app/models/types.py`, booking overlap constraints (native `tstzrange` + EXCLUDE), and guide search moving from Python-side hybrid scoring on blob embeddings to **pgvector** indexes for larger multi-society deployments.
+- **Auth:** Supabase Auth stays the identity provider; Postgres holds app data, not Supabase Auth users.
 
 ## Backend layout
 ```
@@ -87,10 +122,42 @@ Every table except `users` has `society_id`; every query filters on it.
 - `saarthi_actions`: every change Saarthi proposes (tool, service-ready payload, card, status proposed/executed/pending_approval/cancelled/failed/expired). Nothing runs until the resident confirms; the row is also the audit trail
 - `listings`, `audit_log`
 
-**Key indexes:** society_id everywhere; (society_id, starts_at) on events; HNSW on chunk embeddings; exclusion constraint on bookings; unique Razorpay and webhook ids.
+**Key indexes:** society_id everywhere; (society_id, starts_at) on events; exclusion constraint on bookings (Postgres-native; SQLite uses app-level checks where needed); unique Razorpay and webhook ids. **Vector index:** HNSW on `document_chunks.embedding` is the **Postgres/pgvector** target; the SQLite demo stores embeddings as blobs and scores in Python (`app/rag/retrieval.py`).
 
 ## Saarthi (LangGraph + Gemini)
+
 Full requirements: `SAARTHI-REQUIREMENTS.md`. Models come from config: `GEMINI_MODEL_MAIN` for chat, `GEMINI_MODEL_FAST` for summaries, form fill and fallback, `GEMINI_EMBED_MODEL` for the guide. Each call times out, retries once, then falls back to the other model. Chat streams over SSE (`POST /v1/saarthi/chat`).
+
+### Chat graph
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  [*] --> retrieve
+  retrieve --> agent: passages from guide RAG
+  agent --> tools: if tool_calls and rounds < 4
+  tools --> agent: ToolMessage, cards, optional action draft
+  agent --> [*]: text reply (+ citations [n])
+```
+
+Nodes (`app/agents/graph.py`):
+
+| Node | Responsibility |
+|------|----------------|
+| `retrieve` | Embed/query hybrid search for the resident's society; inject passages into the system prompt |
+| `agent` | Stream Gemini reply; bind read + write tool schemas unless round cap or action already proposed |
+| `tools` | Execute read tools via services; write tools only **propose** → `saarthi_actions` confirmation card |
+
+Write execution path (outside the graph loop): resident taps Confirm → `POST /v1/saarthi/actions/{id}/confirm` → same `execute_*` handlers as the UI.
+
+### RAG pipeline (society guide)
+
+1. **Ingest** — Markdown/PDF from `society-guide/` seed and committee uploads (`app/services/guide.py`, `app/rag/chunking.py`, `app/rag/pdf.py`).
+2. **Chunk** — Split on headings; keep tables intact; store label + anchor for citations.
+3. **Embed** — Gemini embedding model; vectors persisted on `document_chunks`.
+4. **Retrieve** — Cosine similarity + BM25, reciprocal rank fusion (`app/rag/retrieval.py`); relevance gates in config drop weak matches so Saarthi can say "not in the guide".
+
+Live "what's happening" questions **never** use RAG; they use read tools only.
 
 **Fill with Saarthi** (`POST /v1/saarthi/fill`): every create and edit form has a one-line box. The fast model returns that form's fields via structured output (`app/agents/fill.py`); `app/services/saarthi_fill.py` cleans them against the form's limits and adds live hints from existing services: event space clashes and the 10:30 PM hall cap, a "Me too" on a similar open issue, a marketplace price range. In edit mode (`current`, `itemId`) only the changed fields come back. It never submits; filled fields carry a sparkle until the resident edits them. Logged to `llm_calls` with purpose `fill`.
 
