@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { Sparkle, useFilledFields } from "@/components/saarthi/sparkle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createIssueApi, joinIssueApi } from "@/lib/api/help-desk-client";
 import { reporterCount } from "@/lib/help-desk/access";
 import { similarOpenIssues } from "@/lib/help-desk/similar";
+import { issueFill } from "@/lib/saarthi/fill-mapping";
 import { REPORT_CATEGORIES, TICKET_CATEGORY_LABEL } from "@/lib/help-desk-labels";
 import type { HelpDeskCategory, HelpDeskIssue, HelpDeskIssueScope, HelpDeskUrgency } from "@/lib/types/help-desk";
 import type { Resident } from "@/lib/types/home";
@@ -35,6 +38,7 @@ export function ReportIssueForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedNumber, setConfirmedNumber] = useState<string | null>(null);
+  const fills = useFilledFields();
 
   const similar = useMemo(() => {
     if (scope !== "common_area") return [];
@@ -66,6 +70,26 @@ export function ReportIssueForm({
     }
   }
 
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = issueFill(raw);
+    // Only a tower this society has; a typed tower name stays free text without the list.
+    if (fill.tower !== undefined && towers?.length && !towers.some((t) => t.name === fill.tower)) {
+      delete fill.tower;
+    }
+    if (fill.category !== undefined && (REPORT_CATEGORIES as string[]).includes(fill.category)) {
+      setCategory(fill.category as HelpDeskCategory);
+    } else {
+      delete fill.category;
+    }
+    if (fill.scope !== undefined) setScope(fill.scope as HelpDeskIssueScope);
+    if (fill.tower !== undefined) setTower(fill.tower);
+    if (fill.areaLabel !== undefined) setAreaLabel(fill.areaLabel);
+    if (fill.title !== undefined) setTitle(fill.title);
+    if (fill.description !== undefined) setDescription(fill.description);
+    if (fill.urgency !== undefined) setUrgency(fill.urgency as HelpDeskUrgency);
+    fills.mark(fill);
+  }
+
   async function meToo(id: string) {
     if (!writeEnabled) return;
     setBusy(true);
@@ -95,9 +119,15 @@ export function ReportIssueForm({
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-lg space-y-5">
+      {writeEnabled ? (
+        <FillWithSaarthi form="issue" onFill={applyFill} onMeToo={(id) => void meToo(id)} />
+      ) : null}
       <Card className="space-y-4 p-5">
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">Category</span>
+          <span className="text-callout font-medium text-ink">
+            Category
+            <Sparkle show={fills.shows("category", category)} />
+          </span>
           <select
             className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
             value={category}
@@ -113,7 +143,10 @@ export function ReportIssueForm({
         </label>
 
         <fieldset className="space-y-2">
-          <legend className="text-callout font-medium text-ink">Where</legend>
+          <legend className="text-callout font-medium text-ink">
+            Where
+            <Sparkle show={fills.shows("scope", scope) || fills.shows("areaLabel", areaLabel)} />
+          </legend>
           <label className="flex items-center gap-2 text-body">
             <input
               type="radio"
@@ -144,7 +177,10 @@ export function ReportIssueForm({
         </fieldset>
 
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">Tower</span>
+          <span className="text-callout font-medium text-ink">
+            Tower
+            <Sparkle show={fills.shows("tower", tower)} />
+          </span>
           {towers?.length ? (
             <select
               className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
@@ -169,7 +205,10 @@ export function ReportIssueForm({
         </label>
 
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">Title</span>
+          <span className="text-callout font-medium text-ink">
+            Title
+            <Sparkle show={fills.shows("title", title)} />
+          </span>
           <input
             className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
             maxLength={80}
@@ -180,7 +219,10 @@ export function ReportIssueForm({
         </label>
 
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">Description</span>
+          <span className="text-callout font-medium text-ink">
+            Description
+            <Sparkle show={fills.shows("description", description)} />
+          </span>
           <textarea
             className="w-full rounded-tile border border-outline-variant/40 p-2.5 text-body"
             maxLength={500}
@@ -191,7 +233,10 @@ export function ReportIssueForm({
         </label>
 
         <fieldset className="space-y-2">
-          <legend className="text-callout font-medium text-ink">Urgency</legend>
+          <legend className="text-callout font-medium text-ink">
+            Urgency
+            <Sparkle show={fills.shows("urgency", urgency)} />
+          </legend>
           <label className="flex items-center gap-2 text-body">
             <input
               type="radio"

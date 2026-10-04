@@ -10,6 +10,8 @@ import {
   uploadEventCoverApi,
 } from "@/lib/api/events-client";
 import { EventCover } from "@/components/events/event-cover";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { Sparkle, useFilledFields } from "@/components/saarthi/sparkle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -31,6 +33,7 @@ import {
   venueLocation,
   type VenueOption,
 } from "@/lib/events/venues";
+import { endForFilledStart, eventFill, fillCurrent } from "@/lib/saarthi/fill-mapping";
 import type { EventCategory, EventRecurrence, EventType, HomeEvent } from "@/lib/types/home";
 
 const VENUE_GROUPS = { flat: "At home", society: "Around the society" };
@@ -110,6 +113,7 @@ export function HostEventForm({
   const [tagsText, setTagsText] = useState(initial.tags.join(", "));
   const [pending, setPending] = useState<"draft" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fills = useFilledFields();
 
   useEffect(() => {
     return () => {
@@ -188,6 +192,38 @@ export function HostEventForm({
     };
   }
 
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = eventFill(raw);
+    const marked: Record<string, unknown> = { ...fill };
+    if (fill.title !== undefined) setTitle(fill.title);
+    if (fill.locationLabel !== undefined) {
+      const venue = resolveVenue(fill.locationLabel, venueOptions);
+      setVenueKey(venue.key);
+      setVenueOther(venue.other);
+      setLocationInvalid(false);
+      marked.locationLabel = venueLocation(venue, venueOptions);
+    }
+    if (fill.startsAt !== undefined) {
+      setStartsAtLocal(fill.startsAt);
+      if (fill.endsAt === undefined) setEndsAtLocal(endForFilledStart(startsAtLocal, endsAtLocal, fill.startsAt));
+    }
+    if (fill.endsAt !== undefined) setEndsAtLocal(fill.endsAt);
+    if (fill.description !== undefined) setDescription(fill.description);
+    if (fill.category !== undefined) setCategory(fill.category);
+    if (fill.capacity !== undefined) setCapacity(String(fill.capacity));
+    if (fill.guestLimit !== undefined) setGuestLimit(String(fill.guestLimit));
+    if (fill.whatToBring !== undefined) setWhatToBring(fill.whatToBring);
+    if (fill.inviteInterest !== undefined && !event) setInviteInterest(fill.inviteInterest);
+    // The type can't change on an edit, and society events are the committee's.
+    if (fill.eventType !== undefined && !event && (fill.eventType !== "society" || isCommittee)) {
+      setEventType(fill.eventType);
+    } else {
+      delete marked.eventType;
+    }
+    if (fill.priceInr !== undefined) setPriceInr(String(fill.priceInr));
+    fills.mark(marked);
+  }
+
   async function submit(mode: "draft" | "publish") {
     if (!location) {
       setLocationInvalid(true);
@@ -237,6 +273,12 @@ export function HostEventForm({
           {approvalExplain(eventType) ?? "Free events go live as soon as you publish."}
         </p>
       </div>
+      <FillWithSaarthi
+        form="event"
+        current={event ? fillCurrent(values(), ["coverUrl"]) : undefined}
+        itemId={event?.id}
+        onFill={applyFill}
+      />
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -245,7 +287,10 @@ export function HostEventForm({
         }}
       >
         <fieldset className="space-y-2">
-          <legend className="text-caption font-medium text-ink-secondary">Type</legend>
+          <legend className="text-caption font-medium text-ink-secondary">
+            Type
+            <Sparkle show={fills.shows("eventType", eventType)} />
+          </legend>
           <div className="flex flex-wrap gap-2">
             {EVENT_TYPES.map((type) => {
               const locked = Boolean(event);
@@ -340,7 +385,10 @@ export function HostEventForm({
         ) : null}
         {eventType === "paid" ? (
           <label className="block space-y-1.5">
-            <span className="text-caption font-medium text-ink-secondary">Ticket price (₹)</span>
+            <span className="text-caption font-medium text-ink-secondary">
+            Ticket price (₹)
+            <Sparkle show={fills.shows("priceInr", priceInr)} />
+          </span>
             <input
               className={inputClassName}
               type="number"
@@ -357,7 +405,10 @@ export function HostEventForm({
           </label>
         ) : null}
         <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">Title</span>
+          <span className="text-caption font-medium text-ink-secondary">
+            Title
+            <Sparkle show={fills.shows("title", title)} />
+          </span>
           <input
             className={inputClassName}
             required
@@ -369,7 +420,10 @@ export function HostEventForm({
           />
         </label>
         <div className="space-y-1.5">
-          <span className="block text-caption font-medium text-ink-secondary">Location</span>
+          <span className="block text-caption font-medium text-ink-secondary">
+            Location
+            <Sparkle show={fills.shows("locationLabel", location)} />
+          </span>
           <Select
             aria-label="Location"
             value={venueKey}
@@ -400,7 +454,10 @@ export function HostEventForm({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="text-caption font-medium text-ink-secondary">Starts</span>
+            <span className="text-caption font-medium text-ink-secondary">
+            Starts
+            <Sparkle show={fills.shows("startsAt", startsAtLocal)} />
+          </span>
             <input
               type="datetime-local"
               className={inputClassName}
@@ -416,7 +473,10 @@ export function HostEventForm({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-caption font-medium text-ink-secondary">Ends</span>
+            <span className="text-caption font-medium text-ink-secondary">
+            Ends
+            <Sparkle show={fills.shows("endsAt", endsAtLocal)} />
+          </span>
             <input
               type="datetime-local"
               className={inputClassName}
@@ -457,7 +517,10 @@ export function HostEventForm({
           </div>
         )}
         <div className="space-y-1.5">
-          <span className="block text-caption font-medium text-ink-secondary">Category</span>
+          <span className="block text-caption font-medium text-ink-secondary">
+            Category
+            <Sparkle show={fills.shows("category", category)} />
+          </span>
           <Select
             aria-label="Category"
             value={category}
@@ -467,7 +530,10 @@ export function HostEventForm({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="text-caption font-medium text-ink-secondary">Capacity</span>
+            <span className="text-caption font-medium text-ink-secondary">
+            Capacity
+            <Sparkle show={fills.shows("capacity", capacity)} />
+          </span>
             <input
               type="number"
               className={inputClassName}
@@ -479,7 +545,10 @@ export function HostEventForm({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-caption font-medium text-ink-secondary">Guests per resident</span>
+            <span className="text-caption font-medium text-ink-secondary">
+            Guests per resident
+            <Sparkle show={fills.shows("guestLimit", guestLimit)} />
+          </span>
             <input
               type="number"
               className={inputClassName}
@@ -491,7 +560,10 @@ export function HostEventForm({
           </label>
         </div>
         <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">About</span>
+          <span className="text-caption font-medium text-ink-secondary">
+            About
+            <Sparkle show={fills.shows("description", description)} />
+          </span>
           <textarea
             className={`${inputClassName} min-h-28 resize-y`}
             maxLength={5000}
@@ -501,7 +573,10 @@ export function HostEventForm({
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-caption font-medium text-ink-secondary">What to bring</span>
+          <span className="text-caption font-medium text-ink-secondary">
+            What to bring
+            <Sparkle show={fills.shows("whatToBring", whatToBring)} />
+          </span>
           <input
             className={inputClassName}
             maxLength={500}
@@ -514,6 +589,7 @@ export function HostEventForm({
           <label className="block space-y-1.5">
             <span className="text-caption font-medium text-ink-secondary">
               Invite residents interested in (optional)
+              <Sparkle show={fills.shows("inviteInterest", inviteInterest)} />
             </span>
             <input
               className={inputClassName}

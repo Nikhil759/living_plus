@@ -87,6 +87,30 @@ class ProposeIn(CamelModel):
     args: dict[str, Any] = Field(default_factory=dict)
 
 
+class FillIn(CamelModel):
+    form: Literal["event", "listing", "business", "opening", "issue", "group", "post", "feedback"]
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=500)]
+    # Edit by instruction: the form's current values; only changes come back.
+    current: dict[str, Any] | None = None
+    # Edit mode: the item being edited, so it never clashes with itself.
+    item_id: Annotated[str, StringConstraints(max_length=100)] | None = None
+
+
+class FillHint(CamelModel):
+    kind: Literal["me_too", "price", "clash", "rule"]
+    text: str
+    href: str | None = None
+    issue_id: str | None = None
+
+
+class FillOut(CamelModel):
+    # Keys are the form's own field names; nothing is submitted.
+    values: dict[str, Any]
+    filled: list[str]
+    question: str | None = None
+    hints: list[FillHint] = Field(default_factory=list)
+
+
 class ActionOut(CamelModel):
     """A proposal for Edit-prefill: the card plus the service-ready payload."""
 

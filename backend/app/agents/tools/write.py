@@ -999,9 +999,9 @@ class PostOpeningArgs(BaseModel):
     bhk: int = Field(ge=1, le=4)
     rent_inr: int = Field(ge=1000)
     furnishing: Literal["furnished", "semi_furnished", "unfurnished"]
-    preference: Literal[
-        "anyone", "women_only", "men_only", "family", "working_professionals", "students"
-    ] = "anyone"
+    preference: Literal["anyone", "women_only", "men_only", "family", "working_professionals"] = (
+        "anyone"
+    )
     description: str
     available_from: str = Field("", description="YYYY-MM-DD; empty means now")
     deposit_inr: int = Field(0, ge=0, description="0 means not given")

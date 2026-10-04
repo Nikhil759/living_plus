@@ -92,6 +92,8 @@ Every table except `users` has `society_id`; every query filters on it.
 ## Saarthi (LangGraph + Gemini)
 Full requirements: `SAARTHI-REQUIREMENTS.md`. Models come from config: `GEMINI_MODEL_MAIN` for chat, `GEMINI_MODEL_FAST` for summaries, form fill and fallback, `GEMINI_EMBED_MODEL` for the guide. Each call times out, retries once, then falls back to the other model. Chat streams over SSE (`POST /v1/saarthi/chat`).
 
+**Fill with Saarthi** (`POST /v1/saarthi/fill`): every create and edit form has a one-line box. The fast model returns that form's fields via structured output (`app/agents/fill.py`); `app/services/saarthi_fill.py` cleans them against the form's limits and adds live hints from existing services: event space clashes and the 10:30 PM hall cap, a "Me too" on a similar open issue, a marketplace price range. In edit mode (`current`, `itemId`) only the changed fields come back. It never submits; filled fields carry a sparkle until the resident edits them. Logged to `llm_calls` with purpose `fill`.
+
 Planned agent roles:
 - **Supervisor:** small, fast model routes to a specialist (structured output).
 - **Amenity agent:** availability, rules, booking.

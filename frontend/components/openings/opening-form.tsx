@@ -7,6 +7,8 @@ import { OpeningCard } from "@/components/openings/opening-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { CHIP, Field, INPUT } from "@/components/marketplace/listing-form";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { useFilledFields } from "@/components/saarthi/sparkle";
 import { ApiError } from "@/lib/api/client";
 import { createOpeningApi, updateOpeningApi } from "@/lib/api/openings-client";
 import {
@@ -24,6 +26,7 @@ import {
   type OpeningFormField,
   type OpeningFormValues,
 } from "@/lib/openings/form";
+import { fillCurrent, openingFill } from "@/lib/saarthi/fill-mapping";
 import {
   BHK_OPTIONS,
   FURNISHING_LABEL,
@@ -107,6 +110,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
   const today = todayIst();
   const towerOptions = options.towers.map((tower) => ({ value: tower.id, label: tower.name }));
   const preferences = PREFERENCES_FOR[values.kind || "room_available"];
+  const fills = useFilledFields();
 
   function set<K extends OpeningFormField>(field: K, value: OpeningFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -117,6 +121,18 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
     if (kind === "") return;
     setValues((current) => ({ ...current, kind, preference: preferenceAfterKind(kind, current.preference) }));
     setErrors((current) => ({ ...current, kind: undefined, preference: undefined }));
+  }
+
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = openingFill(raw);
+    setValues((current) => {
+      const next = { ...current, ...fill };
+      // Keep the preference valid for the kind, as picking a kind by hand does.
+      if (fill.kind && !fill.preference) next.preference = preferenceAfterKind(fill.kind, current.preference);
+      return next;
+    });
+    setErrors((current) => ({ ...current, ...Object.fromEntries(Object.keys(fill).map((k) => [k, undefined])) }));
+    fills.mark(fill);
   }
 
   async function submit(event: React.FormEvent) {
@@ -144,6 +160,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
     <form onSubmit={(event) => void submit(event)} noValidate className="mx-auto w-full max-w-content">
       <div className="lg:flex lg:items-start lg:justify-center lg:gap-10">
         <div className="min-w-0 space-y-5 lg:max-w-[640px] lg:flex-1">
+          <FillWithSaarthi form="opening" current={opening ? fillCurrent(values) : undefined} onFill={applyFill} />
           <Section title="What are you posting?">
             <div role="radiogroup" aria-label="What are you posting?" className="grid gap-3">
               {KINDS.map((kind) => (
@@ -182,7 +199,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
               />
             </Field>
             <Field
-              label="Floor (optional)"
+              label="Floor (optional)" sparkle={fills.shows("floor", values.floor)}
               htmlFor="op-floor"
               error={errors.floor}
               hint="Use 0 for the ground floor. We never show your flat number."
@@ -196,7 +213,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
                 className={INPUT}
               />
             </Field>
-            <Field label="BHK" error={errors.bhk}>
+            <Field label="BHK" sparkle={fills.shows("bhk", values.bhk)} error={errors.bhk}>
               <div className="flex gap-2" role="group" aria-label="BHK">
                 {BHK_OPTIONS.map((bhk) => (
                   <Chip key={bhk} selected={values.bhk === bhk} onClick={() => set("bhk", bhk)}>
@@ -205,7 +222,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
                 ))}
               </div>
             </Field>
-            <Field label="Furnishing" error={errors.furnishing}>
+            <Field label="Furnishing" sparkle={fills.shows("furnishing", values.furnishing)} error={errors.furnishing}>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Furnishing">
                 {FURNISHINGS.map((furnishing) => (
                   <Chip
@@ -221,10 +238,10 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
           </Section>
 
           <Section title="Rent">
-            <Field label="Monthly rent" htmlFor="op-rent" error={errors.rent} hint="Between ₹1,000 and ₹5,00,000.">
+            <Field label="Monthly rent" sparkle={fills.shows("rent", values.rent)} htmlFor="op-rent" error={errors.rent} hint="Between ₹1,000 and ₹5,00,000.">
               <MoneyInput id="op-rent" value={values.rent} onChange={(value) => set("rent", value)} placeholder="18000" />
             </Field>
-            <Field label="Deposit (optional)" htmlFor="op-deposit" error={errors.deposit}>
+            <Field label="Deposit (optional)" sparkle={fills.shows("deposit", values.deposit)} htmlFor="op-deposit" error={errors.deposit}>
               <MoneyInput
                 id="op-deposit"
                 value={values.deposit}
@@ -250,7 +267,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
                 />
               )}
             </Field>
-            <Field label="Available from" error={errors.availableFrom}>
+            <Field label="Available from" sparkle={fills.shows("availableFrom", values.availableFrom) || fills.shows("availableNow", values.availableNow)} error={errors.availableFrom}>
               <div className="flex gap-2" role="group" aria-label="Available from">
                 <Chip selected={values.availableNow} onClick={() => set("availableNow", true)}>
                   Available now
@@ -274,7 +291,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
           </Section>
 
           <Section title="Who it suits">
-            <Field label="Preference" error={errors.preference}>
+            <Field label="Preference" sparkle={fills.shows("preference", values.preference)} error={errors.preference}>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Preference">
                 {preferences.map((preference) => (
                   <Chip
@@ -287,7 +304,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
                 ))}
               </div>
             </Field>
-            <Field label="Included (optional)">
+            <Field label="Included (optional)" sparkle={fills.shows("included", values.included)}>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Included">
                 {INCLUDED_ITEMS.map((item) => (
                   <Chip
@@ -304,7 +321,7 @@ export function OpeningForm({ options, opening }: { options: OpeningOptions; ope
 
           <Section title="Details">
             <Field
-              label="Description"
+              label="Description" sparkle={fills.shows("description", values.description)}
               htmlFor="op-description"
               error={errors.description}
               hint={`${values.description.length}/${MAX_DESCRIPTION}`}

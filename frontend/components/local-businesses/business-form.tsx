@@ -6,6 +6,8 @@ import { useState } from "react";
 import { BusinessCard } from "@/components/local-businesses/business-card";
 import { OfferingsEditor } from "@/components/local-businesses/offerings-editor";
 import { CHIP, Field, INPUT } from "@/components/marketplace/listing-form";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { useFilledFields } from "@/components/saarthi/sparkle";
 import { ListingPhotoPicker } from "@/components/marketplace/listing-photo-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -30,7 +32,9 @@ import {
   type BusinessFormErrors,
   type BusinessFormField,
   type BusinessFormValues,
+  newOfferingRow,
 } from "@/lib/local-businesses/form";
+import { businessFill, fillCurrent } from "@/lib/saarthi/fill-mapping";
 import { businessIconFor } from "@/lib/local-businesses/icons";
 import {
   BUSINESS_CATEGORIES,
@@ -79,10 +83,18 @@ export function BusinessForm({
   const needsPhone = !profile.hasPhone;
   const resubmitting = business?.reviewStatus === "rejected";
   const icon = businessIconFor(values.category);
+  const fills = useFilledFields();
 
   function set<K extends BusinessFormField>(field: K, value: BusinessFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = businessFill(raw, newOfferingRow);
+    setValues((current) => ({ ...current, ...fill }));
+    setErrors((current) => ({ ...current, ...Object.fromEntries(Object.keys(fill).map((k) => [k, undefined])) }));
+    fills.mark(fill);
   }
 
   async function submit(event: React.FormEvent) {
@@ -109,7 +121,8 @@ export function BusinessForm({
     <form onSubmit={(event) => void submit(event)} noValidate className="mx-auto w-full max-w-content">
       <div className="lg:flex lg:items-start lg:justify-center lg:gap-10">
         <div className="min-w-0 space-y-6 lg:max-w-[640px] lg:flex-1">
-          <Field label="Business name" htmlFor="biz-name" error={errors.name} hint={`${values.name.length}/${MAX_NAME}`}>
+          <FillWithSaarthi form="business" current={business ? fillCurrent(values) : undefined} onFill={applyFill} />
+          <Field label="Business name" sparkle={fills.shows("name", values.name)} htmlFor="biz-name" error={errors.name} hint={`${values.name.length}/${MAX_NAME}`}>
             <input
               id="biz-name"
               value={values.name}
@@ -120,7 +133,7 @@ export function BusinessForm({
             />
           </Field>
 
-          <Field label="Category" htmlFor="biz-category" error={errors.category}>
+          <Field label="Category" sparkle={fills.shows("category", values.category)} htmlFor="biz-category" error={errors.category}>
             <Select
               id="biz-category"
               value={values.category}
@@ -132,7 +145,7 @@ export function BusinessForm({
           </Field>
 
           <Field
-            label="Tagline"
+            label="Tagline" sparkle={fills.shows("tagline", values.tagline)}
             htmlFor="biz-tagline"
             error={errors.tagline}
             hint={`${values.tagline.length}/${MAX_TAGLINE}`}
@@ -172,7 +185,7 @@ export function BusinessForm({
           </Field>
 
           <Field
-            label="About (optional)"
+            label="About (optional)" sparkle={fills.shows("about", values.about)}
             htmlFor="biz-about"
             error={errors.about}
             hint={`${values.about.length}/${MAX_ABOUT}`}
@@ -188,11 +201,11 @@ export function BusinessForm({
             />
           </Field>
 
-          <Field label="Offerings" error={errors.offerings}>
+          <Field label="Offerings" sparkle={fills.shows("offerings", values.offerings)} error={errors.offerings}>
             <OfferingsEditor rows={values.offerings} onChange={(rows) => set("offerings", rows)} />
           </Field>
 
-          <Field label="Timings" htmlFor="biz-timings" error={errors.timings} hint={`${values.timings.length}/${MAX_TIMINGS}`}>
+          <Field label="Timings" sparkle={fills.shows("timings", values.timings)} htmlFor="biz-timings" error={errors.timings} hint={`${values.timings.length}/${MAX_TIMINGS}`}>
             <input
               id="biz-timings"
               value={values.timings}
@@ -203,7 +216,7 @@ export function BusinessForm({
             />
           </Field>
 
-          <Field label="Days" error={errors.days}>
+          <Field label="Days" sparkle={fills.shows("days", values.days)} error={errors.days}>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Days">
               {WEEKDAYS.map((day) => (
                 <button
@@ -219,7 +232,7 @@ export function BusinessForm({
             </div>
           </Field>
 
-          <Field label="Where you serve" htmlFor="biz-serves" error={errors.serves}>
+          <Field label="Where you serve" sparkle={fills.shows("serves", values.serves)} htmlFor="biz-serves" error={errors.serves}>
             <Select
               id="biz-serves"
               value={values.serves}

@@ -2,9 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { Sparkle, useFilledFields } from "@/components/saarthi/sparkle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createGroupApi } from "@/lib/api/community-client";
+import { groupFill } from "@/lib/saarthi/fill-mapping";
 import type { GroupVisibility } from "@/lib/types/community";
 
 const field = "w-full rounded-tile border border-outline-variant/40 p-2.5 text-body";
@@ -18,6 +21,17 @@ export function StartGroupForm() {
   const [tags, setTags] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fills = useFilledFields();
+
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = groupFill(raw);
+    if (fill.name !== undefined) setName(fill.name);
+    if (fill.emoji !== undefined) setEmoji(fill.emoji);
+    if (fill.description !== undefined) setDescription(fill.description);
+    if (fill.visibility !== undefined) setVisibility(fill.visibility as GroupVisibility);
+    if (fill.tags !== undefined) setTags(fill.tags);
+    fills.mark(fill);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -40,14 +54,21 @@ export function StartGroupForm() {
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-lg space-y-5">
+      <FillWithSaarthi form="group" onFill={applyFill} />
       <Card className="space-y-4 p-5">
         <div className="flex gap-3">
           <label className="block w-20 space-y-1">
-            <span className="text-callout font-medium text-ink">Emoji</span>
+            <span className="text-callout font-medium text-ink">
+            Emoji
+            <Sparkle show={fills.shows("emoji", emoji)} />
+          </span>
             <input className={field} maxLength={8} value={emoji} onChange={(e) => setEmoji(e.target.value)} />
           </label>
           <label className="block flex-1 space-y-1">
-            <span className="text-callout font-medium text-ink">Group name</span>
+            <span className="text-callout font-medium text-ink">
+            Group name
+            <Sparkle show={fills.shows("name", name)} />
+          </span>
             <input
               className={field}
               minLength={3}
@@ -60,7 +81,10 @@ export function StartGroupForm() {
           </label>
         </div>
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">What is it about?</span>
+          <span className="text-callout font-medium text-ink">
+            What is it about?
+            <Sparkle show={fills.shows("description", description)} />
+          </span>
           <textarea
             className={field}
             rows={3}
@@ -72,7 +96,10 @@ export function StartGroupForm() {
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-callout font-medium text-ink">Interests (comma separated)</span>
+          <span className="text-callout font-medium text-ink">
+            Interests (comma separated)
+            <Sparkle show={fills.shows("tags", tags)} />
+          </span>
           <input
             className={field}
             value={tags}
@@ -84,7 +111,10 @@ export function StartGroupForm() {
           </span>
         </label>
         <fieldset className="space-y-2">
-          <legend className="text-callout font-medium text-ink">Who can join</legend>
+          <legend className="text-callout font-medium text-ink">
+            Who can join
+            <Sparkle show={fills.shows("visibility", visibility)} />
+          </legend>
           <label className="flex items-center gap-2 text-body">
             <input type="radio" name="visibility" checked={visibility === "public"} onChange={() => setVisibility("public")} />
             Anyone in the society

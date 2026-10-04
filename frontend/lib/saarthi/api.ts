@@ -10,6 +10,8 @@ import type {
   ChatMessage,
   ChatSessionDetail,
   ChatSessionSummary,
+  FillForm,
+  FillResult,
   SaarthiEvent,
 } from "@/lib/types/saarthi";
 
@@ -71,6 +73,16 @@ export async function getActionPayload(
   id: string,
 ): Promise<{ tool: string; payload: Record<string, unknown> }> {
   return apiGet(`/v1/saarthi/actions/${encodeURIComponent(id)}`, { headers: await authHeaders() });
+}
+
+/** Fill with Saarthi: one sentence in, form values out. Never submits anything. */
+export async function fillForm(
+  form: FillForm,
+  text: string,
+  current?: Record<string, unknown>,
+  itemId?: string,
+): Promise<FillResult> {
+  return apiPost("/v1/saarthi/fill", { form, text, current, itemId }, { headers: await authHeaders() });
 }
 
 export interface StreamChatInput {

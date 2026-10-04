@@ -66,6 +66,7 @@ Users join a society with an **invite code**, pick tower, flat and role, and sta
 - Answers questions from the society's bylaws, notices and meeting minutes, **with citations**.
 - Says "I couldn't find this in your society's documents" rather than guessing.
 - Examples: "Can I do renovation on Sunday?", "Who is the plumber vendor?", "What did the AGM decide on parking?"
+- **Fill with Saarthi:** on every create and edit form, one sentence ("Sunday morning cycling ride from Gate 1 at 6:30 for 15 people") fills the fields it implies, marked with a sparkle. It asks one question for a missing essential, warns about clashes and rules, suggests "Me too" on a duplicate issue and a fair price on a listing, and never submits. On an edit form, "move it to 8 PM" changes only that.
 
 ### Help desk
 - Residents raise complaints by text or photo.

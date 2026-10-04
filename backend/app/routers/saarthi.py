@@ -18,9 +18,11 @@ from app.schemas.saarthi import (
     ChatSessionDetailOut,
     ChatSessionOut,
     FeedbackIn,
+    FillIn,
+    FillOut,
     ProposeIn,
 )
-from app.services import saarthi_actions, saarthi_chat
+from app.services import saarthi_actions, saarthi_chat, saarthi_fill
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/saarthi", tags=["saarthi"])
@@ -81,6 +83,14 @@ async def feedback(
     message_id: uuid.UUID, body: FeedbackIn, db: DbSession, member: CurrentMemberDep
 ) -> ChatMessageOut:
     return await saarthi_chat.set_feedback(db, member, message_id, body)
+
+
+@router.post("/fill", response_model=FillOut)
+async def fill_form(
+    body: FillIn, db: DbSession, member: CurrentMemberDep, models: ChatModelsDep
+) -> FillOut:
+    """Fill with Saarthi: a sentence becomes form values. The resident still submits."""
+    return await saarthi_fill.fill(db, member, body, models)
 
 
 @router.post("/actions/propose", response_model=ChatMessageOut, status_code=201)

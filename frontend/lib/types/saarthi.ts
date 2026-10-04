@@ -109,3 +109,28 @@ export type SaarthiEvent =
       };
     }
   | { event: "error"; data: { code: string; message: string } };
+
+export type FillForm =
+  | "event"
+  | "listing"
+  | "business"
+  | "opening"
+  | "issue"
+  | "group"
+  | "post"
+  | "feedback";
+
+export interface FillHint {
+  kind: "me_too" | "price" | "clash" | "rule";
+  text: string;
+  href?: string | null;
+  issueId?: string | null;
+}
+
+/** POST /v1/saarthi/fill: values keyed by the form's own field names. */
+export interface FillResult {
+  values: Record<string, unknown>;
+  filled: string[];
+  question: string | null;
+  hints: FillHint[];
+}

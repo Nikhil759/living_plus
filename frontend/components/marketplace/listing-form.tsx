@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { ListingPhotoPicker } from "@/components/marketplace/listing-photo-picker";
+import { FillWithSaarthi } from "@/components/saarthi/fill-with-saarthi";
+import { Sparkle, useFilledFields } from "@/components/saarthi/sparkle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ApiError } from "@/lib/api/client";
@@ -26,6 +28,7 @@ import {
   LISTING_CONDITIONS,
   LISTING_CONDITION_LABEL,
 } from "@/lib/marketplace/view";
+import { fillCurrent, listingFill } from "@/lib/saarthi/fill-mapping";
 import { cn } from "@/lib/utils";
 import type {
   ListingCategory,
@@ -45,9 +48,12 @@ export function Field({
   htmlFor,
   error,
   hint,
+  sparkle = false,
   children,
 }: {
   label: string;
+  /** Saarthi filled this field and the resident hasn't changed it. */
+  sparkle?: boolean;
   htmlFor?: string;
   error?: string;
   hint?: string;
@@ -57,6 +63,7 @@ export function Field({
     <div className="space-y-2">
       <label htmlFor={htmlFor} className="block text-callout font-semibold text-ink">
         {label}
+        <Sparkle show={sparkle} />
       </label>
       {children}
       {hint && !error ? <p className="text-caption text-ink-tertiary">{hint}</p> : null}
@@ -132,10 +139,19 @@ export function ListingForm({
   const [busy, setBusy] = useState(false);
   const needsPhone = !profile.hasPhone;
   const isEdit = Boolean(listing);
+  const fills = useFilledFields();
 
   function set<K extends ListingFormField>(field: K, value: ListingFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function applyFill(raw: Record<string, unknown>) {
+    const fill = listingFill(raw);
+    if (fill.isFree) fill.negotiable = false;
+    setValues((current) => ({ ...current, ...fill }));
+    setErrors((current) => ({ ...current, ...Object.fromEntries(Object.keys(fill).map((k) => [k, undefined])) }));
+    fills.mark(fill);
   }
 
   async function submit(event: React.FormEvent) {
@@ -162,6 +178,7 @@ export function ListingForm({
     <form onSubmit={(event) => void submit(event)} noValidate className="mx-auto w-full max-w-content">
       <div className="lg:flex lg:items-start lg:justify-center lg:gap-10">
         <div className="min-w-0 space-y-6 lg:max-w-[640px] lg:flex-1">
+          <FillWithSaarthi form="listing" current={listing ? fillCurrent(values) : undefined} onFill={applyFill} />
           <Field label="Photos">
             <ListingPhotoPicker
               photos={values.photos}
@@ -171,7 +188,7 @@ export function ListingForm({
             />
           </Field>
 
-          <Field label="Title" htmlFor="listing-title" error={errors.title} hint={`${values.title.length}/${MAX_TITLE}`}>
+          <Field label="Title" sparkle={fills.shows("title", values.title)} htmlFor="listing-title" error={errors.title} hint={`${values.title.length}/${MAX_TITLE}`}>
             <input
               id="listing-title"
               value={values.title}
@@ -183,7 +200,7 @@ export function ListingForm({
           </Field>
 
           <div className="grid gap-6 sm:grid-cols-2">
-            <Field label="Category" htmlFor="listing-category" error={errors.category}>
+            <Field label="Category" sparkle={fills.shows("category", values.category)} htmlFor="listing-category" error={errors.category}>
               <Select
                 id="listing-category"
                 value={values.category}
@@ -193,7 +210,7 @@ export function ListingForm({
                 options={CATEGORY_OPTIONS}
               />
             </Field>
-            <Field label="Condition" error={errors.condition}>
+            <Field label="Condition" sparkle={fills.shows("condition", values.condition)} error={errors.condition}>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Condition">
                 {LISTING_CONDITIONS.map((id) => (
                   <button
@@ -210,7 +227,7 @@ export function ListingForm({
             </Field>
           </div>
 
-          <Field label="Price" htmlFor="listing-price" error={errors.price}>
+          <Field label="Price" sparkle={fills.shows("price", values.price) || fills.shows("isFree", values.isFree)} htmlFor="listing-price" error={errors.price}>
             <div className="space-y-3">
               <div className="relative">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-body text-ink-secondary">₹</span>
@@ -240,7 +257,7 @@ export function ListingForm({
           </Field>
 
           <Field
-            label="Description (optional)"
+            label="Description (optional)" sparkle={fills.shows("description", values.description)}
             htmlFor="listing-description"
             error={errors.description}
             hint={`${values.description.length}/${MAX_DESCRIPTION}`}
@@ -292,7 +309,7 @@ export function ListingForm({
             </Field>
           ) : null}
 
-          <Field label="Pickup note" htmlFor="listing-pickup" error={errors.pickupNote}>
+          <Field label="Pickup note" sparkle={fills.shows("pickupNote", values.pickupNote)} htmlFor="listing-pickup" error={errors.pickupNote}>
             <input
               id="listing-pickup"
               value={values.pickupNote}
