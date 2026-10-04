@@ -35,9 +35,17 @@ CardKind = Literal[
 ]
 
 
+class ChipAction(CamelModel):
+    """A write tool the chip proposes when tapped (still confirmed on a card)."""
+
+    tool: str
+    args: dict[str, Any]
+
+
 class CardChip(CamelModel):
     label: str
     href: str | None = None
+    action: ChipAction | None = None
 
 
 class SaarthiCard(CamelModel):
@@ -69,6 +77,14 @@ class ChatMessageOut(CamelModel):
     created_at: datetime
     # The confirmation card under this reply, with its current status.
     action: dict[str, Any] | None = None
+
+
+class ProposeIn(CamelModel):
+    """A card chip asking for a change directly (no model call); it still needs Confirm."""
+
+    session_id: uuid.UUID
+    tool: Annotated[str, StringConstraints(min_length=2, max_length=60)]
+    args: dict[str, Any] = Field(default_factory=dict)
 
 
 class ActionOut(CamelModel):

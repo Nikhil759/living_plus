@@ -38,7 +38,12 @@ export interface SaarthiCard {
   detail?: string | null;
   badge?: string | null;
   href?: string | null;
-  chips: { label: string; href?: string | null }[];
+  chips: {
+    label: string;
+    href?: string | null;
+    /** Tapping proposes this change on a confirmation card (e.g. book this slot). */
+    action?: { tool: string; args: Record<string, unknown> } | null;
+  }[];
 }
 
 export type ActionStatus =

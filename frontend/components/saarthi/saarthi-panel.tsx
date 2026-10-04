@@ -129,7 +129,7 @@ export function SaarthiPanel() {
           {messages.length === 0 ? (
             <SaarthiEmptyState />
           ) : (
-            <div className="flex-1 overflow-y-auto px-4 py-4" aria-busy={busy}>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4" aria-busy={busy}>
               <ul className="space-y-4" aria-label="Conversation">
                 {messages.map((message, index) => (
                   <SaarthiMessage

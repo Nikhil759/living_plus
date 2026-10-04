@@ -18,6 +18,7 @@ from app.schemas.saarthi import (
     ChatSessionDetailOut,
     ChatSessionOut,
     FeedbackIn,
+    ProposeIn,
 )
 from app.services import saarthi_actions, saarthi_chat
 
@@ -80,6 +81,13 @@ async def feedback(
     message_id: uuid.UUID, body: FeedbackIn, db: DbSession, member: CurrentMemberDep
 ) -> ChatMessageOut:
     return await saarthi_chat.set_feedback(db, member, message_id, body)
+
+
+@router.post("/actions/propose", response_model=ChatMessageOut, status_code=201)
+async def propose_action(
+    body: ProposeIn, db: DbSession, member: CurrentMemberDep
+) -> ChatMessageOut:
+    return await saarthi_actions.propose(db, member, body)
 
 
 @router.get("/actions/{action_id}", response_model=ActionOut)

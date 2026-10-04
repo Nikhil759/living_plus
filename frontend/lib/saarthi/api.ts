@@ -46,6 +46,14 @@ export async function sendFeedback(
   );
 }
 
+/** A chip's change shown as a confirmation card in the chat (no model call). */
+export async function proposeAction(
+  sessionId: string,
+  action: { tool: string; args: Record<string, unknown> },
+): Promise<ChatMessage> {
+  return apiPost("/v1/saarthi/actions/propose", { sessionId, ...action }, { headers: await authHeaders() });
+}
+
 export async function confirmAction(id: string): Promise<ActionDecision> {
   return apiPost(`/v1/saarthi/actions/${encodeURIComponent(id)}/confirm`, undefined, {
     headers: await authHeaders(),

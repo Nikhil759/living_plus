@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 from app.agents.llm import ChatModels, NamedModel, get_chat_models
+from app.auth import get_current_user
 from app.core.config import get_settings
 from app.main import app
 from app.models import Event, Notification, SaarthiAction, Ticket, TicketFollower, User
@@ -139,9 +140,7 @@ async def test_actions_belong_to_one_resident(client, people, act_as, model) -> 
         client.post(f"/v1/saarthi/actions/{action_id}/cancel"),
     ):
         assert (await call).status_code == 404
-    app.dependency_overrides.pop(
-        __import__("app.auth", fromlist=["get_current_user"]).get_current_user
-    )
+    app.dependency_overrides.pop(get_current_user)
     assert (await client.post(f"/v1/saarthi/actions/{action_id}/confirm")).status_code == 401
     assert (await client.get("/v1/saarthi/actions/not-an-id")).status_code == 401
 
@@ -380,3 +379,64 @@ async def test_never_acts_for_someone_else(client, people, act_as, model, db_ses
     audit = await db_session.get(SaarthiAction, uuid.UUID(done["action"]["id"]))
     assert audit.user_id == people["nikhil"].id
     assert ActionStatus(audit.status) == ActionStatus.executed
+
+
+# --- card chips ------------------------------------------------------------------------------
+
+
+async def _slots_reply(client, model) -> tuple[str, dict]:  # type: ignore[no-untyped-def]
+    model.script = [
+        {"tool": "free_slots", "args": {"amenity": "Badminton 2", "date": ist_day(2)}},
+        "Here are the free slots.",
+    ]
+    events = await ask(client, "When is Badminton 2 free the day after tomorrow?")
+    return events[0][1]["sessionId"], events[-1][1]["cards"][0]
+
+
+async def test_tapping_a_slot_chip_proposes_the_booking(client, people, act_as, model) -> None:
+    act_as(people["nikhil"])
+    session_id, card = await _slots_reply(client, model)
+    chip = card["chips"][0]
+    assert chip["action"]["tool"] == "book_slot"
+    assert chip["action"]["args"]["amenity"] == "Badminton 2"
+    seen_before = len(model.seen)
+
+    response = await client.post(
+        "/v1/saarthi/actions/propose", json={"sessionId": session_id, **chip["action"]}
+    )
+    assert response.status_code == 201
+    message = response.json()
+    assert message["action"]["title"] == "Book Badminton 2"
+    assert message["action"]["status"] == "proposed"
+    assert len(model.seen) == seen_before  # no model call for a chip
+
+    before = len((await client.get("/v1/amenities/bookings/mine")).json())
+    confirmed = await client.post(f"/v1/saarthi/actions/{message['action']['id']}/confirm")
+    assert confirmed.json()["action"]["status"] == "executed"
+    assert len((await client.get("/v1/amenities/bookings/mine")).json()) == before + 1
+
+    history = (await client.get(f"/v1/saarthi/sessions/{session_id}")).json()["messages"]
+    assert history[2]["action"]["status"] == "executed"
+
+
+async def test_propose_rules(client, people, act_as, model) -> None:
+    act_as(people["nikhil"])
+    session_id, card = await _slots_reply(client, model)
+    action = card["chips"][0]["action"]
+    url = "/v1/saarthi/actions/propose"
+
+    bad_tool = await client.post(
+        url, json={"sessionId": session_id, "tool": "approve_event", "args": {"event": "x"}}
+    )
+    assert bad_tool.status_code == 422  # committee tools aren't open to residents
+    bad_args = await client.post(
+        url, json={"sessionId": session_id, "tool": "book_slot", "args": {"amenity": "squash"}}
+    )
+    assert bad_args.status_code == 422
+    assert (await client.post(url, json={"tool": "book_slot"})).status_code == 422
+
+    act_as(people["ananya"])  # someone else's chat
+    other = await client.post(url, json={"sessionId": session_id, **action})
+    assert other.status_code == 404
+    app.dependency_overrides.pop(get_current_user)
+    assert (await client.post(url, json={"sessionId": session_id, **action})).status_code == 401

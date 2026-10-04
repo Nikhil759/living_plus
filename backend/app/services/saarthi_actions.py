@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.graph import Recorder
-from app.agents.tools.base import Proposal, ToolContext, WriteSpec
+from app.agents.tools.base import Proposal, ToolContext, ToolInputError, WriteSpec
 from app.agents.tools.committee import COMMITTEE_WRITES
 from app.agents.tools.write import RESIDENT_WRITES
 from app.auth import CurrentMember
@@ -21,7 +21,8 @@ from app.core.config import get_settings
 from app.core.errors import AppError
 from app.models import ChatMessage, ChatSession, SaarthiAction
 from app.models.enums import ActionStatus, ChatRole
-from app.schemas.saarthi import ActionDecisionOut, ActionOut, ChatMessageOut
+from app.schemas.saarthi import ActionDecisionOut, ActionOut, ChatMessageOut, ProposeIn
+from app.services.marketplace import is_committee
 
 PROPOSAL_MINUTES = 30
 WRITES = {spec.name: spec for spec in [*RESIDENT_WRITES, *COMMITTEE_WRITES]}
@@ -71,6 +72,42 @@ def recorder(db: AsyncSession, member: CurrentMember, session: ChatSession) -> R
         return card(action)
 
     return record
+
+
+async def propose(db: AsyncSession, member: CurrentMember, body: ProposeIn) -> ChatMessageOut:
+    """Turns a tapped chip into a confirmation card in the chat, like a proposal from Saarthi."""
+    session = await db.scalar(
+        select(ChatSession).where(
+            ChatSession.id == body.session_id,
+            ChatSession.society_id == member.society_id,
+            ChatSession.user_id == member.user.id,
+            ChatSession.deleted_at.is_(None),
+        )
+    )
+    if session is None:
+        raise AppError("not_found", "Chat not found.", 404)
+    allowed = [*RESIDENT_WRITES, *(COMMITTEE_WRITES if is_committee(member) else [])]
+    spec = next((s for s in allowed if s.name == body.tool), None)
+    if spec is None:
+        raise AppError("validation_error", "That action isn't available.", 422)
+    ctx = ToolContext(db=db, member=member, now=datetime.now(UTC))
+    try:
+        proposal = await spec.propose(ctx, body.args)
+    except ToolInputError as err:
+        raise AppError("cannot_propose", str(err), 422) from None
+    action_card = await recorder(db, member, session)(spec, proposal)
+    message = ChatMessage(
+        society_id=member.society_id,
+        session_id=session.id,
+        role=ChatRole.assistant,
+        content="Here it is. Check the details and confirm below.",
+        action_id=uuid.UUID(action_card["id"]),
+        created_at=datetime.now(UTC),
+    )
+    db.add(message)
+    session.last_message_at = message.created_at
+    await db.commit()
+    return ChatMessageOut.model_validate(message).model_copy(update={"action": action_card})
 
 
 async def _owned(db: AsyncSession, member: CurrentMember, action_id: uuid.UUID) -> SaarthiAction:

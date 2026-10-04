@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import {
   CalendarDays,
   Clock,
@@ -14,7 +17,37 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
+import { useSaarthi } from "@/components/saarthi/saarthi-provider";
 import type { SaarthiCard, SaarthiCardKind } from "@/lib/types/saarthi";
+
+type Chip = SaarthiCard["chips"][number];
+const chipClass =
+  "rounded-full bg-quiet px-2.5 py-1 text-caption font-medium text-ink hover:bg-primary-tint " +
+  "hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
+/** A chip with an action (e.g. a free slot) proposes it on a confirmation card. */
+function ActionChip({ chip, context }: { chip: Chip; context: string }) {
+  const { propose } = useSaarthi();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      aria-label={`Book ${context}, ${chip.label}`}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await propose(chip.action!);
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className={`${chipClass} disabled:opacity-50`}
+    >
+      {chip.label}
+    </button>
+  );
+}
 
 const ICONS: Record<SaarthiCardKind, LucideIcon> = {
   event: CalendarDays,
@@ -81,12 +114,14 @@ export function SaarthiCards({ cards }: { cards: SaarthiCard[] }) {
           {card.chips.length > 0 ? (
             <span className="mt-2 flex flex-wrap gap-1.5 pl-9">
               {card.chips.map((chip) =>
-                chip.href ? (
-                  <Link
+                chip.action ? (
+                  <ActionChip
                     key={chip.label}
-                    href={chip.href}
-                    className="rounded-full bg-quiet px-2.5 py-1 text-caption font-medium text-ink hover:bg-primary-tint hover:text-primary"
-                  >
+                    chip={chip}
+                    context={[card.title, card.subtitle].filter(Boolean).join(" ")}
+                  />
+                ) : chip.href ? (
+                  <Link key={chip.label} href={chip.href} className={chipClass}>
                     {chip.label}
                   </Link>
                 ) : (

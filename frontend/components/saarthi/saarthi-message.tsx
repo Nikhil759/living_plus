@@ -76,11 +76,12 @@ function Feedback({ message }: { message: UiMessage }) {
 
 function CitationChips({ citations }: { citations: Citation[] }) {
   return (
-    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Sources from the society guide">
+    <ul className="mt-2 flex min-w-0 flex-wrap gap-1.5" aria-label="Sources from the society guide">
       {citations.map((c) => (
-        <li key={`${c.documentId}#${c.anchor}`}>
+        <li key={`${c.documentId}#${c.anchor}`} className="min-w-0 max-w-full">
           <Link
             href={`/guide/${c.documentId}#${c.anchor}`}
+            title={c.label}
             className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary-tint px-2.5 py-1 text-caption font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

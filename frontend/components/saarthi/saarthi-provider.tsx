@@ -58,6 +58,7 @@ interface SaarthiContextValue {
   newChat: () => void;
   rate: (messageId: string, rating: ChatFeedback, reason?: string) => Promise<void>;
   decide: (actionId: string, choice: "confirm" | "cancel") => Promise<void>;
+  propose: (action: { tool: string; args: Record<string, unknown> }) => Promise<void>;
   sessions: ChatSessionSummary[] | null;
   sessionId: string | null;
   loadSessions: () => Promise<void>;
@@ -325,6 +326,35 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
     [router],
   );
 
+  /** A tapped chip (e.g. a free slot) becomes a confirmation card; Confirm still decides. */
+  const propose = useCallback(
+    async (action: { tool: string; args: Record<string, unknown> }) => {
+      if (!sessionRef.current) return;
+      try {
+        const message = await saarthiApi.proposeAction(sessionRef.current, action);
+        setMessages((all) => [...all, toUiMessage(message)]);
+        setAnnouncement(`Saarthi: ${message.action?.title ?? message.content}`);
+      } catch (error) {
+        const message = error instanceof ApiError ? error.message : FRIENDLY_ERROR;
+        setMessages((all) => [
+          ...all,
+          {
+            id: localId(),
+            role: "assistant",
+            content: message,
+            status: "error",
+            feedback: null,
+            saved: false,
+            citations: [],
+            cards: [],
+            action: null,
+          },
+        ]);
+      }
+    },
+    [],
+  );
+
   const loadSessions = useCallback(async () => {
     if (!enabled) return;
     try {
@@ -398,6 +428,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       newChat: reset,
       rate,
       decide,
+      propose,
       sessions,
       sessionId,
       loadSessions,
@@ -419,6 +450,7 @@ export function SaarthiProvider({ residentName, children }: { residentName: stri
       reset,
       rate,
       decide,
+      propose,
       sessions,
       sessionId,
       loadSessions,

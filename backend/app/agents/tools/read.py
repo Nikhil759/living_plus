@@ -37,7 +37,7 @@ from app.schemas.event import EventListItemOut
 from app.schemas.help_desk import IssueOut
 from app.schemas.local_business import BusinessCardOut
 from app.schemas.marketplace import ListingCardOut
-from app.schemas.saarthi import CardChip, SaarthiCard
+from app.schemas.saarthi import CardChip, ChipAction, SaarthiCard
 from app.services import amenities as amenity_service
 from app.services import (
     amenity_bookings,
@@ -288,7 +288,22 @@ async def free_slots(ctx: ToolContext, args: SlotArgs) -> ToolResult:
                 subtitle=ist_day(slots.date),
                 detail=_count(len(free), "free slot") if free else "No free slots",
                 href=href,
-                chips=[CardChip(label=label, href=href) for label in labels[:8]],
+                # Tapping a chip proposes the booking; the resident still confirms it.
+                chips=[
+                    CardChip(
+                        label=label,
+                        href=href,
+                        action=ChipAction(
+                            tool="book_slot",
+                            args={
+                                "amenity": name,
+                                "date": slots.date.isoformat(),
+                                "time": slot.starts_at.astimezone(IST).strftime("%H:%M"),
+                            },
+                        ),
+                    )
+                    for label, slot in zip(labels[:8], free[:8], strict=True)
+                ],
             )
         ],
     )
